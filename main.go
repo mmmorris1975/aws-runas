@@ -10,6 +10,8 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"sort"
+	"strings"
 )
 
 const VERSION = "0.0.1"
@@ -45,6 +47,30 @@ func init() {
 	kingpin.CommandLine.Help = cmdDesc
 }
 
+func dedupAndSort(ary *[]string) *[]string {
+	m := make(map[string]bool)
+
+	// dedup
+	for _, v := range *ary {
+		trimV := strings.TrimSpace(v)
+		if len(trimV) > 0 {
+			m[trimV] = true
+		}
+	}
+
+	// array-ify
+	i := 0
+	newAry := make([]string, len(m))
+	for k := range m {
+		newAry[i] = k
+		i++
+	}
+
+	// sort & return
+	sort.Strings(newAry)
+	return &newAry
+}
+
 func main() {
 	kingpin.Parse()
 
@@ -76,6 +102,7 @@ func main() {
 		}
 		fmt.Printf("%s\n", *res.MFADevices[0].SerialNumber)
 	case *listRoles:
+		roles := make([]string, 0)
 		if *verbose {
 			log.Println("DEBUG List Roles")
 		}
@@ -89,38 +116,39 @@ func main() {
 		if *verbose {
 			log.Printf("DEBUG USER: %s\n", userName)
 		}
-		// TODO process user roles
+		// TODO process user roles (in parallel)
+		urg := UserRoleGetter{Client: s}
+		roles = append(roles, *urg.GetInlineRoles(userName)...)
+		roles = append(roles, *urg.GetAttachedRoles(userName)...)
 
+		i := iam.ListGroupsForUserInput{UserName: &userName}
+		grg := GroupRoleGetter{Client: s}
 		truncated := true
-		marker := ""
 		for truncated {
-			i := iam.ListGroupsForUserInput{UserName: &userName}
-			if len(marker) > 0 {
-				i.Marker = &marker
-			}
-
 			g, err := s.ListGroupsForUser(&i)
 			if err != nil {
 				log.Printf("ERROR %v\n", err)
 				break
 			}
 
-			// TODO process group entries for role data
+			// TODO process group entries for role data (in parallel)
 			for x, grp := range g.Groups {
 				if *verbose {
 					log.Printf("DEBUG GROUP[%d]: %s\n", x, *grp.GroupName)
 				}
+				roles = append(roles, *grg.GetInlineRoles(*grp.GroupName)...)
+				roles = append(roles, *grg.GetAttachedRoles(*grp.GroupName)...)
 			}
 
-			if *g.IsTruncated {
-				truncated = true
-				marker = *g.Marker
-			} else {
-				truncated = false
+			truncated = *g.IsTruncated
+			if truncated {
+				i.Marker = g.Marker
 			}
 		}
+
+		fmt.Printf("ROLES: %v\n", dedupAndSort(&roles))
 	default:
-		// MFA happens here, but does not cache outside the execution of the program.
+		// MFA happens here, but does not cache credentials beyond the execution of the program.
 		// Also, no way to change default MFA cred expiration of 15min *le sigh*
 		// Can probably hack up a custom provider to cache the stuff, but there's no
 		// way to change that 15 min default expiration time without a patch to the SDK
@@ -145,7 +173,7 @@ func main() {
 			}
 
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
-			c.Stdin  = os.Stdin
+			c.Stdin = os.Stdin
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 
