@@ -146,7 +146,10 @@ func main() {
 			}
 		}
 
-		fmt.Printf("ROLES: %v\n", dedupAndSort(&roles))
+		fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.User.Arn)
+		for _, v := range *dedupAndSort(&roles) {
+			fmt.Printf("  %s\n", v)
+		}
 	default:
 		// MFA happens here, but does not cache credentials beyond the execution of the program.
 		// Also, no way to change default MFA cred expiration of 15min *le sigh*

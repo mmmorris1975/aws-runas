@@ -20,6 +20,48 @@ func convertAttachedPolicies(p []*iam.AttachedPolicy) *[]string {
 	return &policies
 }
 
+func findRoles(data interface{}) *[]string {
+	roles := make([]string, 0)
+
+	switch t := data.(type) {
+	case []interface{}:
+		for _, v := range t {
+			roles = append(roles, *findRoles(v)...)
+		}
+	case map[string]interface{}:
+		var actionAssumeRole bool
+
+		if t["Effect"] == "Allow" {
+			switch v := t["Action"].(type) {
+			case string:
+				if v == "sts:AssumeRole" {
+					actionAssumeRole = true
+				}
+			case []string:
+				for _, val := range v {
+					if val == "sts:AssumeRole" {
+						actionAssumeRole = true
+					}
+				}
+			}
+
+			if actionAssumeRole {
+				switch x := t["Resource"].(type) {
+				case string:
+					roles = append(roles, x)
+				case []interface{}:
+					// The compiler tells me that if it's not a string, it's this (not []string)
+					for _, j := range x {
+						roles = append(roles, j.(string))
+					}
+				}
+			}
+		}
+	}
+
+	return &roles
+}
+
 func parsePolicy(p *string) *[]string {
 	roles := make([]string, 0)
 	polJson := make(map[string]interface{})
@@ -31,18 +73,7 @@ func parsePolicy(p *string) *[]string {
 	}
 
 	json.Unmarshal([]byte(parsedDoc), &polJson)
-	switch t := polJson["Statement"].(type) {
-	case []interface{}:
-		for _, v := range t {
-			log.Printf("%v\n", v)
-			// TODO probably need to recurse?
-		}
-	case map[string]interface{}:
-		if t["Effect"] == "Allow" && t["Action"] == "sts:AssumeRole" {
-			log.Printf("%v\n", t["Resource"])
-			// TODO possible this is a string or an array?
-		}
-	}
+	roles = *findRoles(polJson["Statement"])
 
 	return &roles
 }
