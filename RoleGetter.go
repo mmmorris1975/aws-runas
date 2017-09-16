@@ -10,6 +10,8 @@ import (
 type RoleGetter interface {
 	GetInlineRoles(name string) *[]string
 	GetAttachedRoles(name string) *[]string
+	GetInlineRolesChan(name string, c chan *[]string)
+	GetAttachedRolesChan(name string, c chan *[]string)
 }
 
 func convertAttachedPolicies(p []*iam.AttachedPolicy) *[]string {
@@ -153,6 +155,31 @@ func (u *UserRoleGetter) GetAttachedRoles(name string) *[]string {
 	return &roles
 }
 
+func (u *UserRoleGetter) GetInlineRolesChan(name string, c chan *[]string) {
+	roles := u.GetInlineRoles(name)
+	c <- roles
+}
+
+func (u *UserRoleGetter) GetAttachedRolesChan(name string, c chan *[]string) {
+	roles := u.GetAttachedRoles(name)
+	c <- roles
+}
+
+func (u *UserRoleGetter) FetchRoles(name string) *[]string {
+	roles := make([]string, 0)
+	c := make(chan *[]string)
+
+	go u.GetInlineRolesChan(name, c)
+	go u.GetAttachedRolesChan(name, c)
+
+	for i := 0; i < 2; i++ {
+		r := <-c
+		roles = append(roles, *r...)
+	}
+
+	return &roles
+}
+
 type GroupRoleGetter struct {
 	Client *iam.IAM
 }
@@ -223,6 +250,33 @@ func (g *GroupRoleGetter) GetAttachedRoles(name string) *[]string {
 		if truncated {
 			listPolInput.Marker = polList.Marker
 		}
+	}
+
+	return &roles
+}
+
+func (g *GroupRoleGetter) GetInlineRolesChan(name string, c chan *[]string) {
+	roles := g.GetInlineRoles(name)
+	c <- roles
+}
+
+func (g *GroupRoleGetter) GetAttachedRolesChan(name string, c chan *[]string) {
+	roles := g.GetAttachedRoles(name)
+	c <- roles
+}
+
+func (g *GroupRoleGetter) FetchRoles(groups ...*iam.Group) *[]string {
+	roles := make([]string, 0)
+	c := make(chan *[]string, 4)
+
+	for _, grp := range groups {
+		go g.GetInlineRolesChan(*grp.GroupName, c)
+		go g.GetAttachedRolesChan(*grp.GroupName, c)
+	}
+
+	for i := 0; i < len(groups)*2; i++ {
+		r := <-c
+		roles = append(roles, *r...)
 	}
 
 	return &roles

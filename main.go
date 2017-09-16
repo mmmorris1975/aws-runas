@@ -116,10 +116,9 @@ func main() {
 		if *verbose {
 			log.Printf("DEBUG USER: %s\n", userName)
 		}
-		// TODO process user roles (in parallel)
+
 		urg := UserRoleGetter{Client: s}
-		roles = append(roles, *urg.GetInlineRoles(userName)...)
-		roles = append(roles, *urg.GetAttachedRoles(userName)...)
+		roles = append(roles, *urg.FetchRoles(userName)...)
 
 		i := iam.ListGroupsForUserInput{UserName: &userName}
 		grg := GroupRoleGetter{Client: s}
@@ -131,14 +130,12 @@ func main() {
 				break
 			}
 
-			// TODO process group entries for role data (in parallel)
-			for x, grp := range g.Groups {
-				if *verbose {
+			if *verbose {
+				for x, grp := range g.Groups {
 					log.Printf("DEBUG GROUP[%d]: %s\n", x, *grp.GroupName)
 				}
-				roles = append(roles, *grg.GetInlineRoles(*grp.GroupName)...)
-				roles = append(roles, *grg.GetAttachedRoles(*grp.GroupName)...)
 			}
+			roles = append(roles, *grg.FetchRoles(g.Groups...)...)
 
 			truncated = *g.IsTruncated
 			if truncated {
