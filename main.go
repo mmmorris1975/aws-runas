@@ -12,9 +12,15 @@ import (
 	"runtime"
 	"sort"
 	"strings"
+	"time"
 )
 
-const VERSION = "0.0.1"
+const (
+	VERSION         = "0.0.1"
+	minDuration     = time.Duration(15) * time.Minute
+	maxDuration     = time.Duration(1) * time.Hour
+	defaultDuration = "1h"
+)
 
 var (
 	listRoles *bool
@@ -22,12 +28,14 @@ var (
 	verbose   *bool
 	version   *bool
 	profile   *string
+	duration  *string
 	cmd       *[]string
 )
 
 func init() {
 	const (
 		cmdDesc         = "Create an environment for interacting with the AWS API using an assumed role"
+		durationArgDesc = "duration of the retrieved session token"
 		listRoleArgDesc = "list role ARNs you are able to assume"
 		listMfaArgDesc  = "list the ARN of the MFA device associated with your account"
 		verboseArgDesc  = "print verbose/debug messages"
@@ -35,6 +43,7 @@ func init() {
 		cmdArgDesc      = "command to execute using configured profile"
 	)
 
+	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration).String()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
@@ -73,16 +82,21 @@ func dedupAndSort(ary *[]string) *[]string {
 
 func main() {
 	kingpin.Parse()
+	duration_d, _ := time.ParseDuration(*duration)
+
+	if duration_d < minDuration || duration_d > maxDuration {
+		log.Printf("WARNING Duration should be between %s and %s, using default of %s\n", minDuration.String(), maxDuration.String(), defaultDuration)
+		duration_d, _ = time.ParseDuration(defaultDuration)
+	}
+
+	// These are magic words to change AssumeRole credential expiration
+	stscreds.DefaultDuration = duration_d
 
 	if *verbose {
 		log.Printf("DEBUG PROFILE: %s\n", *profile)
 	}
 
-	// This seems to be the way in to get the MFA and AssumeRole config for a given profile.
-	// (At least without having to figure out all of the config locations in your own code!)
-	// However, since the underlying provider data isn't exported (not even stuff like Role
-	// or MFA token ARN), we can't manipulate the settings for the provider (specifically
-	// the cred expiration time for AssumeRole) before calling Get() to generate our credentials
+	// This is how to get the MFA and AssumeRole config for a given profile.
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState:       session.SharedConfigEnable,
 		Profile:                 *profile,
@@ -149,10 +163,11 @@ func main() {
 		}
 	default:
 		// MFA happens here, but does not cache credentials beyond the execution of the program.
-		// Also, no way to change default MFA cred expiration of 15min *le sigh*
-		// Can probably hack up a custom provider to cache the stuff, but there's no
-		// way to change that 15 min default expiration time without a patch to the SDK
+		// TODO - Can probably hack up a custom provider to cache the stuff
+		// the credentials struct doesn't provide expiration info (although they are returned by the provider)
+		// We'll probably want to add our own expiration field when we write to cache
 		creds, err := (*sess.Config).Credentials.Get()
+
 		if err != nil {
 			log.Fatalf("ERROR %v\n", err)
 		}
