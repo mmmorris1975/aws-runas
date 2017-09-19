@@ -2,13 +2,16 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -16,20 +19,21 @@ import (
 )
 
 const (
-	VERSION         = "0.0.1"
-	minDuration     = time.Duration(15) * time.Minute
-	maxDuration     = time.Duration(1) * time.Hour
-	defaultDuration = "1h"
+	VERSION     = "0.0.1"
+	minDuration = time.Duration(15) * time.Minute
+	maxDuration = time.Duration(1) * time.Hour
 )
 
 var (
-	listRoles *bool
-	listMfa   *bool
-	verbose   *bool
-	version   *bool
-	profile   *string
-	duration  *string
-	cmd       *[]string
+	listRoles       *bool
+	listMfa         *bool
+	verbose         *bool
+	version         *bool
+	profile         *string
+	duration        *time.Duration
+	cmd             *[]string
+	defaultDuration = maxDuration
+	cacheDir        = filepath.Join(filepath.Dir(defaults.SharedCredentialsFilename()), "go", "cache")
 )
 
 func init() {
@@ -43,7 +47,7 @@ func init() {
 		cmdArgDesc      = "command to execute using configured profile"
 	)
 
-	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration).String()
+	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration.String()).Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
@@ -82,15 +86,15 @@ func dedupAndSort(ary *[]string) *[]string {
 
 func main() {
 	kingpin.Parse()
-	duration_d, _ := time.ParseDuration(*duration)
 
-	if duration_d < minDuration || duration_d > maxDuration {
-		log.Printf("WARNING Duration should be between %s and %s, using default of %s\n", minDuration.String(), maxDuration.String(), defaultDuration)
-		duration_d, _ = time.ParseDuration(defaultDuration)
+	if *duration < minDuration || *duration > maxDuration {
+		log.Printf("WARNING Duration should be between %s and %s, using default of %s\n",
+			minDuration.String(), maxDuration.String(), defaultDuration.String())
+		duration = &defaultDuration
 	}
 
 	// These are magic words to change AssumeRole credential expiration
-	stscreds.DefaultDuration = duration_d
+	stscreds.DefaultDuration = *duration
 
 	if *verbose {
 		log.Printf("DEBUG PROFILE: %s\n", *profile)
@@ -162,19 +166,46 @@ func main() {
 			fmt.Printf("  %s\n", v)
 		}
 	default:
-		// MFA happens here, but does not cache credentials beyond the execution of the program.
-		// TODO - Can probably hack up a custom provider to cache the stuff
-		// the credentials struct doesn't provide expiration info (although they are returned by the provider)
-		// We'll probably want to add our own expiration field when we write to cache
-		creds, err := (*sess.Config).Credentials.Get()
+		var (
+			creds credentials.Value
+			err   error
+		)
 
-		if err != nil {
-			log.Fatalf("ERROR %v\n", err)
+		cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%s.json", *profile))
+		cacheProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
+		p := credentials.NewCredentials(cacheProvider)
+
+		// Let errors from Get() fall through, and force refreshing the creds
+		creds, err = p.Get()
+		if err != nil && *verbose {
+			log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
+		}
+
+		if p.IsExpired() {
+			// MFA happens here, leverage custom code to cache the credentials
+			expire_t := time.Now().Add(*duration)
+			creds, err = (*sess.Config).Credentials.Get()
+			if err != nil {
+				log.Fatalf("ERROR %v\n", err)
+			}
+
+			arc := AssumeRoleCredentials{
+				AccessKeyId:     creds.AccessKeyID,
+				SecretAccessKey: creds.SecretAccessKey,
+				SessionToken:    creds.SessionToken,
+				Expiration:      expire_t,
+			}
+
+			err = cacheProvider.Store(&arc)
+			if err != nil {
+				log.Printf("WARNING Unable to store credentials in cache: %+v\n", err)
+			}
 		}
 
 		if *verbose {
-			log.Printf("DEBUG %+v\n", creds)
+			log.Printf("DEBUG Credentials: %+v\n", creds)
 		}
+
 		os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 		os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 		if len(creds.SessionToken) > 0 {
