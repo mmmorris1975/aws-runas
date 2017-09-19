@@ -28,7 +28,12 @@ Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.10.41, and kingp
 
 ## Building and Installing
 
-TODO
+Running `go get github.com/mmmorris1975/go-aws-runas` should do the trick for downloading this code (and dependancies),
+and building the program on your local system.
+
+If you're looking to build a specific version of this tool, or use specific tags/commits of the required libraries, run
+`go get -d github.com/mmmorris1975/go-aws-runas` to only download the packages, then checkout the git tags/commits
+you're interested in on the necessary repos.
 
 ## Usage
     usage: go-aws-runas [<flags>] [<profile>] [<cmd>...]
