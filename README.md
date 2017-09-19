@@ -1,13 +1,14 @@
 # go-aws-runas
 
-A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/aws-runas "aws-runas").
+A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/aws-runas "aws-runas").  Unscientific testing
+indicates a 25-30% performance improvement over the python-based version of this tool
 
 It's still a command to provide a friendly way to do an AWS STS assumeRole operation so you can perform AWS API actions
 using a particular set of permissions.  Includes integration with roles requiring MFA authentication!  Works
 off of profile names configured in the AWS SDK configuration file.
 
 Like the original aws-runas, this program will cache the credentials returned for the assumed role.  However, unlike
-the original program, the cached credentials for this Go program is not compatible with the awscli, or pything version
+the original program, the cached credentials for this Go program are not compatible with the awscli, or python version
 of this program.
 
 If using MFA, when the credentials approach expiration you will be prompted to re-enter
