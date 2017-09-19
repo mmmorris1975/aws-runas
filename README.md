@@ -9,7 +9,8 @@ off of profile names configured in the AWS SDK configuration file.
 
 Like the original aws-runas, this program will cache the credentials returned for the assumed role.  However, unlike
 the original program, the cached credentials for this Go program are not compatible with the awscli, or python version
-of this program.
+of this program.  Another difference from the python version of this tool, you are also able to specify the duration
+of the assumed role credentials (but in all honesty, who is going to move from the default/maximum value of 1 hour?)
 
 If using MFA, when the credentials approach expiration you will be prompted to re-enter
 the MFA token value to refresh the credentials.  If MFA is not required for the assumed role, the credentials
