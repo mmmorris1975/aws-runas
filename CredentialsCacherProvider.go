@@ -65,9 +65,13 @@ func (p *CredentialsCacherProvider) Retrieve() (credentials.Value, error) {
 	val.SessionToken = p.Credentials.SessionToken
 
 	// Flag credentials to refresh after ~90% of the actual expiration time (6 minutes for default/max
-	// credential lifetime of 1h, 90 seconds for minimum credential lifetime of 15m)
-	window := time.Duration(time.Until(p.Credentials.Expiration).Nanoseconds()/10)
-	p.Expiry.SetExpiration(p.Credentials.Expiration, window)
+	// credential lifetime of 1h, 90 seconds for minimum credential lifetime of 15m), using the ModTime()
+	// of the credential cache file as the anchor for the calculation
+	cache_s, err := os.Stat(p.CacheFilename)
+	if err == nil {
+		window := p.Credentials.Expiration.Sub(cache_s.ModTime()) / 10
+		p.Expiry.SetExpiration(p.Credentials.Expiration, window)
+	}
 
 	return val, nil
 }
