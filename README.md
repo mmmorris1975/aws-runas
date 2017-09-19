@@ -28,15 +28,13 @@ Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.10.41, and kingp
 
 ## Building and Installing
 
-Running `go get github.com/mmmorris1975/go-aws-runas` should do the trick for downloading this code (and dependancies),
-and building the program on your local system.
-
-If you're looking to build a specific version of this tool, or use specific tags/commits of the required libraries, run
-`go get -d github.com/mmmorris1975/go-aws-runas` to only download the packages, then checkout the git tags/commits
-you're interested in on the necessary repos.
+Assuming you have a go workspace, and GOPATH environment variable set (https://golang.org/doc/code.html#Organization):
+Run `go get -d github.com/mmmorris1975/go-aws-runas`, and optionally check out any git tags/commits in the downloaded
+repos (if you're looking to compile specific versions of the code/libraries).  Then run `go build -o aws-runas github.com/mmmorris1975/go-aws-runas`
+to create the executable `aws-runas` in the current directory
 
 ## Usage
-    usage: go-aws-runas [<flags>] [<profile>] [<cmd>...]
+    usage: aws-runas [<flags>] [<profile>] [<cmd>...]
 
     Create an environment for interacting with the AWS API using an assumed role
 
