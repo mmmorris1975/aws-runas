@@ -7,10 +7,11 @@ It's still a command to provide a friendly way to do an AWS STS assumeRole opera
 using a particular set of permissions.  Includes integration with roles requiring MFA authentication!  Works
 off of profile names configured in the AWS SDK configuration file.
 
-Like the original aws-runas, this program will cache the credentials returned for the assumed role.  However, unlike
-the original program, the cached credentials for this Go program are not compatible with the awscli, or python version
-of this program.  Another difference from the python version of this tool, you are also able to specify the duration
-of the assumed role credentials (but in all honesty, who is going to move from the default/maximum value of 1 hour?)
+Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just take the
+compile executable and "go".  Like the original aws-runas, this program will cache the credentials returned for the
+assumed role.  However, unlike the original python program, the cached credentials for this Go program are not compatible
+with the awscli.  Another difference from the python version of this tool, you are also able to specify the duration of
+the assumed role credentials (but in all honesty, who is going to move from the default/maximum value of 1 hour?)
 
 If using MFA, when the credentials approach expiration you will be prompted to re-enter
 the MFA token value to refresh the credentials.  If MFA is not required for the assumed role, the credentials
