@@ -8,14 +8,15 @@ using a particular set of permissions.  Includes integration with roles requirin
 off of profile names configured in the AWS SDK configuration file.
 
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just take the
-compile executable and "go".  Like the original aws-runas, this program will cache the credentials returned for the
+compiled executable and "go".  Like the original aws-runas, this program will cache the credentials returned for the
 assumed role.  However, unlike the original python program, the cached credentials for this Go program are not compatible
 with the awscli.  Another difference from the python version of this tool, you are also able to specify the duration of
 the assumed role credentials (but in all honesty, who is going to move from the default/maximum value of 1 hour?)
 
-If using MFA, when the credentials approach expiration you will be prompted to re-enter
-the MFA token value to refresh the credentials.  If MFA is not required for the assumed role, the credentials
-should refresh automatically.
+If using MFA, when the credentials approach expiration you will be prompted to re-enter the MFA token value to refresh
+the credentials during the next execution of aws-runas. (Since this is a wrapper program, there's no way to know when
+credentials need to be refreshed in the middle of the called program execution) If MFA is not required for the assumed
+role, the credentials should refresh without user intervention when aws-runas is executed.
 
 See the following for more information on AWS SDK configuration files:
 
