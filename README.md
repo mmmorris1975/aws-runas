@@ -26,14 +26,15 @@ See the following for more information on AWS SDK configuration files:
 
 ## Build Requirements
 
-Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.10.41, and kingpin.v2
+Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.10.50, and kingpin.v2 v2.2.5
 
 ## Building and Installing
 
+_NOTE_ This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 Assuming you have a go workspace, and GOPATH environment variable set (https://golang.org/doc/code.html#Organization):
-Run `go get -d github.com/mmmorris1975/go-aws-runas`, and optionally check out any git tags/commits in the downloaded
-repos (if you're looking to compile specific versions of the code/libraries).  Then run `go build -o aws-runas github.com/mmmorris1975/go-aws-runas`
-to create the executable `aws-runas` in the current directory
+  1. Run `go get -d github.com/mmmorris1975/go-aws-runas`
+  2. Run `dep ensure` to check/retrieve dependencies
+  3. Then run `go build -o aws-runas github.com/mmmorris1975/go-aws-runas` to create the executable `aws-runas` in the current directory
 
 ## Usage
     usage: aws-runas [<flags>] [<profile>] [<cmd>...]
