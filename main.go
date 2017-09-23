@@ -19,20 +19,23 @@ import (
 )
 
 const (
-	VERSION     = "0.0.1"
+	VERSION     = "0.1.0"
 	minDuration = time.Duration(15) * time.Minute
-	maxDuration = time.Duration(1) * time.Hour
+	maxDuration = time.Duration(36) * time.Hour
 )
 
 var (
 	listRoles       *bool
 	listMfa         *bool
+	showExpire	*bool
+	sesCreds	*bool
+	refresh		*bool
 	verbose         *bool
 	version         *bool
 	profile         *string
 	duration        *time.Duration
 	cmd             *[]string
-	defaultDuration = maxDuration
+	defaultDuration = time.Duration(12) * time.Hour
 	cacheDir        = filepath.Join(filepath.Dir(defaults.SharedCredentialsFilename()), "go", "cache")
 )
 
@@ -42,6 +45,9 @@ func init() {
 		durationArgDesc = "duration of the retrieved session token"
 		listRoleArgDesc = "list role ARNs you are able to assume"
 		listMfaArgDesc  = "list the ARN of the MFA device associated with your account"
+		showExpArgDesc  = "Show token expiration time"
+		sesCredArgDesc  = "print eval()-able session token info"
+		refreshArgDesc  = "force a refresh of the cached credentials"
 		verboseArgDesc  = "print verbose/debug messages"
 		profileArgDesc  = "name of profile"
 		cmdArgDesc      = "command to execute using configured profile"
@@ -50,6 +56,9 @@ func init() {
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration.String()).Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
+	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
+	sesCreds = kingpin.Flag("session", sesCredArgDesc).Short('s').Bool()
+	refresh = kingpin.Flag("refresh", refreshArgDesc).Short('r').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
 	profile = kingpin.Arg("profile", profileArgDesc).Default("default").String()
 	cmd = CmdArg(kingpin.Arg("cmd", cmdArgDesc))
