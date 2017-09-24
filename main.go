@@ -7,10 +7,11 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	// "github.com/aws/aws-sdk-go/service/sts"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"log"
 	"os"
-	"os/exec"
+	// "os/exec"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -27,16 +28,16 @@ const (
 var (
 	listRoles       *bool
 	listMfa         *bool
-	showExpire	*bool
-	sesCreds	*bool
-	refresh		*bool
+	showExpire      *bool
+	sesCreds        *bool
+	refresh         *bool
 	verbose         *bool
 	version         *bool
 	profile         *string
 	duration        *time.Duration
 	cmd             *[]string
 	defaultDuration = time.Duration(12) * time.Hour
-	cacheDir        = filepath.Join(filepath.Dir(defaults.SharedCredentialsFilename()), "go", "cache")
+	cacheDir        = filepath.Dir(defaults.SharedCredentialsFilename())
 )
 
 func init() {
@@ -93,6 +94,19 @@ func dedupAndSort(ary *[]string) *[]string {
 	return &newAry
 }
 
+func printCredentials(creds credentials.Value) {
+	exportToken := "export"
+	switch runtime.GOOS {
+	case "windows":
+		exportToken = "set"
+	}
+
+	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
+	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
+}
+
 func main() {
 	kingpin.Parse()
 
@@ -103,7 +117,7 @@ func main() {
 	}
 
 	// These are magic words to change AssumeRole credential expiration
-	stscreds.DefaultDuration = *duration
+	stscreds.DefaultDuration = time.Duration(1) * time.Hour
 
 	if *verbose {
 		log.Printf("DEBUG PROFILE: %s\n", *profile)
@@ -175,77 +189,112 @@ func main() {
 			fmt.Printf("  %s\n", v)
 		}
 	default:
-		var (
-			creds credentials.Value
-			err   error
-		)
-
-		cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%s.json", *profile))
-		cacheProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
-		p := credentials.NewCredentials(cacheProvider)
-
-		// Let errors from Get() fall through, and force refreshing the creds
-		creds, err = p.Get()
-		if err != nil && *verbose {
-			log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
+		profile_cfg, err := new(AWSConfigParser).GetProfile(profile)
+		if err != nil {
+			log.Fatalf("ERROR unable to get configuration for profile '%s': %+v", *profile, err)
 		}
 
-		if p.IsExpired() {
-			// MFA happens here, leverage custom code to cache the credentials
-			expire_t := time.Now().Add(*duration)
-			creds, err = (*sess.Config).Credentials.Get()
-			if err != nil {
-				log.Fatalf("ERROR %v\n", err)
+		if *refresh {
+			// TODO do here? (delete cache file)
+			log.Println("Would refresh credentials here")
+		}
+		cacheFile := filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile_cfg.SourceProfile))
+		credProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
+		creds, err := credProvider.Retrieve()
+		if err != nil {
+			// TODO handle errror (previously we logged a warning and fell through to re-get creds)
+		}
+
+		if credProvider.IsExpired() {
+			// TODO Call GetSessionToken and cache results
+		}
+
+		if *showExpire {
+			exp_t := credProvider.ExpirationTime()
+			log.Printf("Session credentials will expire on %s (%s)", exp_t, exp_t.Sub(time.Now()).Round(time.Second))
+			os.Exit(0)
+		}
+
+		if *sesCreds {
+			printCredentials(creds)
+			os.Exit(0)
+		}
+
+		// TODO call AssumeRole using session token creds
+
+		/*
+			var (
+				creds credentials.Value
+				err   error
+			)
+
+			cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%s.json", *profile))
+			cacheProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
+			p := credentials.NewCredentials(cacheProvider)
+
+			// Let errors from Get() fall through, and force refreshing the creds
+			creds, err = p.Get()
+			if err != nil && *verbose {
+				log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
 			}
 
-			arc := AssumeRoleCredentials{
-				AccessKeyId:     creds.AccessKeyID,
-				SecretAccessKey: creds.SecretAccessKey,
-				SessionToken:    creds.SessionToken,
-				Expiration:      expire_t,
+			if p.IsExpired() {
+				// MFA happens here, leverage custom code to cache the credentials
+				expire_t := time.Now().Add(*duration)
+				creds, err = (*sess.Config).Credentials.Get()
+				if err != nil {
+					log.Fatalf("ERROR %v\n", err)
+				}
+
+				arc := AssumeRoleCredentials{
+					AccessKeyId:     creds.AccessKeyID,
+					SecretAccessKey: creds.SecretAccessKey,
+					SessionToken:    creds.SessionToken,
+					Expiration:      expire_t,
+				}
+
+				err = cacheProvider.Store(&arc)
+				if err != nil {
+					log.Printf("WARNING Unable to store credentials in cache: %+v\n", err)
+				}
 			}
 
-			err = cacheProvider.Store(&arc)
-			if err != nil {
-				log.Printf("WARNING Unable to store credentials in cache: %+v\n", err)
-			}
-		}
-
-		if *verbose {
-			log.Printf("DEBUG Credentials: %+v\n", creds)
-		}
-
-		os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-		os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-		if len(creds.SessionToken) > 0 {
-			os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
-			os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
-		}
-
-		if len(*cmd) > 1 {
 			if *verbose {
-				log.Printf("DEBUG CMD: %v\n", *cmd)
+				log.Printf("DEBUG Credentials: %+v\n", creds)
 			}
 
-			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
-			c.Stdin = os.Stdin
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
-
-			err := c.Run()
-			if err != nil {
-				log.Fatalf("ERROR %v\n", err)
-			}
-		} else {
-			exportToken := "export"
-			switch runtime.GOOS {
-			case "windows":
-				exportToken = "set"
+			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+			if len(creds.SessionToken) > 0 {
+				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
+				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
 			}
 
-			for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
-				fmt.Printf("%s %s='%s'\n", exportToken, v, os.Getenv(v))
+			if len(*cmd) > 1 {
+				if *verbose {
+					log.Printf("DEBUG CMD: %v\n", *cmd)
+				}
+
+				c := exec.Command((*cmd)[0], (*cmd)[1:]...)
+				c.Stdin = os.Stdin
+				c.Stdout = os.Stdout
+				c.Stderr = os.Stderr
+
+				err := c.Run()
+				if err != nil {
+					log.Fatalf("ERROR %v\n", err)
+				}
+			} else {
+				exportToken := "export"
+				switch runtime.GOOS {
+				case "windows":
+					exportToken = "set"
+				}
+
+				for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
+					fmt.Printf("%s %s='%s'\n", exportToken, v, os.Getenv(v))
+				}
 			}
-		}
+		*/
 	}
 }
