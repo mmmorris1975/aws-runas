@@ -231,6 +231,8 @@ func main() {
 			os.Remove(cacheFile)
 		}
 
+		// FIXME in theory couldn't we create a SessionTokenProvider which we could plug into credentials.NewCredentials
+		// to handle retrieving & caching of the credentials, and provide a way to refresh expired session tokens?
 		credProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
 		creds, err := credProvider.Retrieve()
 		if err != nil && *verbose {
