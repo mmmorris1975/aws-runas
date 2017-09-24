@@ -2,16 +2,18 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
-	// "github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"log"
 	"os"
-	// "os/exec"
+	"os/exec"
+	"os/user"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -107,6 +109,35 @@ func printCredentials(creds credentials.Value) {
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
+func doAssumeRole(ses_creds *credentials.Value, profile_cfg *AWSProfile) (*sts.Credentials, error) {
+	username := "__"
+	user, err := user.Current()
+	if err == nil {
+		username = user.Username
+	}
+
+	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
+	input := sts.AssumeRoleInput{
+		DurationSeconds: aws.Int64(int64(3600)),
+		RoleArn:         aws.String(profile_cfg.RoleArn),
+		RoleSessionName: sesName,
+	}
+
+	sesOpts := session.Options{
+		Profile:           profile_cfg.SourceProfile,
+		SharedConfigState: session.SharedConfigEnable,
+		Config:            aws.Config{Credentials: credentials.NewStaticCredentialsFromCreds(*ses_creds)},
+	}
+	s := session.Must(session.NewSessionWithOptions(sesOpts))
+	sts := sts.New(s)
+	res, err := sts.AssumeRole(&input)
+	if err != nil {
+		log.Fatalf("ERROR error calling AssumeRole: %+v", err)
+		return nil, err
+	}
+	return res.Credentials, nil
+}
+
 func main() {
 	kingpin.Parse()
 
@@ -194,19 +225,46 @@ func main() {
 			log.Fatalf("ERROR unable to get configuration for profile '%s': %+v", *profile, err)
 		}
 
-		if *refresh {
-			// TODO do here? (delete cache file)
-			log.Println("Would refresh credentials here")
-		}
 		cacheFile := filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile_cfg.SourceProfile))
+
+		if *refresh {
+			os.Remove(cacheFile)
+		}
+
 		credProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
 		creds, err := credProvider.Retrieve()
-		if err != nil {
-			// TODO handle errror (previously we logged a warning and fell through to re-get creds)
+		if err != nil && *verbose {
+			log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
 		}
 
 		if credProvider.IsExpired() {
-			// TODO Call GetSessionToken and cache results
+			ses_duration := int64(duration.Seconds())
+			input := sts.GetSessionTokenInput{DurationSeconds: &ses_duration}
+
+			mfa_serial := profile_cfg.MfaSerial
+			if len(mfa_serial) > 0 {
+				// Prompt for MFA code
+				var mfa_code string
+				fmt.Print("Enter MFA Code: ")
+				fmt.Scanln(&mfa_code)
+
+				input.SerialNumber = &mfa_serial
+				input.TokenCode = &mfa_code
+			}
+			s := sts.New(sess)
+			res, err := s.GetSessionToken(&input)
+			if err != nil {
+				log.Fatalf("ERROR unable to get session token: %+v", err)
+			}
+
+			c := CacheableCredentials{
+				AccessKeyId:     *res.Credentials.AccessKeyId,
+				SecretAccessKey: *res.Credentials.SecretAccessKey,
+				SessionToken:    *res.Credentials.SessionToken,
+				Expiration:      (*res.Credentials.Expiration).Unix(),
+			}
+			credProvider.Store(&c)
+			creds, _ = credProvider.Retrieve()
 		}
 
 		if *showExpire {
@@ -220,81 +278,39 @@ func main() {
 			os.Exit(0)
 		}
 
-		// TODO call AssumeRole using session token creds
+		if *verbose {
+			log.Printf("DEBUG Credentials: %+v\n", creds)
+		}
 
-		/*
-			var (
-				creds credentials.Value
-				err   error
-			)
+		ar_creds, err := doAssumeRole(&creds, profile_cfg)
+		if err != nil {
+			log.Fatalf("ERROR error doing AssumeRole: %+v", err)
+		}
 
-			cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%s.json", *profile))
-			cacheProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
-			p := credentials.NewCredentials(cacheProvider)
-
-			// Let errors from Get() fall through, and force refreshing the creds
-			creds, err = p.Get()
-			if err != nil && *verbose {
-				log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
-			}
-
-			if p.IsExpired() {
-				// MFA happens here, leverage custom code to cache the credentials
-				expire_t := time.Now().Add(*duration)
-				creds, err = (*sess.Config).Credentials.Get()
-				if err != nil {
-					log.Fatalf("ERROR %v\n", err)
-				}
-
-				arc := AssumeRoleCredentials{
-					AccessKeyId:     creds.AccessKeyID,
-					SecretAccessKey: creds.SecretAccessKey,
-					SessionToken:    creds.SessionToken,
-					Expiration:      expire_t,
-				}
-
-				err = cacheProvider.Store(&arc)
-				if err != nil {
-					log.Printf("WARNING Unable to store credentials in cache: %+v\n", err)
-				}
-			}
-
-			if *verbose {
-				log.Printf("DEBUG Credentials: %+v\n", creds)
-			}
-
-			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+		if len(*cmd) > 1 {
+			os.Setenv("AWS_ACCESS_KEY_ID", *ar_creds.AccessKeyId)
+			os.Setenv("AWS_SECRET_ACCESS_KEY", *ar_creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
-				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
-				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
+				os.Setenv("AWS_SESSION_TOKEN", *ar_creds.SessionToken)
+				os.Setenv("AWS_SECURITY_TOKEN", *ar_creds.SessionToken)
 			}
 
-			if len(*cmd) > 1 {
-				if *verbose {
-					log.Printf("DEBUG CMD: %v\n", *cmd)
-				}
+			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
+			c.Stdin = os.Stdin
+			c.Stdout = os.Stdout
+			c.Stderr = os.Stderr
 
-				c := exec.Command((*cmd)[0], (*cmd)[1:]...)
-				c.Stdin = os.Stdin
-				c.Stdout = os.Stdout
-				c.Stderr = os.Stderr
-
-				err := c.Run()
-				if err != nil {
-					log.Fatalf("ERROR %v\n", err)
-				}
-			} else {
-				exportToken := "export"
-				switch runtime.GOOS {
-				case "windows":
-					exportToken = "set"
-				}
-
-				for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
-					fmt.Printf("%s %s='%s'\n", exportToken, v, os.Getenv(v))
-				}
+			err := c.Run()
+			if err != nil {
+				log.Fatalf("ERROR %v\n", err)
 			}
-		*/
+		} else {
+			// AssumeRole credentials are sts.Credentials, convert to credentials.Value to print
+			printCredentials(credentials.Value{
+				AccessKeyID:     *ar_creds.AccessKeyId,
+				SecretAccessKey: *ar_creds.SecretAccessKey,
+				SessionToken:    *ar_creds.SessionToken,
+			})
+		}
 	}
 }
