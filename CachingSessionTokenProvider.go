@@ -76,7 +76,7 @@ func (p *CachingSessionTokenProvider) IsExpired() bool {
 	return expired
 }
 
-func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (*sts.Credentials, error) {
+func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (credentials.Value, error) {
 	username := "__"
 	user, err := user.Current()
 	if err == nil {
@@ -92,7 +92,7 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (*sts.
 
 	creds, err := p.Retrieve()
 	if err != nil {
-		return nil, err
+		return credentials.Value{}, err
 	}
 
 	sesOpts := session.Options{
@@ -104,8 +104,15 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (*sts.
 	sts := sts.New(s)
 	res, err := sts.AssumeRole(&input)
 	if err != nil {
-		return nil, err
+		return credentials.Value{}, err
 	}
 
-	return res.Credentials, nil
+	c := res.Credentials
+	v := credentials.Value{
+		AccessKeyID: *c.AccessKeyId,
+		SecretAccessKey: *c.SecretAccessKey,
+		SessionToken: *c.SessionToken,
+		ProviderName: "CachingSessionTokenProvider",
+	}
+	return v, nil
 }
