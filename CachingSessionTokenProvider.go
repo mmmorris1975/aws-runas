@@ -109,10 +109,10 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (crede
 
 	c := res.Credentials
 	v := credentials.Value{
-		AccessKeyID: *c.AccessKeyId,
+		AccessKeyID:     *c.AccessKeyId,
 		SecretAccessKey: *c.SecretAccessKey,
-		SessionToken: *c.SessionToken,
-		ProviderName: "CachingSessionTokenProvider",
+		SessionToken:    *c.SessionToken,
+		ProviderName:    "CachingSessionTokenProvider",
 	}
 	return v, nil
 }
