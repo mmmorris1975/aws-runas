@@ -2,18 +2,15 @@ package main
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"log"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
 	"runtime"
 	"sort"
@@ -109,35 +106,6 @@ func printCredentials(creds credentials.Value) {
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
-func doAssumeRole(ses_creds *credentials.Value, profile_cfg *AWSProfile) (*sts.Credentials, error) {
-	username := "__"
-	user, err := user.Current()
-	if err == nil {
-		username = user.Username
-	}
-
-	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
-	input := sts.AssumeRoleInput{
-		DurationSeconds: aws.Int64(int64(3600)),
-		RoleArn:         aws.String(profile_cfg.RoleArn),
-		RoleSessionName: sesName,
-	}
-
-	sesOpts := session.Options{
-		Profile:           profile_cfg.SourceProfile,
-		SharedConfigState: session.SharedConfigEnable,
-		Config:            aws.Config{Credentials: credentials.NewStaticCredentialsFromCreds(*ses_creds)},
-	}
-	s := session.Must(session.NewSessionWithOptions(sesOpts))
-	sts := sts.New(s)
-	res, err := sts.AssumeRole(&input)
-	if err != nil {
-		log.Fatalf("ERROR error calling AssumeRole: %+v", err)
-		return nil, err
-	}
-	return res.Credentials, nil
-}
-
 func main() {
 	kingpin.Parse()
 
@@ -225,48 +193,23 @@ func main() {
 			log.Fatalf("ERROR unable to get configuration for profile '%s': %+v", *profile, err)
 		}
 
-		cacheFile := filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile_cfg.SourceProfile))
+		credProvider := CachingSessionTokenProvider{
+			Profile:  profile_cfg.SourceProfile,
+			Duration: *duration,
+		}
+
+		if len(profile_cfg.MfaSerial) > 0 {
+			credProvider.MfaSerial = profile_cfg.MfaSerial
+		}
 
 		if *refresh {
-			os.Remove(cacheFile)
+			os.Remove(credProvider.CacheFile())
 		}
 
-		// FIXME in theory couldn't we create a SessionTokenProvider which we could plug into credentials.NewCredentials
-		// to handle retrieving & caching of the credentials, and provide a way to refresh expired session tokens?
-		credProvider := &CredentialsCacherProvider{CacheFilename: cacheFile}
-		creds, err := credProvider.Retrieve()
-		if err != nil && *verbose {
-			log.Printf("DEBUG WARNING Error fetching cached credentials: %+v\n", err)
-		}
-
-		if credProvider.IsExpired() {
-			ses_duration := int64(duration.Seconds())
-			input := sts.GetSessionTokenInput{DurationSeconds: &ses_duration}
-
-			mfa_serial := profile_cfg.MfaSerial
-			if len(mfa_serial) > 0 {
-				// Prompt for MFA code
-				var mfa_code string
-				fmt.Print("Enter MFA Code: ")
-				fmt.Scanln(&mfa_code)
-
-				input.SerialNumber = &mfa_serial
-				input.TokenCode = &mfa_code
-			}
-			s := sts.New(sess)
-			res, err := s.GetSessionToken(&input)
-			if err != nil {
-				log.Fatalf("ERROR unable to get session token: %+v", err)
-			}
-
-			c := CacheableCredentials{
-				AccessKeyId:     *res.Credentials.AccessKeyId,
-				SecretAccessKey: *res.Credentials.SecretAccessKey,
-				SessionToken:    *res.Credentials.SessionToken,
-				Expiration:      (*res.Credentials.Expiration).Unix(),
-			}
-			credProvider.Store(&c)
-			creds, _ = credProvider.Retrieve()
+		p := credentials.NewCredentials(&credProvider)
+		creds, err := p.Get()
+		if err != nil {
+			log.Fatalf("ERROR unable to get SessionToken credentials: +%v", err)
 		}
 
 		if *showExpire {
@@ -280,11 +223,7 @@ func main() {
 			os.Exit(0)
 		}
 
-		if *verbose {
-			log.Printf("DEBUG Credentials: %+v\n", creds)
-		}
-
-		ar_creds, err := doAssumeRole(&creds, profile_cfg)
+		ar_creds, err := credProvider.AssumeRole(profile_cfg)
 		if err != nil {
 			log.Fatalf("ERROR error doing AssumeRole: %+v", err)
 		}
