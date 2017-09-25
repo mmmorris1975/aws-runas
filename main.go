@@ -46,7 +46,7 @@ func init() {
 		listRoleArgDesc = "list role ARNs you are able to assume"
 		listMfaArgDesc  = "list the ARN of the MFA device associated with your account"
 		showExpArgDesc  = "Show token expiration time"
-		sesCredArgDesc  = "print eval()-able session token info"
+		sesCredArgDesc  = "print eval()-able session token info, or run command using session token credentials"
 		refreshArgDesc  = "force a refresh of the cached credentials"
 		verboseArgDesc  = "print verbose/debug messages"
 		profileArgDesc  = "name of profile"
@@ -218,22 +218,19 @@ func main() {
 			os.Exit(0)
 		}
 
-		if *sesCreds {
-			printCredentials(creds)
-			os.Exit(0)
-		}
-
-		ar_creds, err := credProvider.AssumeRole(profile_cfg)
-		if err != nil {
-			log.Fatalf("ERROR error doing AssumeRole: %+v", err)
+		if !*sesCreds {
+			creds, err = credProvider.AssumeRole(profile_cfg)
+			if err != nil {
+				log.Fatalf("ERROR error doing AssumeRole: %+v", err)
+			}
 		}
 
 		if len(*cmd) > 1 {
-			os.Setenv("AWS_ACCESS_KEY_ID", *ar_creds.AccessKeyId)
-			os.Setenv("AWS_SECRET_ACCESS_KEY", *ar_creds.SecretAccessKey)
+			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
-				os.Setenv("AWS_SESSION_TOKEN", *ar_creds.SessionToken)
-				os.Setenv("AWS_SECURITY_TOKEN", *ar_creds.SessionToken)
+				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
+				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
 			}
 
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
@@ -246,12 +243,7 @@ func main() {
 				log.Fatalf("ERROR %v\n", err)
 			}
 		} else {
-			// AssumeRole credentials are sts.Credentials, convert to credentials.Value to print
-			printCredentials(credentials.Value{
-				AccessKeyID:     *ar_creds.AccessKeyId,
-				SecretAccessKey: *ar_creds.SecretAccessKey,
-				SessionToken:    *ar_creds.SessionToken,
-			})
+			printCredentials(creds)
 		}
 	}
 }
