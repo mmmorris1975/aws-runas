@@ -56,6 +56,24 @@ Example:
     role_arn = arn:aws:iam::987654321098:role/admin_role
     mfa_serial = arn:aws:iam::123456789098:mfa/iam_user
 
+### Required AWS permissions
+
+The user's credentials used by this program will need access to call the following AWS APIs to function:
+
+  * AssumeRole (to get the credentials for running under an assumed role)
+  * GetSessionToken (to get the session token credentials for running a command or calling AssumeRole)
+  * ListMFADevices (get MFA devices for `-m` option)
+
+The following API calls are used by the `-l` option to find assume-able roles for the calling user:
+  * GetUser
+  * ListGroupsForUser
+  * GetUserPolicy
+  * ListUserPolicies
+  * GetGroupPolicies
+  * ListGroupPolicies
+  * GetPolicy
+  * GetPolicyVersion
+
 ## Usage
     usage: go-aws-runas [<flags>] [<profile>] [<cmd>...]
 
