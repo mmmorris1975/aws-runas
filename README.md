@@ -75,7 +75,7 @@ The following API calls are used by the `-l` option to find assume-able roles fo
   * GetPolicyVersion
 
 ## Usage
-    usage: go-aws-runas [<flags>] [<profile>] [<cmd>...]
+    usage: aws-runas [<flags>] [<profile>] [<cmd>...]
 
     Create an environment for interacting with the AWS API using an assumed role
 
@@ -93,6 +93,10 @@ The following API calls are used by the `-l` option to find assume-able roles fo
     Args:
       [<profile>]  name of profile
       [<cmd>]      command to execute using configured profile
+
+*NOTE:* When running a command which includes options using '-' or '--', you may need to modify the aws-runas command, to
+signal to aws-runas that the options should not be processed by aws-runs, but passed to the command instead:
+`aws-runas my-profile -- my command --with --options`
 
 ### Listing available roles
 
