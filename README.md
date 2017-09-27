@@ -40,6 +40,8 @@ Assuming you have a go workspace, and GOPATH environment variable set (https://g
   2. Run `dep ensure` to check/retrieve dependencies
   3. Then run `go build -o aws-runas github.com/mmmorris1975/go-aws-runas` to create the executable `aws-runas` in the current directory
 
+Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/go-aws-runas/releases/latest)
+
 ## Configuration
 
 To configure a profile in the .aws/config file for using AssumeRole, make sure the `source_profile` and `role_arn` attributes are
