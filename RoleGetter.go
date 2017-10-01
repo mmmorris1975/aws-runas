@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"log"
 	"net/url"
+	"github.com/mbndr/logo"
 )
 
 type RoleGetter interface {
@@ -64,27 +64,28 @@ func findRoles(data interface{}) *[]string {
 	return &roles
 }
 
-func parsePolicy(p *string) *[]string {
+func parsePolicy(p *string) (*[]string, error) {
 	roles := make([]string, 0)
 	polJson := make(map[string]interface{})
 
 	parsedDoc, err := url.QueryUnescape(*p)
 	if err != nil {
-		log.Printf("%v", err)
-		return &roles
+		return &roles, err
 	}
 
 	json.Unmarshal([]byte(parsedDoc), &polJson)
 	roles = *findRoles(polJson["Statement"])
 
-	return &roles
+	return &roles, nil
 }
 
 type UserRoleGetter struct {
 	Client *iam.IAM
+	Logger *logo.Logger
 }
 
 func (u *UserRoleGetter) GetInlineRoles(name string) *[]string {
+	u.Logger.Debugf("In GetInlineRoles() with param: %s", name)
 	roles := make([]string, 0)
 	listPolInput := iam.ListUserPoliciesInput{UserName: &name}
 	getPolInput := iam.GetUserPolicyInput{UserName: &name}
@@ -93,7 +94,7 @@ func (u *UserRoleGetter) GetInlineRoles(name string) *[]string {
 	for truncated {
 		polList, err := u.Client.ListUserPolicies(&listPolInput)
 		if err != nil {
-			log.Printf("ERROR %v\n", err)
+			u.Logger.Errorf("Error calling ListUserPolicies(): %v", err)
 			break
 		}
 
@@ -101,10 +102,17 @@ func (u *UserRoleGetter) GetInlineRoles(name string) *[]string {
 			getPolInput.PolicyName = p
 			res, err := u.Client.GetUserPolicy(&getPolInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				u.Logger.Errorf("Error calling GetUserPolicy(): %v", err)
 				continue
 			}
-			roles = append(roles, *parsePolicy(res.PolicyDocument)...)
+
+			r, err := parsePolicy(res.PolicyDocument)
+			if err != nil {
+				u.Logger.Errorf("Error parsing policy document: %v", err)
+				continue
+			}
+
+			roles = append(roles, *r...)
 		}
 
 		truncated = *polList.IsTruncated
@@ -113,10 +121,12 @@ func (u *UserRoleGetter) GetInlineRoles(name string) *[]string {
 		}
 	}
 
+	u.Logger.Debugf("USER INLINE ROLES: %+v", roles)
 	return &roles
 }
 
 func (u *UserRoleGetter) GetAttachedRoles(name string) *[]string {
+	u.Logger.Debugf("In GetAttachedRoles() with param: %s", name)
 	roles := make([]string, 0)
 	listPolInput := iam.ListAttachedUserPoliciesInput{UserName: &name}
 
@@ -124,7 +134,7 @@ func (u *UserRoleGetter) GetAttachedRoles(name string) *[]string {
 	for truncated {
 		polList, err := u.Client.ListAttachedUserPolicies(&listPolInput)
 		if err != nil {
-			log.Printf("ERROR %v\n", err)
+			u.Logger.Errorf("Error calling ListAttachedUserPolicies(): %v", err)
 			break
 		}
 
@@ -132,18 +142,24 @@ func (u *UserRoleGetter) GetAttachedRoles(name string) *[]string {
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := u.Client.GetPolicy(&getPolInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				u.Logger.Errorf("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getPolVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getPolVerRes, err := u.Client.GetPolicyVersion(&getPolVerInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				u.Logger.Errorf("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
-			roles = append(roles, *parsePolicy(getPolVerRes.PolicyVersion.Document)...)
+			r, err := parsePolicy(getPolVerRes.PolicyVersion.Document)
+			if err != nil {
+				u.Logger.Errorf("Error parsing policy document: %v", err)
+				continue
+			}
+
+			roles = append(roles, *r...)
 		}
 
 		truncated = *polList.IsTruncated
@@ -152,6 +168,7 @@ func (u *UserRoleGetter) GetAttachedRoles(name string) *[]string {
 		}
 	}
 
+	u.Logger.Debugf("USER ATTACHED ROLES: %+v", roles)
 	return &roles
 }
 
@@ -166,6 +183,7 @@ func (u *UserRoleGetter) GetAttachedRolesChan(name string, c chan *[]string) {
 }
 
 func (u *UserRoleGetter) FetchRoles(name string) *[]string {
+	u.Logger.Debugf("In FetchRoles() with param: %s", name)
 	roles := make([]string, 0)
 	c := make(chan *[]string)
 
@@ -177,14 +195,17 @@ func (u *UserRoleGetter) FetchRoles(name string) *[]string {
 		roles = append(roles, *r...)
 	}
 
+	u.Logger.Debugf("ALL USER ROLES: %+v", roles)
 	return &roles
 }
 
 type GroupRoleGetter struct {
 	Client *iam.IAM
+	Logger *logo.Logger
 }
 
 func (g *GroupRoleGetter) GetInlineRoles(name string) *[]string {
+	g.Logger.Debugf("In GetInlineRoles() with param: %s", name)
 	roles := make([]string, 0)
 	listPolInput := iam.ListGroupPoliciesInput{GroupName: &name}
 	getPolInput := iam.GetGroupPolicyInput{GroupName: &name}
@@ -193,7 +214,7 @@ func (g *GroupRoleGetter) GetInlineRoles(name string) *[]string {
 	for truncated {
 		polList, err := g.Client.ListGroupPolicies(&listPolInput)
 		if err != nil {
-			log.Printf("ERROR %v\n", err)
+			g.Logger.Errorf("Error calling ListGroupPolicies(): %v", err)
 			break
 		}
 
@@ -201,10 +222,17 @@ func (g *GroupRoleGetter) GetInlineRoles(name string) *[]string {
 			getPolInput.PolicyName = p
 			res, err := g.Client.GetGroupPolicy(&getPolInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				g.Logger.Errorf("Error calling GetGroupPolicy(): %v", err)
 				continue
 			}
-			roles = append(roles, *parsePolicy(res.PolicyDocument)...)
+
+			r, err := parsePolicy(res.PolicyDocument)
+			if err != nil {
+				g.Logger.Errorf("Error parsing policy document: %v", err)
+				continue
+			}
+
+			roles = append(roles, *r...)
 		}
 
 		truncated = *polList.IsTruncated
@@ -213,10 +241,12 @@ func (g *GroupRoleGetter) GetInlineRoles(name string) *[]string {
 		}
 	}
 
+	g.Logger.Debugf("GROUP INLINE ROLES: %+v", roles)
 	return &roles
 }
 
 func (g *GroupRoleGetter) GetAttachedRoles(name string) *[]string {
+	g.Logger.Debugf("In GetAttachedRoles() with param: %s", name)
 	roles := make([]string, 0)
 	listPolInput := iam.ListAttachedGroupPoliciesInput{GroupName: &name}
 
@@ -224,7 +254,7 @@ func (g *GroupRoleGetter) GetAttachedRoles(name string) *[]string {
 	for truncated {
 		polList, err := g.Client.ListAttachedGroupPolicies(&listPolInput)
 		if err != nil {
-			log.Printf("ERROR %v\n", err)
+			g.Logger.Errorf("Error calling ListAttachedGroupPolicies(): %v", err)
 			break
 		}
 
@@ -232,18 +262,24 @@ func (g *GroupRoleGetter) GetAttachedRoles(name string) *[]string {
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := g.Client.GetPolicy(&getPolInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				g.Logger.Errorf("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getPolVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getPolVerRes, err := g.Client.GetPolicyVersion(&getPolVerInput)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				g.Logger.Errorf("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
-			roles = append(roles, *parsePolicy(getPolVerRes.PolicyVersion.Document)...)
+			r, err := parsePolicy(getPolVerRes.PolicyVersion.Document)
+			if err != nil {
+				g.Logger.Errorf("Error parsing policy document: %v", err)
+				continue
+			}
+
+			roles = append(roles, *r...)
 		}
 
 		truncated = *polList.IsTruncated
@@ -252,6 +288,7 @@ func (g *GroupRoleGetter) GetAttachedRoles(name string) *[]string {
 		}
 	}
 
+	g.Logger.Debug("GROUP ATTACHED ROLES: %+v", roles)
 	return &roles
 }
 
@@ -266,6 +303,7 @@ func (g *GroupRoleGetter) GetAttachedRolesChan(name string, c chan *[]string) {
 }
 
 func (g *GroupRoleGetter) FetchRoles(groups ...*iam.Group) *[]string {
+	g.Logger.Debugf("In FetchRoles() with params: %v", groups)
 	roles := make([]string, 0)
 	c := make(chan *[]string, 4)
 
@@ -279,5 +317,6 @@ func (g *GroupRoleGetter) FetchRoles(groups ...*iam.Group) *[]string {
 		roles = append(roles, *r...)
 	}
 
+	g.Logger.Debugf("ALL GROUP ROLES: %v", roles)
 	return &roles
 }

@@ -158,11 +158,13 @@ func main() {
 		userName := *u.User.UserName
 		log.Debugf("USER: %s", userName)
 
-		urg := UserRoleGetter{Client: s}
+		urg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.UserRoleGetter", true)
+		urg := UserRoleGetter{Client: s, Logger: urg_logger}
 		roles = append(roles, *urg.FetchRoles(userName)...)
 
 		i := iam.ListGroupsForUserInput{UserName: &userName}
-		grg := GroupRoleGetter{Client: s}
+		grg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.GroupRoleGetter", true)
+		grg := GroupRoleGetter{Client: s, Logger: grg_logger}
 		truncated := true
 		for truncated {
 			g, err := s.ListGroupsForUser(&i)
