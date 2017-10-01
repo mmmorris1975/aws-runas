@@ -141,7 +141,7 @@ func main() {
 
 		res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
 		if err != nil {
-			log.Fatalf("%v", err)
+			log.Fatalf("Error listing MFA devices: %v", err)
 		}
 
 		fmt.Printf("%s\n", *res.MFADevices[0].SerialNumber)
@@ -152,7 +152,7 @@ func main() {
 
 		u, err := s.GetUser(&iam.GetUserInput{})
 		if err != nil {
-			log.Fatalf("%v", err)
+			log.Fatalf("Error getting IAM user info: %v", err)
 		}
 
 		userName := *u.User.UserName
@@ -167,7 +167,7 @@ func main() {
 		for truncated {
 			g, err := s.ListGroupsForUser(&i)
 			if err != nil {
-				log.Errorf("%v", err)
+				log.Errorf("Error getting user's IAM group list: %v", err)
 				break
 			}
 
@@ -192,7 +192,7 @@ func main() {
 		cfgParser := AWSConfigParser{Logger: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true)}
 		profile_cfg, err := cfgParser.GetProfile(profile)
 		if err != nil {
-			log.Fatalf("unable to get configuration for profile '%s': %+v", *profile, err)
+			log.Fatalf("Unable to get configuration for profile '%s': %+v", *profile, err)
 		}
 
 		credProvider := CachingSessionTokenProvider{
@@ -212,7 +212,7 @@ func main() {
 		p := credentials.NewCredentials(&credProvider)
 		creds, err := p.Get()
 		if err != nil {
-			log.Fatalf("unable to get SessionToken credentials: +%v", err)
+			log.Fatalf("Unable to get SessionToken credentials: +%v", err)
 		}
 
 		if *showExpire {
@@ -224,7 +224,7 @@ func main() {
 		if !*sesCreds {
 			creds, err = credProvider.AssumeRole(profile_cfg)
 			if err != nil {
-				log.Fatalf("error doing AssumeRole: %+v", err)
+				log.Fatalf("Error doing AssumeRole: %+v", err)
 			}
 		}
 
@@ -243,6 +243,7 @@ func main() {
 
 			err := c.Run()
 			if err != nil {
+				log.Debug("Error running command")
 				log.Fatalf("%v", err)
 			}
 		} else {
