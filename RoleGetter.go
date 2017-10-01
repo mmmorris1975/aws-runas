@@ -3,8 +3,8 @@ package main
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"net/url"
 	"github.com/mbndr/logo"
+	"net/url"
 )
 
 type RoleGetter interface {

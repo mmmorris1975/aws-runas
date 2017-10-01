@@ -45,18 +45,30 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 ## Configuration
 
 To configure a profile in the .aws/config file for using AssumeRole, make sure the `source_profile` and `role_arn` attributes are
-set for the profile.  The `role_arn` attribute will determine which role will be assumed for that profile.  The `source_profile`
-attribute specifies the name of the profile which will be used to perform the GetSessionToken operation.
+set for the desired profile.  The `role_arn` attribute will determine which role to assume for that profile.  The `source_profile`
+attribute specifies the name of the profile which will be used to perform the GetSessionToken operation.  If you wish to supply an MFA
+code when doing the GetSessionToken call, you **MUST** specify the `mfa_serial` attribute in the profile referenced by `source_profile`
 
 If the `mfa_serial` attribute is present in the profile configuration, That MFA device will be used when requesting or refreshing
-the session token.
+the session token.  If the attribute is not found in the profile configuration, the program will attempt to find it in the section
+referenced by `source_profile`, in an attempt to simplify the config file.  (NOTE: this is a non-standard configuration, and may break
+other tools which require the mfa_serial attribute inside the profile config to make the AssumeRole API call, [ex: awscli])
 
-Example:
+Example (compatible with awscli `--profile` option):
 
     [profile admin]
     source_profile = default
     role_arn = arn:aws:iam::987654321098:role/admin_role
     mfa_serial = arn:aws:iam::123456789098:mfa/iam_user
+
+Example (NOT compatible with awscli `--profile` option, if MFA requred for AssumeRole):
+
+    [default]
+    mfa_serial = arn:aws:iam::123456789098:mfa/iam_user
+
+    [profile admin]
+    source_profile = default
+    role_arn = arn:aws:iam::987654321098:role/admin_role
 
 ### Required AWS permissions
 
