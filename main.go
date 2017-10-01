@@ -37,7 +37,7 @@ var (
 	cmd             *[]string
 	defaultDuration = time.Duration(12) * time.Hour
 	cacheDir        = filepath.Dir(defaults.SharedCredentialsFilename())
-	logLevel	= logo.WARN
+	logLevel        = logo.WARN
 )
 
 func init() {
@@ -189,7 +189,7 @@ func main() {
 			fmt.Printf("  %s\n", v)
 		}
 	default:
-		cfgParser := AWSConfigParser{ Log: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true) }
+		cfgParser := AWSConfigParser{Logger: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true)}
 		profile_cfg, err := cfgParser.GetProfile(profile)
 		if err != nil {
 			log.Fatalf("unable to get configuration for profile '%s': %+v", *profile, err)
@@ -198,6 +198,7 @@ func main() {
 		credProvider := CachingSessionTokenProvider{
 			Profile:  profile_cfg.SourceProfile,
 			Duration: *duration,
+			Logger:   logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.CachingSessionTokenProvider", true),
 		}
 
 		if len(profile_cfg.MfaSerial) > 0 {
