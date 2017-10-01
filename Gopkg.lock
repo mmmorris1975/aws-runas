@@ -32,6 +32,11 @@
   version = "0.2.2"
 
 [[projects]]
+  name = "github.com/mbndr/logo"
+  packages = ["."]
+  revision = "2cf79af92583dac1e32304d4eb833e8be68aa1e7"
+
+[[projects]]
   name = "gopkg.in/alecthomas/kingpin.v2"
   packages = ["."]
   revision = "1087e65c9441605df944fb12c33f0fe7072d18ca"
@@ -40,6 +45,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "e6672a163812697158446da089dc6dbe29fc8c66cc33c2c125a0e640b9804b25"
+  inputs-digest = "4a8e91fc2d4adf71cfa0434bde8ca76009ebb5beaf5a94f0dceb76fd31ff0199"
   solver-name = "gps-cdcl"
   solver-version = 1
