@@ -7,8 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/mbndr/logo"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +37,7 @@ var (
 	cmd             *[]string
 	defaultDuration = time.Duration(12) * time.Hour
 	cacheDir        = filepath.Dir(defaults.SharedCredentialsFilename())
+	logLevel	= logo.WARN
 )
 
 func init() {
@@ -109,8 +110,14 @@ func printCredentials(creds credentials.Value) {
 func main() {
 	kingpin.Parse()
 
+	if *verbose {
+		logLevel = logo.DEBUG
+	}
+
+	log := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.main", true)
+
 	if *duration < minDuration || *duration > maxDuration {
-		log.Printf("WARNING Duration should be between %s and %s, using default of %s\n",
+		log.Warnf("Duration should be between %s and %s, using default of %s",
 			minDuration.String(), maxDuration.String(), defaultDuration.String())
 		duration = &defaultDuration
 	}
@@ -118,9 +125,7 @@ func main() {
 	// These are magic words to change AssumeRole credential expiration
 	stscreds.DefaultDuration = time.Duration(1) * time.Hour
 
-	if *verbose {
-		log.Printf("DEBUG PROFILE: %s\n", *profile)
-	}
+	log.Debugf("PROFILE: %s", *profile)
 
 	// This is how to get the MFA and AssumeRole config for a given profile.
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
@@ -131,31 +136,27 @@ func main() {
 
 	switch {
 	case *listMfa:
-		if *verbose {
-			log.Println("DEBUG List MFA")
-		}
-
+		log.Debug("List MFA")
 		s := iam.New(sess)
+
 		res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
 		if err != nil {
-			log.Fatalf("ERROR %v\n", err)
+			log.Fatalf("%v", err)
 		}
+
 		fmt.Printf("%s\n", *res.MFADevices[0].SerialNumber)
 	case *listRoles:
+		log.Debug("List Roles")
 		roles := make([]string, 0)
-		if *verbose {
-			log.Println("DEBUG List Roles")
-		}
 		s := iam.New(sess)
 
 		u, err := s.GetUser(&iam.GetUserInput{})
 		if err != nil {
-			log.Fatalf("ERROR %v\n", err)
+			log.Fatalf("%v", err)
 		}
+
 		userName := *u.User.UserName
-		if *verbose {
-			log.Printf("DEBUG USER: %s\n", userName)
-		}
+		log.Debugf("USER: %s", userName)
 
 		urg := UserRoleGetter{Client: s}
 		roles = append(roles, *urg.FetchRoles(userName)...)
@@ -166,13 +167,13 @@ func main() {
 		for truncated {
 			g, err := s.ListGroupsForUser(&i)
 			if err != nil {
-				log.Printf("ERROR %v\n", err)
+				log.Errorf("%v", err)
 				break
 			}
 
 			if *verbose {
 				for x, grp := range g.Groups {
-					log.Printf("DEBUG GROUP[%d]: %s\n", x, *grp.GroupName)
+					log.Debugf("GROUP[%d]: %s", x, *grp.GroupName)
 				}
 			}
 			roles = append(roles, *grg.FetchRoles(g.Groups...)...)
@@ -188,9 +189,10 @@ func main() {
 			fmt.Printf("  %s\n", v)
 		}
 	default:
-		profile_cfg, err := new(AWSConfigParser).GetProfile(profile)
+		cfgParser := AWSConfigParser{ Log: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true) }
+		profile_cfg, err := cfgParser.GetProfile(profile)
 		if err != nil {
-			log.Fatalf("ERROR unable to get configuration for profile '%s': %+v", *profile, err)
+			log.Fatalf("unable to get configuration for profile '%s': %+v", *profile, err)
 		}
 
 		credProvider := CachingSessionTokenProvider{
@@ -209,19 +211,19 @@ func main() {
 		p := credentials.NewCredentials(&credProvider)
 		creds, err := p.Get()
 		if err != nil {
-			log.Fatalf("ERROR unable to get SessionToken credentials: +%v", err)
+			log.Fatalf("unable to get SessionToken credentials: +%v", err)
 		}
 
 		if *showExpire {
 			exp_t := credProvider.ExpirationTime()
-			log.Printf("Session credentials will expire on %s (%s)", exp_t, exp_t.Sub(time.Now()).Round(time.Second))
+			fmt.Printf("Session credentials will expire on %s (%s)\n", exp_t, exp_t.Sub(time.Now()).Round(time.Second))
 			os.Exit(0)
 		}
 
 		if !*sesCreds {
 			creds, err = credProvider.AssumeRole(profile_cfg)
 			if err != nil {
-				log.Fatalf("ERROR error doing AssumeRole: %+v", err)
+				log.Fatalf("error doing AssumeRole: %+v", err)
 			}
 		}
 
@@ -240,7 +242,7 @@ func main() {
 
 			err := c.Run()
 			if err != nil {
-				log.Fatalf("ERROR %v\n", err)
+				log.Fatalf("%v", err)
 			}
 		} else {
 			printCredentials(creds)
