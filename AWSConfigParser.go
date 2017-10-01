@@ -14,11 +14,11 @@ type AWSProfile struct {
 }
 
 type AWSConfigParser struct {
-	Log	*logo.Logger
+	Logger *logo.Logger
 }
 
 func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
-	p.Log.Debug("In GetProfile()")
+	p.Logger.Debug("In GetProfile()")
 	section := "default"
 
 	cfg, err := p._readConfig()
@@ -32,27 +32,27 @@ func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
 		section = "profile " + *profile
 	}
 
-	p.Log.Debugf("Looking for profile data in section: '%s'", section)
+	p.Logger.Debugf("Looking for profile data in section: '%s'", section)
 	profile_t := &AWSProfile{SourceProfile: *profile}
 	err = cfg.Section(section).MapTo(profile_t)
 	if err != nil {
 		return nil, err
 	}
 
-	p.Log.Debugf("PROFILE: %+v", *profile_t)
+	p.Logger.Debugf("PROFILE: %+v", *profile_t)
 	return profile_t, nil
 }
 
 func (p *AWSConfigParser) _readConfig() (*ini.File, error) {
-	p.Log.Debug("In _readConfig()")
+	p.Logger.Debug("In _readConfig()")
 	cfgFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
 
 	val, ok := os.LookupEnv("AWS_CONFIG_FILE")
 	if ok {
-		p.Log.Debug("Using env var for config file location")
+		p.Logger.Debug("Using env var for config file location")
 		cfgFile = val
 	}
 
-	p.Log.Debugf("CONFIG FILE: %s", cfgFile)
+	p.Logger.Debugf("CONFIG FILE: %s", cfgFile)
 	return ini.Load(cfgFile)
 }
