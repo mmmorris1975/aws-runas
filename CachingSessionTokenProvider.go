@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/mbndr/logo"
 	"os/user"
 	"path/filepath"
 	"time"
@@ -17,23 +18,31 @@ type CachingSessionTokenProvider struct {
 	Profile   string
 	Duration  time.Duration
 	MfaSerial string
+	Logger    *logo.Logger
 }
 
 func (p *CachingSessionTokenProvider) CacheFile() string {
-	cacheDir = filepath.Dir(defaults.SharedCredentialsFilename())
-	return filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", p.Profile))
+	p.Logger.Debug("In CacheFile()")
+	cacheDir := filepath.Dir(defaults.SharedCredentialsFilename())
+	cacheFile := filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", p.Profile))
+
+	p.Logger.Debugf("CREDENTIAL CACHE FILE: %s", cacheFile)
+	return cacheFile
 }
 
 // Satisfies credentials.Provider
 func (p *CachingSessionTokenProvider) Retrieve() (credentials.Value, error) {
+	p.Logger.Debug("In Retrieve()")
 	p.CredentialsCacherProvider.CacheFilename = p.CacheFile()
 	creds, _ := p.CredentialsCacherProvider.Retrieve() // TODO let errors fall through?
 
 	if p.IsExpired() {
+		p.Logger.Debug("Detected expired credentials")
 		dur_secs := int64(p.Duration.Seconds())
 		input := sts.GetSessionTokenInput{DurationSeconds: &dur_secs}
 
 		if len(p.MfaSerial) > 0 {
+			p.Logger.Debug("MfaSerial passed, prompting for code")
 			// Prompt for MFA code
 			var mfa_code string
 			fmt.Print("Enter MFA Code: ")
@@ -61,22 +70,27 @@ func (p *CachingSessionTokenProvider) Retrieve() (credentials.Value, error) {
 			SessionToken:    *res.Credentials.SessionToken,
 			Expiration:      (*res.Credentials.Expiration).Unix(),
 		}
+		p.Logger.Debug("Storing new credentials in cache")
 		p.CredentialsCacherProvider.Store(&c)
 		creds, _ = p.CredentialsCacherProvider.Retrieve()
 	}
 
+	p.Logger.Debugf("SESSION TOKEN CREDENTIALS: %+v", creds)
 	return creds, nil
 }
 
 // Satisfies credentials.Provider
 func (p *CachingSessionTokenProvider) IsExpired() bool {
+	p.Logger.Debug("In IsExpired()")
 	expired := true
 	expired = p.CredentialsCacherProvider.IsExpired()
 
+	p.Logger.Debugf("EXPIRED: %t", expired)
 	return expired
 }
 
 func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (credentials.Value, error) {
+	p.Logger.Debug("In AssumeRole()")
 	username := "__"
 	user, err := user.Current()
 	if err == nil {
@@ -84,6 +98,7 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (crede
 	}
 
 	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
+	p.Logger.Debugf("Setting AssumeRole session name to: %s", *sesName)
 	input := sts.AssumeRoleInput{
 		DurationSeconds: aws.Int64(int64(3600)),
 		RoleArn:         aws.String(profile_cfg.RoleArn),
@@ -114,5 +129,7 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (crede
 		SessionToken:    *c.SessionToken,
 		ProviderName:    "CachingSessionTokenProvider",
 	}
+
+	p.Logger.Debugf("ASSUME ROLE CREDENTIALS: %+v", v)
 	return v, nil
 }
