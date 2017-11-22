@@ -110,11 +110,7 @@ func printCredentials(creds credentials.Value) {
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
-func getRoles(sess *session.Session) *[]string {
-	// Used to return an array of role ARN's available to the user
-	log := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.main", true)
-	roles := make([]string, 0)
-
+func getIamUser(sess *session.Session, log *logo.Logger) (*iam.User) {
 	s := iam.New(sess)
 
 	u, err := s.GetUser(&iam.GetUserInput{})
@@ -122,14 +118,21 @@ func getRoles(sess *session.Session) *[]string {
 		log.Fatalf("Error getting IAM user info: %v", err)
 	}
 
-	userName := *u.User.UserName
-	log.Debugf("USER: %s", userName)
+	log.Debugf("USER: %+v", u)
+	return u.User
+}
+
+func getRoles(sess *session.Session, userName *string, log *logo.Logger) *[]string {
+	s := iam.New(sess)
+
+	// Used to return an array of role ARN's available to the user
+	roles := make([]string, 0)
 
 	urg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.UserRoleGetter", true)
 	urg := UserRoleGetter{Client: s, Logger: urg_logger}
-	roles = append(roles, *urg.FetchRoles(userName)...)
+	roles = append(roles, *urg.FetchRoles(*userName)...)
 
-	i := iam.ListGroupsForUserInput{UserName: &userName}
+	i := iam.ListGroupsForUserInput{UserName: userName}
 	grg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.GroupRoleGetter", true)
 	grg := GroupRoleGetter{Client: s, Logger: grg_logger}
 	truncated := true
@@ -153,7 +156,6 @@ func getRoles(sess *session.Session) *[]string {
 		}
 	}
 
-	fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.User.Arn)
 	dedupAndSort(&roles)
 	return &roles
 }
@@ -207,14 +209,23 @@ func main() {
 		}
 
 		fmt.Printf("%s\n", *res.MFADevices[0].SerialNumber)
-	case *makeConf:
-		log.Debug("Make Configuration Files.")
 	case *listRoles, *makeConf:
-		log.Debug("List Roles")
-		roles := getRoles(sess)
+		u := getIamUser(sess, log)
+		userName := *u.UserName
 
-		for _, v := range *roles {
-			fmt.Printf("  %s\n", v)
+		roles := getRoles(sess, &userName, log)
+
+		if *listRoles {
+			log.Debug("List Roles")
+			fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.Arn)
+			for _, v := range *roles {
+				fmt.Printf("  %s\n", v)
+			}
+		}
+
+		if *makeConf {
+			log.Debug("Make Configuration Files.")
+			// TODO create .aws/config formatted output based on result of getRoles()
 		}
 	default:
 		cfgParser := AWSConfigParser{Logger: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true)}
