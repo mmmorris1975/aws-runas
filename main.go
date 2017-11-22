@@ -110,7 +110,7 @@ func printCredentials(creds credentials.Value) {
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
-func getIamUser(sess *session.Session, log *logo.Logger) (*iam.User) {
+func getIamUser(sess *session.Session, log *logo.Logger) *iam.User {
 	s := iam.New(sess)
 
 	u, err := s.GetUser(&iam.GetUserInput{})
