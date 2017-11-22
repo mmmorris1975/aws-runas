@@ -159,13 +159,13 @@ func getRoles(sess *session.Session) *[]string {
 }
 
 func getAWSSession() *session.Session {
-
 	//  Unset the environment
 	env := []string{"AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
 	for _, env := range env {
 		os.Unsetenv(env)
 	}
 
+	// This is how to get the MFA and AssumeRole config for a given profile.
 	sess := session.Must(session.NewSessionWithOptions(session.Options{
 		SharedConfigState:       session.SharedConfigEnable,
 		Profile:                 *profile,
@@ -194,20 +194,6 @@ func main() {
 	stscreds.DefaultDuration = time.Duration(1) * time.Hour
 
 	log.Debugf("PROFILE: %s", *profile)
-
-	//	Unset the environment
-	env := []string{"AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
-	for _, env := range env {
-		os.Unsetenv(env)
-	}
-
-	// This is how to get the MFA and AssumeRole config for a given profile.
-	//sess := getsession.Must(session.NewSessionWithOptions(session.Options{
-	//	SharedConfigState:       session.SharedConfigEnable,
-	//	Profile:                 *profile,
-	//	AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-	//}))
-
 	sess := getAWSSession()
 
 	switch {
