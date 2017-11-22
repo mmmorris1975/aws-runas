@@ -16,8 +16,8 @@
 [[projects]]
   name = "github.com/aws/aws-sdk-go"
   packages = ["aws","aws/awserr","aws/awsutil","aws/client","aws/client/metadata","aws/corehandlers","aws/credentials","aws/credentials/ec2rolecreds","aws/credentials/endpointcreds","aws/credentials/stscreds","aws/defaults","aws/ec2metadata","aws/endpoints","aws/request","aws/session","aws/signer/v4","internal/shareddefaults","private/protocol","private/protocol/query","private/protocol/query/queryutil","private/protocol/rest","private/protocol/xml/xmlutil","service/iam","service/sts"]
-  revision = "5615d2ed566a09d326f681c789310a2e5ba5de5d"
-  version = "v1.10.50"
+  revision = "991fe2497a95d757bb53f95cbcebf3d26134c9fe"
+  version = "v1.12.32"
 
 [[projects]]
   name = "github.com/go-ini/ini"
@@ -28,8 +28,7 @@
 [[projects]]
   name = "github.com/jmespath/go-jmespath"
   packages = ["."]
-  revision = "3433f3ea46d9f8019119e7dd41274e112a2359a9"
-  version = "0.2.2"
+  revision = "0b12d6b5"
 
 [[projects]]
   name = "github.com/mbndr/logo"
@@ -45,6 +44,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "4a8e91fc2d4adf71cfa0434bde8ca76009ebb5beaf5a94f0dceb76fd31ff0199"
+  inputs-digest = "8107374eaf992fa3cab53cccd8fc6d8930c8f284df278a1437fd9ca6af7bb72a"
   solver-name = "gps-cdcl"
   solver-version = 1
