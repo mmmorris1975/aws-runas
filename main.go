@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	VERSION     = "0.1.1"
+	VERSION     = "0.1.2"
 	minDuration = time.Duration(15) * time.Minute
 	maxDuration = time.Duration(36) * time.Hour
 )
@@ -32,6 +32,7 @@ var (
 	refresh         *bool
 	verbose         *bool
 	version         *bool
+	makeConf        *bool
 	profile         *string
 	duration        *time.Duration
 	cmd             *[]string
@@ -52,12 +53,14 @@ func init() {
 		verboseArgDesc  = "print verbose/debug messages"
 		profileArgDesc  = "name of profile"
 		cmdArgDesc      = "command to execute using configured profile"
+		makeConfArgDesc = "Build an AWS extended switch-role plugin configuration for all available roles"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration.String()).Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
+	makeConf = kingpin.Flag("make-conf", makeConfArgDesc).Short('c').Bool()
 	sesCreds = kingpin.Flag("session", sesCredArgDesc).Short('s').Bool()
 	refresh = kingpin.Flag("refresh", refreshArgDesc).Short('r').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
@@ -107,6 +110,71 @@ func printCredentials(creds credentials.Value) {
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
+func getRoles(sess *session.Session) *[]string {
+	// Used to return an array of role ARN's available to the user
+	log := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.main", true)
+	roles := make([]string, 0)
+
+	s := iam.New(sess)
+
+	u, err := s.GetUser(&iam.GetUserInput{})
+	if err != nil {
+		log.Fatalf("Error getting IAM user info: %v", err)
+	}
+
+	userName := *u.User.UserName
+	log.Debugf("USER: %s", userName)
+
+	urg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.UserRoleGetter", true)
+	urg := UserRoleGetter{Client: s, Logger: urg_logger}
+	roles = append(roles, *urg.FetchRoles(userName)...)
+
+	i := iam.ListGroupsForUserInput{UserName: &userName}
+	grg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.GroupRoleGetter", true)
+	grg := GroupRoleGetter{Client: s, Logger: grg_logger}
+	truncated := true
+	for truncated {
+		g, err := s.ListGroupsForUser(&i)
+		if err != nil {
+			log.Errorf("Error getting user's IAM group list: %v", err)
+			break
+		}
+
+		if *verbose {
+			for x, grp := range g.Groups {
+				log.Debugf("GROUP[%d]: %s", x, *grp.GroupName)
+			}
+		}
+		roles = append(roles, *grg.FetchRoles(g.Groups...)...)
+
+		truncated = *g.IsTruncated
+		if truncated {
+			i.Marker = g.Marker
+		}
+	}
+
+	fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.User.Arn)
+	dedupAndSort(&roles)
+	return &roles
+}
+
+func getAWSSession() *session.Session {
+
+	//  Unset the environment
+	env := []string{"AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
+	for _, env := range env {
+		os.Unsetenv(env)
+	}
+
+	sess := session.Must(session.NewSessionWithOptions(session.Options{
+		SharedConfigState:       session.SharedConfigEnable,
+		Profile:                 *profile,
+		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+	}))
+
+	return sess
+}
+
 func main() {
 	kingpin.Parse()
 
@@ -127,12 +195,20 @@ func main() {
 
 	log.Debugf("PROFILE: %s", *profile)
 
+	//	Unset the environment
+	env := []string{"AWS_SECRET_ACCESS_KEY", "AWS_ACCESS_KEY_ID", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
+	for _, env := range env {
+		os.Unsetenv(env)
+	}
+
 	// This is how to get the MFA and AssumeRole config for a given profile.
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState:       session.SharedConfigEnable,
-		Profile:                 *profile,
-		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
-	}))
+	//sess := getsession.Must(session.NewSessionWithOptions(session.Options{
+	//	SharedConfigState:       session.SharedConfigEnable,
+	//	Profile:                 *profile,
+	//	AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+	//}))
+
+	sess := getAWSSession()
 
 	switch {
 	case *listMfa:
@@ -145,49 +221,13 @@ func main() {
 		}
 
 		fmt.Printf("%s\n", *res.MFADevices[0].SerialNumber)
-	case *listRoles:
+	case *makeConf:
+		log.Debug("Make Configuration Files.")
+	case *listRoles, *makeConf:
 		log.Debug("List Roles")
-		roles := make([]string, 0)
-		s := iam.New(sess)
+		roles := getRoles(sess)
 
-		u, err := s.GetUser(&iam.GetUserInput{})
-		if err != nil {
-			log.Fatalf("Error getting IAM user info: %v", err)
-		}
-
-		userName := *u.User.UserName
-		log.Debugf("USER: %s", userName)
-
-		urg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.UserRoleGetter", true)
-		urg := UserRoleGetter{Client: s, Logger: urg_logger}
-		roles = append(roles, *urg.FetchRoles(userName)...)
-
-		i := iam.ListGroupsForUserInput{UserName: &userName}
-		grg_logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.GroupRoleGetter", true)
-		grg := GroupRoleGetter{Client: s, Logger: grg_logger}
-		truncated := true
-		for truncated {
-			g, err := s.ListGroupsForUser(&i)
-			if err != nil {
-				log.Errorf("Error getting user's IAM group list: %v", err)
-				break
-			}
-
-			if *verbose {
-				for x, grp := range g.Groups {
-					log.Debugf("GROUP[%d]: %s", x, *grp.GroupName)
-				}
-			}
-			roles = append(roles, *grg.FetchRoles(g.Groups...)...)
-
-			truncated = *g.IsTruncated
-			if truncated {
-				i.Marker = g.Marker
-			}
-		}
-
-		fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.User.Arn)
-		for _, v := range *dedupAndSort(&roles) {
+		for _, v := range *roles {
 			fmt.Printf("  %s\n", v)
 		}
 	default:
