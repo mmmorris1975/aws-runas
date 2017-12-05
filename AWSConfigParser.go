@@ -4,6 +4,7 @@ import (
 	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -66,7 +67,14 @@ func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
 
 func (p *AWSConfigParser) _readConfig() (*ini.File, error) {
 	p.Logger.Debug("In _readConfig()")
-	cfgFile := filepath.Join(os.Getenv("HOME"), ".aws", "config")
+
+	u, err := user.Current()
+	if err != nil {
+		p.Logger.Debug("Unable to determine current user: %+v", err)
+		return nil, err
+	}
+
+	cfgFile := filepath.Join(u.HomeDir, ".aws", "config")
 
 	val, ok := os.LookupEnv("AWS_CONFIG_FILE")
 	if ok {

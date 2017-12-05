@@ -10,8 +10,8 @@ import (
 	"github.com/mbndr/logo"
 	"os/user"
 	"path/filepath"
-	"time"
 	"regexp"
+	"time"
 )
 
 type CachingSessionTokenProvider struct {
