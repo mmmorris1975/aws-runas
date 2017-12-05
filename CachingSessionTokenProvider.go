@@ -11,6 +11,7 @@ import (
 	"os/user"
 	"path/filepath"
 	"time"
+	"regexp"
 )
 
 type CachingSessionTokenProvider struct {
@@ -94,7 +95,10 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (crede
 	username := "__"
 	user, err := user.Current()
 	if err == nil {
-		username = user.Username
+		// On Windows, this could return DOMAIN\user, and '\' is not a valid character for RoleSessionName
+		// AWS API docs say that regex [[:word:]=,.@-] is the valid characters for RoleSessionName
+		re := regexp.MustCompile("[^[:word:]=,.@-]")
+		username = re.ReplaceAllLiteralString(user.Username, "_")
 	}
 
 	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
