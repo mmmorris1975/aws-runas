@@ -11,7 +11,7 @@ This tool initially performs an AWS STS GetSessionToken call to handle MFA crede
 then makes the AssumeRole call.  This allows us to not have to re-enter the MFA information (if required) every time
 AssumeRole is called (or when the AssumeRole credentials expire), only when new Session Tokens are requested
 (by default 12 hours).  These credentials are not compatible with credentials cached by awscli, however they should be
-compatible with versions of this tool build in different languages.
+compatible with versions of this tool built in different languages.
 
 If using MFA, when the credentials approach expiration you will be prompted to re-enter the MFA token value to refresh
 the credentials during the next execution of aws-runas. (Since this is a wrapper program, there's no way to know when
@@ -28,17 +28,18 @@ See the following for more information on AWS SDK configuration files:
 - https://boto3.readthedocs.io/en/latest/guide/quickstart.html#configuration
 - https://boto3.readthedocs.io/en/latest/guide/configuration.html#aws-config-file
 
-## Build Requirements
-
-Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.32, and kingpin.v2 v2.2.5
-*NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
-
 ## Installing
 
 Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/go-aws-runas/releases/latest)
 
 ## Building
 
+### Build Requirements
+
+Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.32, and kingpin.v2 v2.2.5
+*NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
+
+### Build Steps
 Assuming you have a go workspace, and GOPATH environment variable set (https://golang.org/doc/code.html#Organization):
   1. Run `go get -d github.com/mmmorris1975/go-aws-runas`
   2. Run `dep ensure` to check/retrieve dependencies
