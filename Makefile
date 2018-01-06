@@ -4,14 +4,14 @@ VER := $(shell git describe --tags)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-$(EXE): Gopkg.toml *.go
+$(EXE): Gopkg.lock *.go
 	go build -v -o $@ $(PKG)
 
-Gopkg.toml:
+Gopkg.lock: Gopkg.toml
 	dep ensure
 
 .PHONY: release
-release: darwin windows linux
+release: $(EXE) darwin windows linux
 
 .PHONY: darwin linux windows
 darwin linux:
@@ -22,3 +22,7 @@ windows:
 .PHONY: clean
 clean:
 	rm -f $(EXE) $(EXE)-*-*-*
+
+.PHONY: dist-clean
+dist-clean: clean
+	rm -f Gopkg.lock
