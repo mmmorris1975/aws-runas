@@ -36,7 +36,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.32, and kingpin.v2 v2.2.5
+Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.56, and kingpin.v2 v2.2.6
 *NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 
 ### Build Steps
