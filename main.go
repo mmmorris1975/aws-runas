@@ -34,6 +34,7 @@ var (
 	version         *bool
 	makeConf        *bool
 	profile         *string
+	mfaArn          *string
 	duration        *time.Duration
 	cmd             *[]string
 	defaultDuration = time.Duration(12) * time.Hour
@@ -51,8 +52,9 @@ func init() {
 		sesCredArgDesc  = "print eval()-able session token info, or run command using session token credentials"
 		refreshArgDesc  = "force a refresh of the cached credentials"
 		verboseArgDesc  = "print verbose/debug messages"
-		profileArgDesc  = "name of profile"
+		profileArgDesc  = "name of profile, or role ARN"
 		cmdArgDesc      = "command to execute using configured profile"
+		mfaArnDesc      = "ARN of MFA device needed to perform Assume Role operation"
 		makeConfArgDesc = "Build an AWS extended switch-role plugin configuration for all available roles"
 	)
 
@@ -64,6 +66,7 @@ func init() {
 	sesCreds = kingpin.Flag("session", sesCredArgDesc).Short('s').Bool()
 	refresh = kingpin.Flag("refresh", refreshArgDesc).Short('r').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
+	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
 	profile = kingpin.Arg("profile", profileArgDesc).Default("default").String()
 	cmd = CmdArg(kingpin.Arg("cmd", cmdArgDesc))
 
@@ -228,8 +231,7 @@ func main() {
 			// TODO create .aws/config formatted output based on result of getRoles()
 		}
 	default:
-		cfgParser := AWSConfigParser{Logger: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true)}
-		profile_cfg, err := cfgParser.GetProfile(profile)
+		profile_cfg, err := NewAWSProfile(profile, mfaArn)
 		if err != nil {
 			log.Fatalf("Unable to get configuration for profile '%s': %+v", *profile, err)
 		}

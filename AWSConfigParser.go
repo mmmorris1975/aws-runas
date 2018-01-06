@@ -6,12 +6,40 @@ import (
 	"os"
 	"os/user"
 	"path/filepath"
+	"strings"
 )
 
 type AWSProfile struct {
 	SourceProfile string `ini:"source_profile"`
 	RoleArn       string `ini:"role_arn"`
 	MfaSerial     string `ini:"mfa_serial"`
+}
+
+func NewAWSProfile(profile_name *string, mfa_arn *string) (*AWSProfile, error) {
+	var profile_cfg *AWSProfile
+	var err error
+
+	if strings.Contains(*profile_name, "arn:aws:iam::") {
+		// Don't set SourceProfile to allow the SDK to use the default CredentialProvider
+		// to look up API keys using the internal SDK credential lookup logic.  It makes the
+		// cache file name a bit wonky, but that's not a big deal.
+		profile_cfg = &AWSProfile{
+			RoleArn: *profile_name,
+		}
+	} else {
+		// profile arg looks like a profile name
+		cfgParser := AWSConfigParser{Logger: logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.AWSConfigParser", true)}
+		profile_cfg, err = cfgParser.GetProfile(profile_name)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if len(*mfa_arn) > 0 {
+		profile_cfg.MfaSerial = *mfa_arn
+	}
+
+	return profile_cfg, nil
 }
 
 type AWSConfigParser struct {
