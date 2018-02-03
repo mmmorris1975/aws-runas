@@ -269,7 +269,7 @@ func main() {
 			}
 		}
 
-		if len(*cmd) > 1 {
+		if len(*cmd) >= 1 {
 			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
