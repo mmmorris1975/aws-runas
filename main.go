@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	humanize "github.com/dustin/go-humanize"
 	"github.com/mbndr/logo"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
@@ -258,8 +259,11 @@ func main() {
 
 		if *showExpire {
 			exp_t := credProvider.ExpirationTime()
-			fmt.Printf("Session credentials will expire on %s (%s)\n", exp_t, exp_t.Sub(time.Now()).Round(time.Second))
-			os.Exit(0)
+			sentance_tense := "will expire"
+			if exp_t.Before(time.Now()) {
+				sentance_tense = "expired"
+			}
+			fmt.Printf("Session credentials %s %s\n", sentance_tense, humanize.Time(exp_t))
 		}
 
 		if !*sesCreds {
