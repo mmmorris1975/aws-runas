@@ -266,7 +266,7 @@ func main() {
 			if exp_t.Before(time.Now()) {
 				sentance_tense = "expired"
 			}
-			fmt.Printf("Session credentials %s on %s (%s)\n", sentance_tense, fmt_t, hmn_t)
+			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", sentance_tense, fmt_t, hmn_t)
 		}
 
 		if !*sesCreds {
