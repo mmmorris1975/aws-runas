@@ -182,6 +182,10 @@ func getAWSSession() *session.Session {
 }
 
 func main() {
+	// Tell kingpin to stop parsing flags once we start processing 'cmd', allows something like:
+	// `aws-runas --verbose profile command -a --long_arg`
+	// without needing an explicit `--` between 'profile' and 'cmd'
+	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
 	if *verbose {
