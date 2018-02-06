@@ -23,7 +23,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.12.56"
+  version = "1.12.71"
 
 [[constraint]]
   name = "gopkg.in/alecthomas/kingpin.v2"
@@ -33,4 +33,6 @@
   name = "github.com/mbndr/logo"
   revision = "2cf79af92583dac1e32304d4eb833e8be68aa1e7"
 
-
+[[constraint]]
+  name = "github.com/dustin/go-humanize"
+  revision = "bb3d318650d48840a39aa21a027c6630e198e626"

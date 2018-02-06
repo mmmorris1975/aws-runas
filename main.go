@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	VERSION     = "0.1.4"
+	VERSION     = "0.1.5"
 	minDuration = time.Duration(15) * time.Minute
 	maxDuration = time.Duration(36) * time.Hour
 )
@@ -259,11 +259,14 @@ func main() {
 
 		if *showExpire {
 			exp_t := credProvider.ExpirationTime()
+			fmt_t := exp_t.Format("2006-01-02 15:04:05")
+			hmn_t := humanize.Time(exp_t)
+
 			sentance_tense := "will expire"
 			if exp_t.Before(time.Now()) {
 				sentance_tense = "expired"
 			}
-			fmt.Printf("Session credentials %s %s\n", sentance_tense, humanize.Time(exp_t))
+			fmt.Printf("Session credentials %s on %s (%s)\n", sentance_tense, fmt_t, hmn_t)
 		}
 
 		if !*sesCreds {
@@ -273,7 +276,7 @@ func main() {
 			}
 		}
 
-		if len(*cmd) >= 1 {
+		if len(*cmd) > 0 {
 			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
