@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	VERSION     = "0.1.5"
+	VERSION     = "1.0.0"
 	minDuration = time.Duration(15) * time.Minute
 	maxDuration = time.Duration(36) * time.Hour
 )
