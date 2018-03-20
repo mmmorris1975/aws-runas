@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
 	"os"
@@ -8,6 +9,10 @@ import (
 	"path/filepath"
 	"strings"
 )
+
+// Prefix for role ARNs and Virtual MFA devices
+// (physical MFA devices use device serial number, not ARN)
+const IAM_ARN = "arn:aws:iam::"
 
 type AWSProfile struct {
 	SourceProfile string `ini:"source_profile"`
@@ -19,7 +24,7 @@ func NewAWSProfile(profile_name *string, mfa_arn *string) (*AWSProfile, error) {
 	var profile_cfg *AWSProfile
 	var err error
 
-	if strings.Contains(*profile_name, "arn:aws:iam::") {
+	if strings.HasPrefix(*profile_name, IAM_ARN) {
 		// Don't set SourceProfile to allow the SDK to use the default CredentialProvider
 		// to look up API keys using the internal SDK credential lookup logic.  It makes the
 		// cache file name a bit wonky, but that's not a big deal.
@@ -59,6 +64,10 @@ func (p *AWSConfigParser) lookupProfile(profile *string, cfg *ini.File) (*AWSPro
 	err := cfg.Section(section).MapTo(profile_t)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(profile_t.RoleArn) > 0 && !strings.HasPrefix(profile_t.RoleArn, IAM_ARN) {
+		return nil, fmt.Errorf("Role ARN format error, does not start with %s", IAM_ARN)
 	}
 
 	return profile_t, nil

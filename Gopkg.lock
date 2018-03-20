@@ -35,6 +35,8 @@
     "aws/request",
     "aws/session",
     "aws/signer/v4",
+    "internal/sdkio",
+    "internal/sdkrand",
     "internal/shareddefaults",
     "private/protocol",
     "private/protocol/query",
@@ -44,8 +46,8 @@
     "service/iam",
     "service/sts"
   ]
-  revision = "0cbaf57ea311890e62f0b01652529295079e9e95"
-  version = "v1.12.71"
+  revision = "f0872da8a448f8cb10f4f0c95c2100e4f7356448"
+  version = "v1.13.16"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -77,6 +79,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "387e4105a1377a916f1291908d1dc55cf6732196c919eaeafab8b1a68c063f2a"
+  inputs-digest = "ed30db349a9dfe17234f60da726c12fd1edbcdc67176e220e66767eec8873acd"
   solver-name = "gps-cdcl"
   solver-version = 1
