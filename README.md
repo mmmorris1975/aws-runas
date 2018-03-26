@@ -1,6 +1,6 @@
 # go-aws-runas
 
-A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/aws-runas "aws-runas").  Unscientific testing
+A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/py-aws-runas "aws-runas").  Unscientific testing
 indicates a 25-30% performance improvement over the python-based version of this tool
 
 It's still a command to provide a friendly way to do an AWS STS AssumeRole operation so you can perform AWS API actions
