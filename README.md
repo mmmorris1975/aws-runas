@@ -1,4 +1,4 @@
-# go-aws-runas
+# aws-runas
 
 A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/py-aws-runas "aws-runas").  Unscientific testing
 indicates a 25-30% performance improvement over the python-based version of this tool
