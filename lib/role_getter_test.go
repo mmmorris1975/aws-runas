@@ -1,6 +1,9 @@
 package lib
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 type MockRoleGetter struct {
 	r Roles
@@ -14,17 +17,19 @@ func (m *MockRoleGetter) Roles() Roles {
 	return m.r.Dedup()
 }
 
-func TestRoleGetter(t *testing.T) {
+func ExampleRoleGetter() {
 	roles := []string{
 		"mock3", "mock2", "mock1", "mock2", "mock4", "mock1",
 	}
 	m := NewMockRoleGetter(roles)
-	r := m.Roles()
-
-	t.Logf("Standard role result: %v", r)
-	if len(r) < 1 {
-		t.Errorf("No results found")
+	for _, r := range m.Roles() {
+		fmt.Println(r)
 	}
+	// Output:
+	// mock1
+	// mock2
+	// mock3
+	// mock4
 }
 
 func TestEmptyRoleGetter(t *testing.T) {
