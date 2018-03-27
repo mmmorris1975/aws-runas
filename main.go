@@ -123,7 +123,6 @@ func main() {
 	case *listRoles, *makeConf:
 		u := iamUser(sess)
 		userName := *u.UserName
-		log.Debug(userName)
 
 		rg := lib.NewRoleGetter(sess, userName, logLevel)
 
@@ -211,8 +210,8 @@ func main() {
 }
 
 func defaultAwsSession() *session.Session {
-	// Doing this kills the ability to use env vars vs requiring the ~/.aws/credentials file
-	// May also mess with -M option and authentication
+	// Doing this kills the ability to use env vars, which may mess
+	// with the -M option, requiring the ~/.aws/credentials file
 	// Unset AWS credential env vars
 	//env := []string{
 	//	"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY",

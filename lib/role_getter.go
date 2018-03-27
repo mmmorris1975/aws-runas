@@ -13,8 +13,10 @@ import (
 	"sync"
 )
 
+// Container for IAM role ARN
 type Roles []string
 
+// Return a sorted set of roles with duplicates removed
 func (r Roles) Dedup() Roles {
 	m := make(map[string]bool)
 
@@ -34,10 +36,12 @@ func (r Roles) Dedup() Roles {
 	return Roles(a)
 }
 
+// Interface for providing a mechanism to retrieve a set of Roles
 type RoleGetter interface {
 	Roles() Roles
 }
 
+// Create a RoleGetter to retrieve AWS IAM roles for the specified user
 func NewRoleGetter(sess *session.Session, user string, logLevel logo.Level) RoleGetter {
 	l := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.RoleGetter", true)
 	return &simpleRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
@@ -50,6 +54,10 @@ type simpleRoleGetter struct {
 	user   string
 }
 
+// Get the explicitly configured IAM roles from the user's IAM account
+// and groups.  Roles from inline and attached IAM polices are discovered.
+// Access to roles which are implicitly granted (via policies like the AWS-managed
+// administrator or IAM full access) are not discovered by this method.
 func (r *simpleRoleGetter) Roles() Roles {
 	res := make([]string, 0)
 	ch := make(chan string, 8)
