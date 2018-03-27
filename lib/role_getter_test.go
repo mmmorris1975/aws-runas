@@ -16,11 +16,12 @@ func (m *MockRoleGetter) Roles() Roles {
 
 func TestRoleGetter(t *testing.T) {
 	roles := []string{
-		"mock1", "mock2", "mock3", "mock2", "mock4", "mock1",
+		"mock3", "mock2", "mock1", "mock2", "mock4", "mock1",
 	}
 	m := NewMockRoleGetter(roles)
 	r := m.Roles()
 
+	t.Logf("Standard role result: %v", r)
 	if len(r) < 1 {
 		t.Errorf("No results found")
 	}
