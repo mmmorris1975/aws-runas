@@ -110,14 +110,12 @@ func main() {
 	switch {
 	case *listMfa:
 		log.Debug("List MFA")
-		s := iam.New(sess)
-
-		res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
+		mfa, err := lookupMfa(sess)
 		if err != nil {
-			log.Fatalf("Error listing MFA devices: %v", err)
+			log.Fatalf("Error retrieving MFA info: %v", err)
 		}
 
-		for _, d := range res.MFADevices {
+		for _, d := range mfa {
 			fmt.Printf("%s\n", *d.SerialNumber)
 		}
 	case *listRoles, *makeConf:
@@ -137,10 +135,33 @@ func main() {
 
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
-			// TODO create .aws/config formatted output based on result of rg.Roles()
+			cm, err := lib.NewAwsConfigManager(logLevel)
+			if err != nil {
+				log.Fatalf("Error loading configuration: %v", err)
+			}
+
+			var mfa *string
+			if mfaArn != nil && len(*mfaArn) > 0 {
+				mfa = mfaArn
+			} else {
+				m, err := lookupMfa(sess)
+				if err != nil {
+					log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
+				}
+
+				if len(m) > 0 {
+					// use 1st MFA device found
+					mfa = m[0].SerialNumber
+				}
+			}
+
+			if err := cm.BuildConfig(roles, mfa); err != nil {
+				log.Fatalf("Error building config file: %v", err)
+			}
 		}
 	case *updateFlag:
 		// TODO check github releases page for update
+		log.Debug("Update check")
 	default:
 		//profile_cfg, err := NewAWSProfile(profile, mfaArn)
 		//if err != nil {
@@ -245,4 +266,15 @@ func iamUser(s *session.Session) *iam.User {
 
 	log.Debugf("USER: %+v", u)
 	return u.User
+}
+
+func lookupMfa(sess *session.Session) ([]*iam.MFADevice, error) {
+	s := iam.New(sess)
+
+	res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
+	if err != nil {
+		return nil, err
+	}
+
+	return res.MFADevices, nil
 }
