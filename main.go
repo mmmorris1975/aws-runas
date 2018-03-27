@@ -124,12 +124,13 @@ func main() {
 		u := iamUser(sess)
 		userName := *u.UserName
 
-		rg := lib.NewRoleGetter(sess, userName, logLevel)
+		rg := lib.NewAwsRoleGetter(sess, userName, logLevel)
+		roles := rg.Roles()
 
 		if *listRoles {
 			log.Debug("List Roles")
 			fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.Arn)
-			for _, v := range rg.Roles() {
+			for _, v := range roles {
 				fmt.Printf("  %s\n", v)
 			}
 		}

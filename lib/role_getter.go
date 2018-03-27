@@ -42,12 +42,12 @@ type RoleGetter interface {
 }
 
 // Create a RoleGetter to retrieve AWS IAM roles for the specified user
-func NewRoleGetter(sess *session.Session, user string, logLevel logo.Level) RoleGetter {
+func NewAwsRoleGetter(sess *session.Session, user string, logLevel logo.Level) RoleGetter {
 	l := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.RoleGetter", true)
-	return &simpleRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
+	return &awsRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
 }
 
-type simpleRoleGetter struct {
+type awsRoleGetter struct {
 	client *session.Session
 	log    *logo.Logger
 	wg     *sync.WaitGroup
@@ -58,7 +58,7 @@ type simpleRoleGetter struct {
 // and groups.  Roles from inline and attached IAM polices are discovered.
 // Access to roles which are implicitly granted (via policies like the AWS-managed
 // administrator or IAM full access) are not discovered by this method.
-func (r *simpleRoleGetter) Roles() Roles {
+func (r *awsRoleGetter) Roles() Roles {
 	res := make([]string, 0)
 	ch := make(chan string, 8)
 
@@ -72,7 +72,7 @@ func (r *simpleRoleGetter) Roles() Roles {
 	return Roles(res).Dedup()
 }
 
-func (r *simpleRoleGetter) roles(ch chan<- string) {
+func (r *awsRoleGetter) roles(ch chan<- string) {
 	defer close(ch)
 	c := iam.New(r.client)
 
@@ -104,7 +104,7 @@ func (r *simpleRoleGetter) roles(ch chan<- string) {
 	r.wg.Wait()
 }
 
-func (r *simpleRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
+func (r *awsRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 	defer r.wg.Done()
 	listPolInput := iam.ListUserPoliciesInput{UserName: aws.String(r.user)}
 	getPolInput := iam.GetUserPolicyInput{UserName: aws.String(r.user)}
@@ -143,7 +143,7 @@ func (r *simpleRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 	}
 }
 
-func (r *simpleRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
+func (r *awsRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 	defer r.wg.Done()
 	listPolInput := iam.ListAttachedUserPoliciesInput{UserName: aws.String(r.user)}
 
@@ -188,7 +188,7 @@ func (r *simpleRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 	}
 }
 
-func (r *simpleRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string) {
+func (r *awsRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string) {
 	defer r.wg.Done()
 	listPolInput := iam.ListGroupPoliciesInput{GroupName: g}
 	getPolInput := iam.GetGroupPolicyInput{GroupName: g}
@@ -227,7 +227,7 @@ func (r *simpleRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- str
 	}
 }
 
-func (r *simpleRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- string) {
+func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- string) {
 	defer r.wg.Done()
 	listPolInput := iam.ListAttachedGroupPoliciesInput{GroupName: g}
 
