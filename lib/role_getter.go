@@ -1,4 +1,4 @@
-package main
+package lib
 
 import (
 	"encoding/json"
@@ -77,11 +77,11 @@ func (r *simpleRoleGetter) roles(ch chan<- string) {
 	for truncated {
 		g, err := c.ListGroupsForUser(&i)
 		if err != nil {
-			log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
+			r.log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
 		}
 
 		for _, grp := range g.Groups {
-			log.Debugf("GROUP: %s", *grp.GroupName)
+			r.log.Debugf("GROUP: %s", *grp.GroupName)
 			r.wg.Add(2)
 			go r.inlineGroupRoles(c, grp.GroupName, ch)
 			go r.attachedGroupRoles(c, grp.GroupName, ch)

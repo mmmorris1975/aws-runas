@@ -17,6 +17,7 @@ import (
 	//"strings"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/mmmorris1975/aws-runas/lib"
 	"time"
 )
 
@@ -124,7 +125,7 @@ func main() {
 		userName := *u.UserName
 		log.Debug(userName)
 
-		rg := NewRoleGetter(sess, userName, logLevel)
+		rg := lib.NewRoleGetter(sess, userName, logLevel)
 
 		if *listRoles {
 			log.Debug("List Roles")
