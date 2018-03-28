@@ -45,13 +45,7 @@ type ConfigManagerOptions struct {
 // the environment variable AWS_CONFIG_FILE to determine the file to
 // load, and if not defined fall back to the SDK default value.
 func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
-	c := defaults.SharedConfigFilename()
-	e, ok := os.LookupEnv("AWS_CONFIG_FILE")
-	if ok && len(e) > 0 {
-		c = e
-	}
-
-	f, err := ini.Load(c)
+	f, err := ini.Load(AwsConfigFile())
 	if err != nil {
 		return nil, err
 	}
