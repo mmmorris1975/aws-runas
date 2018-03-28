@@ -142,6 +142,7 @@ func main() {
 
 			var mfa *string
 			if mfaArn != nil && len(*mfaArn) > 0 {
+				// MFA arn provided by cmdline option
 				mfa = mfaArn
 			} else {
 				m, err := lookupMfa(sess)

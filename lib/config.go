@@ -79,14 +79,15 @@ func (c *awsConfigManager) DefaultProfile() (*AWSProfile, error) {
 // will be retrieved.  If the specified profile contains a role_arn setting
 // that value will be checked to ensure it's a valid IAM arn.
 func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
+	if p == nil || len(*p) < 1 {
+		return nil, fmt.Errorf("nil or empty profile name")
+	}
+
 	profile, err := c.DefaultProfile()
 	if err != nil {
 		return nil, err
 	}
-
-	if profile.name != *p {
-		profile.name = "profile " + *p
-	}
+	profile.name = *p
 
 	if err := c.profile(profile); err != nil {
 		return nil, err
@@ -102,6 +103,11 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		// Validate that RoleArn is an IAM ARN
 		if !strings.HasPrefix(a.String(), IAM_ARN) {
 			return nil, fmt.Errorf("role ARN format error, does not start with %s", IAM_ARN)
+		}
+
+		// TODO also check that SourceProfile is valid?
+		if len(profile.SourceProfile) < 1 {
+			return nil, fmt.Errorf("role_arn configured, but missing required source_profile")
 		}
 	}
 
@@ -119,7 +125,17 @@ func (c *awsConfigManager) BuildConfig(r Roles, mfa *string) error {
 }
 
 func (c *awsConfigManager) profile(p *AWSProfile) error {
-	if err := c.config.Section(p.name).MapTo(p); err != nil {
+	name := p.name
+	if name != p.SourceProfile {
+		name = "profile " + name
+	}
+
+	s, err := c.config.GetSection(name)
+	if err != nil {
+		return err
+	}
+
+	if err := s.MapTo(p); err != nil {
 		return err
 	}
 	return nil
