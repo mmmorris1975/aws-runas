@@ -22,9 +22,7 @@ import (
 )
 
 const (
-	VERSION     = "1.0.0-alpha1"
-	minDuration = time.Duration(15) * time.Minute
-	maxDuration = time.Duration(36) * time.Hour
+	VERSION = "1.0.0-alpha1"
 )
 
 var (
@@ -122,7 +120,7 @@ func main() {
 		u := iamUser(sess)
 		userName := *u.UserName
 
-		rg := lib.NewAwsRoleGetter(sess, userName, logLevel)
+		rg := lib.NewAwsRoleGetter(sess, userName, &lib.RoleGetterOptions{LogLevel: logLevel})
 		roles := rg.Roles()
 
 		if *listRoles {
@@ -135,7 +133,7 @@ func main() {
 
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
-			cm, err := lib.NewAwsConfigManager(logLevel)
+			cm, err := lib.NewAwsConfigManager(&lib.ConfigManagerOptions{LogLevel: logLevel})
 			if err != nil {
 				log.Fatalf("Error loading configuration: %v", err)
 			}

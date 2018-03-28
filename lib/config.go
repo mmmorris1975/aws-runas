@@ -36,10 +36,14 @@ type ConfigManager interface {
 	BuildConfig(roles Roles, mfa *string) error
 }
 
+type ConfigManagerOptions struct {
+	LogLevel logo.Level
+}
+
 // A ConfigManager specific to the aws sdk configuration.  It will use
 // the environment variable AWS_CONFIG_FILE to determine the file to
 // load, and if not defined fall back to the SDK default value.
-func NewAwsConfigManager(logLevel logo.Level) (ConfigManager, error) {
+func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
 	c := defaults.SharedConfigFilename()
 	e, ok := os.LookupEnv("AWS_CONFIG_FILE")
 	if ok && len(e) > 0 {
@@ -52,7 +56,7 @@ func NewAwsConfigManager(logLevel logo.Level) (ConfigManager, error) {
 	}
 	f.BlockMode = false
 
-	logger := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.ConfigManager", true)
+	logger := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.ConfigManager", true)
 
 	return &awsConfigManager{config: f, log: logger}, nil
 }

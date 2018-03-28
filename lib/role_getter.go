@@ -41,9 +41,13 @@ type RoleGetter interface {
 	Roles() Roles
 }
 
+type RoleGetterOptions struct {
+	LogLevel logo.Level
+}
+
 // Create a RoleGetter to retrieve AWS IAM roles for the specified user
-func NewAwsRoleGetter(sess *session.Session, user string, logLevel logo.Level) RoleGetter {
-	l := logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.RoleGetter", true)
+func NewAwsRoleGetter(sess *session.Session, user string, opts *RoleGetterOptions) RoleGetter {
+	l := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.RoleGetter", true)
 	return &awsRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
 }
 

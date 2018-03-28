@@ -239,7 +239,7 @@ func ExampleGetProfileRoleMfa() {
 //}
 
 func defaultProfile() (*AWSProfile, error) {
-	cm, err := NewAwsConfigManager(logo.INFO)
+	cm, err := NewAwsConfigManager(&ConfigManagerOptions{LogLevel: logo.INFO})
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +253,7 @@ func defaultProfile() (*AWSProfile, error) {
 }
 
 func getProfile(name *string) (*AWSProfile, error) {
-	cm, err := NewAwsConfigManager(logo.INFO)
+	cm, err := NewAwsConfigManager(&ConfigManagerOptions{LogLevel: logo.INFO})
 	if err != nil {
 		return nil, err
 	}
