@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
 	"os"
@@ -146,7 +147,7 @@ func (c *awsConfigManager) profile(p *AWSProfile) error {
 }
 
 func defaultSection() string {
-	s := "default"
+	s := session.DefaultSharedConfigProfile
 	v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
 	if ok {
 		s = v
