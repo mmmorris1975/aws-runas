@@ -108,7 +108,7 @@ func main() {
 	switch {
 	case *listMfa:
 		log.Debug("List MFA")
-		mfa, err := lookupMfa(sess)
+		mfa, err := lib.LookupMfa(sess)
 		if err != nil {
 			log.Fatalf("Error retrieving MFA info: %v", err)
 		}
@@ -143,7 +143,7 @@ func main() {
 				// MFA arn provided by cmdline option
 				mfa = mfaArn
 			} else {
-				m, err := lookupMfa(sess)
+				m, err := lib.LookupMfa(sess)
 				if err != nil {
 					log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
 				}
@@ -265,15 +265,4 @@ func iamUser(s *session.Session) *iam.User {
 
 	log.Debugf("USER: %+v", u)
 	return u.User
-}
-
-func lookupMfa(sess *session.Session) ([]*iam.MFADevice, error) {
-	s := iam.New(sess)
-
-	res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
-	if err != nil {
-		return nil, err
-	}
-
-	return res.MFADevices, nil
 }
