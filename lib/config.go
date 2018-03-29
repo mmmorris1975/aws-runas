@@ -3,7 +3,6 @@ package lib
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
