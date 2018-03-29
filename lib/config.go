@@ -117,6 +117,13 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		if err := c.profile(sp); err != nil {
 			return nil, err
 		}
+
+		if len(sp.MfaSerial) > 0 && len(profile.MfaSerial) < 1 {
+			// MFA not explicitly configured in our profile, but is in the source profile
+			// bubble up source profile config to top-level profile.  This isn't standard
+			// AWS SDK behavior, but feels like it's a nice to have.
+			profile.MfaSerial = sp.MfaSerial
+		}
 		profile.sourceProfile = sp
 	}
 

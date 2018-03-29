@@ -159,11 +159,13 @@ func ExampleGetProfileNoRoleMfa() {
 	}
 
 	fmt.Println(p.name)
+	fmt.Println(p.Region)
 	fmt.Println(p.SourceProfile)
 	fmt.Println(p.RoleArn)
 	fmt.Println(p.MfaSerial)
 	// Output:
 	// basic
+	// us-west-2
 	//
 	//
 	//
@@ -209,28 +211,25 @@ func ExampleGetProfileRoleMfa() {
 	// 87654321
 }
 
-// FIXME fails because we're not resolving source_profile after getting named profile
-// should this be a feature of this code, since it breaks aws sdk compatibility?
-//func ExampleGetProfileRoleInheritMfa() {
-//	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
-//	name := "has_role_inherit_mfa"
-//
+func ExampleGetProfileRoleInheritMfa() {
+	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
+	name := "has_role_inherit_mfa"
 
-//	p, err := getProfile(aws.String(name))
-//	if err != nil {
-//		fmt.Printf("Error getting profile %s: %v", name, err)
-//	}
-//
-//	fmt.Println(p.name)
-//	fmt.Println(p.SourceProfile)
-//	fmt.Println(p.RoleArn)
-//	fmt.Println(p.MfaSerial)
-//	// Output:
-//	// has_role_inherit_mfa
-//	// alt_default
-//	// arn:aws:iam::012345678901:mfa/my_iam_user
-//	// 12345678
-//}
+	p, err := getProfile(aws.String(name))
+	if err != nil {
+		fmt.Printf("Error getting profile %s: %v", name, err)
+	}
+
+	fmt.Println(p.name)
+	fmt.Println(p.SourceProfile)
+	fmt.Println(p.RoleArn)
+	fmt.Println(p.MfaSerial)
+	// Output:
+	// has_role_inherit_mfa
+	// alt_default
+	// arn:aws:iam::012345678901:mfa/my_iam_user
+	// 12345678
+}
 
 func defaultProfile() (*AWSProfile, error) {
 	cm, err := NewAwsConfigManager(&ConfigManagerOptions{LogLevel: logo.INFO})
