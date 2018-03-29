@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
-	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	humanize "github.com/dustin/go-humanize"
@@ -12,7 +11,6 @@ import (
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -20,7 +18,7 @@ import (
 )
 
 const (
-	VERSION     = "1.0.0"
+	VERSION     = "0.1.6"
 	minDuration = time.Duration(15) * time.Minute
 	maxDuration = time.Duration(36) * time.Hour
 )
@@ -32,14 +30,12 @@ var (
 	sesCreds        *bool
 	refresh         *bool
 	verbose         *bool
-	version         *bool
 	makeConf        *bool
 	profile         *string
 	mfaArn          *string
 	duration        *time.Duration
 	cmd             *[]string
 	defaultDuration = time.Duration(12) * time.Hour
-	cacheDir        = filepath.Dir(defaults.SharedCredentialsFilename())
 	logLevel        = logo.WARN
 )
 
@@ -101,17 +97,21 @@ func dedupAndSort(ary *[]string) *[]string {
 	return &newAry
 }
 
-func printCredentials(creds credentials.Value) {
+func printCredentials(p *AWSProfile, creds credentials.Value) {
+	format := "%s %s='%s'"
 	exportToken := "export"
 	switch runtime.GOOS {
 	case "windows":
 		exportToken = "set"
 	}
 
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
+	if len(p.Region) > 0 {
+		fmt.Printf(format, exportToken, "AWS_REGION", p.Region)
+	}
+	fmt.Printf(format, exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	fmt.Printf(format, exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+	fmt.Printf(format, exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
+	fmt.Printf(format, exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }
 
 func getIamUser(sess *session.Session, log *logo.Logger) *iam.User {
@@ -287,6 +287,9 @@ func main() {
 				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
 				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
 			}
+			if len(profile_cfg.Region) > 0 {
+				os.Setenv("AWS_REGION", profile_cfg.Region)
+			}
 
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin
@@ -299,7 +302,7 @@ func main() {
 				log.Fatalf("%v", err)
 			}
 		} else {
-			printCredentials(creds)
+			printCredentials(profile_cfg, creds)
 		}
 	}
 }

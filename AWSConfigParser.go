@@ -18,6 +18,7 @@ type AWSProfile struct {
 	SourceProfile string `ini:"source_profile"`
 	RoleArn       string `ini:"role_arn"`
 	MfaSerial     string `ini:"mfa_serial"`
+	Region        string `ini:"region"`
 }
 
 func NewAWSProfile(profile_name *string, mfa_arn *string) (*AWSProfile, error) {
@@ -88,13 +89,21 @@ func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
 		return nil, err
 	}
 
-	if len(profile_t.MfaSerial) < 1 && *profile != profile_t.SourceProfile {
-		p.Logger.Debug("No mfa_serial config found in profile, checking source_profile")
+	if *profile != profile_t.SourceProfile {
+		p.Logger.Debug("Checking source_profile for additional configuration")
 		src_profile_t, err := p.lookupProfile(&profile_t.SourceProfile, cfg)
-		if err == nil {
-			profile_t.MfaSerial = src_profile_t.MfaSerial
+		if err != nil {
+			p.Logger.Debugf("Error looking up source_profile: %v", err)
 		} else {
-			p.Logger.Debugf("Ignoring error while looking up source_profile info: %+v", err)
+			if len(profile_t.MfaSerial) < 1 {
+				p.Logger.Debug("Setting mfa serial from source profile")
+				profile_t.MfaSerial = src_profile_t.MfaSerial
+			}
+
+			if len(profile_t.Region) < 1 {
+				p.Logger.Debugf("Setting region from source profile")
+				profile_t.Region = src_profile_t.Region
+			}
 		}
 	}
 
