@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/mbndr/logo"
 	"io/ioutil"
@@ -26,9 +27,9 @@ const (
 	// AWS SDK minimum assume role credentials duration
 	ASSUME_ROLE_MIN_DURATION = SESSION_TOKEN_MIN_DURATION
 	// AWS SDK maximum assume role credentials duration
-	ASSUME_ROLE_MAX_DURATION = time.Duration(1 * time.Hour)
+	ASSUME_ROLE_MAX_DURATION = time.Duration(12 * time.Hour)
 	// AWS SDK default assume role credentials duration
-	ASSUME_ROLE_DEFAULT_DURATION = ASSUME_ROLE_MAX_DURATION
+	ASSUME_ROLE_DEFAULT_DURATION = time.Duration(1 * time.Hour)
 )
 
 // A credentials.Value compatible set of credentials with the
@@ -60,7 +61,6 @@ type SessionTokenProvider interface {
 type SessionTokenProviderOptions struct {
 	LogLevel             logo.Level
 	SessionTokenDuration time.Duration
-	AssumeRoleDuration   time.Duration
 	RoleArn              string
 	MfaSerial            string
 }
@@ -84,52 +84,17 @@ type SessionTokenProviderOptions struct {
 func NewSessionTokenProvider(profile *AWSProfile, opts *SessionTokenProviderOptions) (SessionTokenProvider, error) {
 	p := new(awsAssumeRoleProvider)
 
-	logger := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.CachedCredentialsProvider", true)
-	p.log = logger
-
-	logger.Debugf("NewSessionTokenProvider() with options: %+v", opts)
-
-	if opts.SessionTokenDuration < 1 {
-		logger.Debug("Setting default session token duration")
-		opts.SessionTokenDuration = SESSION_TOKEN_DEFAULT_DURATION
-	} else if opts.SessionTokenDuration < SESSION_TOKEN_MIN_DURATION {
-		logger.Debug("Session token duration too short, adjusting to min value")
-		opts.SessionTokenDuration = SESSION_TOKEN_MIN_DURATION
-	} else if opts.SessionTokenDuration > SESSION_TOKEN_MAX_DURATION {
-		logger.Debug("Session token duration too long, adjusting to max value")
-		opts.SessionTokenDuration = SESSION_TOKEN_MAX_DURATION
+	if err := p.setAttrs(profile, opts); err != nil {
+		return nil, err
 	}
-	p.sessionTokenDuration = opts.SessionTokenDuration
+	p.log.Debugf("NewSessionTokenProvider() with options: %+v", opts)
 
-	if opts.AssumeRoleDuration < 1 {
-		logger.Debug("Setting default assume role credential duration")
-		opts.AssumeRoleDuration = ASSUME_ROLE_DEFAULT_DURATION
-	} else if opts.AssumeRoleDuration < ASSUME_ROLE_MIN_DURATION {
-		logger.Debug("Assume role duration too short, adjusting to min value")
-		opts.AssumeRoleDuration = ASSUME_ROLE_MIN_DURATION
-	} else if opts.AssumeRoleDuration > ASSUME_ROLE_MAX_DURATION {
-		logger.Debug("Assume role duration too long, adjusting to max value")
-		opts.AssumeRoleDuration = ASSUME_ROLE_MAX_DURATION
-	}
-	p.assumeRoleDuration = opts.AssumeRoleDuration
+	// Create a session based on the configured source profile, otherwise
+	// AWS SDK takes over and tries to do the assume role call with the
+	// user's credentials vs. session token.
+	p.sess = AwsSession(profile.SourceProfile)
 
-	if len(opts.RoleArn) > 0 {
-		a, err := arn.Parse(opts.RoleArn)
-		if err != nil {
-			return nil, err
-		}
-		profile.RoleArn = a.String()
-	}
-
-	if len(opts.MfaSerial) > 0 {
-		profile.MfaSerial = opts.MfaSerial
-	}
-	p.profile = profile
-
-	cacheDir := filepath.Dir(AwsConfigFile())
-	p.cacheFile = filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile.SourceProfile))
-
-	logger.Debugf("NewSessionTokenProvider(): %+v", p)
+	p.log.Debugf("NewSessionTokenProvider(): %+v", p)
 	return p, nil
 }
 
@@ -140,6 +105,7 @@ type awsAssumeRoleProvider struct {
 	cacheFile            string
 	profile              *AWSProfile
 	creds                *CachableCredentials
+	sess                 *session.Session
 }
 
 // Check if a set of credentials have expired (or are within the
@@ -265,8 +231,7 @@ func (p *awsAssumeRoleProvider) AssumeRole() (credentials.Value, error) {
 		//ExternalId: aws.String(p.profile.ExternalId),
 	}
 
-	sess := AwsSession(p.profile.SourceProfile)
-	res, err := sts.New(sess, &aws.Config{Credentials: credentials.NewCredentials(p)}).AssumeRole(&in)
+	res, err := sts.New(p.sess, &aws.Config{Credentials: credentials.NewCredentials(p)}).AssumeRole(&in)
 	if err != nil {
 		return credentials.Value{}, err
 	}
@@ -307,15 +272,60 @@ func (p *awsAssumeRoleProvider) sessionToken() (*sts.Credentials, error) {
 		in.TokenCode = aws.String(PromptForMfa())
 	}
 
-	// Create a session based on the configured source profile, otherwise
-	// AWS SDK takes over and tries to do the assume role call with the
-	// user's credentials vs. session token.
-	s := sts.New(AwsSession(p.profile.SourceProfile))
+	s := sts.New(p.sess)
 	res, err := s.GetSessionToken(&in)
 	if err != nil {
 		return nil, err
 	}
 	return res.Credentials, nil
+}
+
+func (p *awsAssumeRoleProvider) setAttrs(profile *AWSProfile, opts *SessionTokenProviderOptions) error {
+	logger := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.CachedCredentialsProvider", true)
+	p.log = logger
+
+	if opts.SessionTokenDuration < 1 {
+		p.log.Debug("Setting default session token duration")
+		opts.SessionTokenDuration = SESSION_TOKEN_DEFAULT_DURATION
+	} else if opts.SessionTokenDuration < SESSION_TOKEN_MIN_DURATION {
+		p.log.Debug("Session token duration too short, adjusting to min value")
+		opts.SessionTokenDuration = SESSION_TOKEN_MIN_DURATION
+	} else if opts.SessionTokenDuration > SESSION_TOKEN_MAX_DURATION {
+		p.log.Debug("Session token duration too long, adjusting to max value")
+		opts.SessionTokenDuration = SESSION_TOKEN_MAX_DURATION
+	}
+	p.sessionTokenDuration = opts.SessionTokenDuration
+
+	// initially align with SessionTokenDuration
+	p.assumeRoleDuration = p.sessionTokenDuration
+	if p.assumeRoleDuration < 1 {
+		p.log.Debug("Setting default assume role credential duration")
+		p.assumeRoleDuration = ASSUME_ROLE_DEFAULT_DURATION
+	} else if p.assumeRoleDuration < ASSUME_ROLE_MIN_DURATION {
+		p.log.Debug("Assume role duration too short, adjusting to min value")
+		p.assumeRoleDuration = ASSUME_ROLE_MIN_DURATION
+	} else if p.assumeRoleDuration > ASSUME_ROLE_MAX_DURATION {
+		p.log.Debug("Assume role duration too long, adjusting to max value")
+		p.assumeRoleDuration = ASSUME_ROLE_MAX_DURATION
+	}
+
+	if len(opts.RoleArn) > 0 {
+		a, err := arn.Parse(opts.RoleArn)
+		if err != nil {
+			return err
+		}
+		profile.RoleArn = a.String()
+	}
+
+	if len(opts.MfaSerial) > 0 {
+		profile.MfaSerial = opts.MfaSerial
+	}
+	p.profile = profile
+
+	cacheDir := filepath.Dir(AwsConfigFile())
+	p.cacheFile = filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile.SourceProfile))
+
+	return nil
 }
 
 func expirationTime(t int64) time.Time {
