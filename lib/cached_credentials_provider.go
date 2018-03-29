@@ -228,7 +228,9 @@ func (p *awsAssumeRoleProvider) AssumeRole() (credentials.Value, error) {
 		RoleArn:         aws.String(p.profile.RoleArn),
 		RoleSessionName: sesName,
 		DurationSeconds: aws.Int64(int64(p.assumeRoleDuration.Seconds())),
-		//ExternalId: aws.String(p.profile.ExternalId),
+	}
+	if len(p.profile.ExternalId) > 0 {
+		in.ExternalId = aws.String(p.profile.ExternalId)
 	}
 
 	res, err := sts.New(p.sess, &aws.Config{Credentials: credentials.NewCredentials(p)}).AssumeRole(&in)
