@@ -129,15 +129,11 @@ func TestBadSourceProfile(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
 	name := "has_role_bad_source"
 
-	// We're not validating if source_profile is a valid name, should we?
-	// or leave it up to the SDK to handle that?
 	p, err := getProfile(aws.String(name))
-	if err != nil {
-		t.Errorf("Error looking up profile %s: %v", name, err)
-	}
-
-	if p.SourceProfile != "bad" && p.name != name {
-		t.Errorf("Bad profile returned, expecting source_profile = 'bad' but got: %s", p.SourceProfile)
+	if err == nil {
+		t.Errorf("Expected error for invalid source_profile, but received: %+v", p)
+	} else {
+		t.Logf("Expected invalid source_profile error: %v", err)
 	}
 }
 
@@ -146,12 +142,10 @@ func TestNoSourceProfile(t *testing.T) {
 	name := "has_role_no_source"
 
 	p, err := getProfile(aws.String(name))
-	if err != nil {
-		t.Errorf("Error looking up profile %s: %v", name, err)
-	}
-
-	if p.SourceProfile != "default" && p.name != name {
-		t.Errorf("Bad profile returned, expecting default source_profile but got: %s", p.SourceProfile)
+	if err == nil {
+		t.Errorf("Expected error for missing source_profile, but received: %+v", p)
+	} else {
+		t.Logf("Expected missing source_profile error: %v", err)
 	}
 }
 
@@ -170,7 +164,7 @@ func ExampleGetProfileNoRoleMfa() {
 	fmt.Println(p.MfaSerial)
 	// Output:
 	// basic
-	// default
+	//
 	//
 	//
 }

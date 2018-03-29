@@ -24,6 +24,7 @@ type AWSProfile struct {
 	RoleSessionName string `ini:"role_session_name"`
 	Region          string `ini:"region"`
 	name            string
+	sourceProfile   *AWSProfile
 }
 
 // Interface for managing an ini-formatted configuration file
@@ -44,9 +45,10 @@ type ConfigManagerOptions struct {
 // the environment variable AWS_CONFIG_FILE to determine the file to
 // load, and if not defined fall back to the SDK default value.
 func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
-	f, err := ini.Load(AwsConfigFile())
+	cf := AwsConfigFile()
+	f, err := ini.Load(cf)
 	if err != nil {
-		return nil, err
+		return nil, session.SharedConfigLoadError{Filename: cf, Err: err}
 	}
 	f.BlockMode = false
 
@@ -65,7 +67,7 @@ type awsConfigManager struct {
 // and if not set, use a value of "default"
 func (c *awsConfigManager) DefaultProfile() (*AWSProfile, error) {
 	s := defaultSection()
-	p := &AWSProfile{SourceProfile: s, name: s}
+	p := &AWSProfile{name: s}
 	if err := c.profile(p); err != nil {
 		return nil, err
 	}
@@ -73,19 +75,21 @@ func (c *awsConfigManager) DefaultProfile() (*AWSProfile, error) {
 }
 
 // Retrieve an AWSProfile by name.  The default profile will be looked up
-// first to provide default settings, and then the profile-specific values
+// first to provide some default settings, then the profile-specific values
 // will be retrieved.  If the specified profile contains a role_arn setting
-// that value will be checked to ensure it's a valid IAM arn.
+// that value will be checked to ensure it's a valid IAM arn, and that the
+// required source_profile setting is valid.
 func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 	if p == nil || len(*p) < 1 {
 		return nil, fmt.Errorf("nil or empty profile name")
 	}
 
-	profile, err := c.DefaultProfile()
+	dp, err := c.DefaultProfile()
 	if err != nil {
 		return nil, err
 	}
-	profile.name = *p
+
+	profile := &AWSProfile{name: *p, Region: dp.Region}
 
 	if err := c.profile(profile); err != nil {
 		return nil, err
@@ -103,10 +107,17 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 			return nil, fmt.Errorf("role ARN format error, does not start with %s", IAM_ARN)
 		}
 
-		// TODO also check that SourceProfile is valid?
+		// The source_profile config is required (and only valid) with role_arn
+		// Ensure that it exists, and is valid
 		if len(profile.SourceProfile) < 1 {
 			return nil, fmt.Errorf("role_arn configured, but missing required source_profile")
 		}
+
+		sp := &AWSProfile{name: profile.SourceProfile}
+		if err := c.profile(sp); err != nil {
+			return nil, err
+		}
+		profile.sourceProfile = sp
 	}
 
 	return profile, nil
@@ -122,15 +133,18 @@ func (c *awsConfigManager) BuildConfig(r Roles, mfa *string) error {
 	return nil
 }
 
+// Support looking up a profile by sections named 'name'
+// or 'profile name'.  See session.setFromIniFile() in
+// aws/session/shared_config.go in the AWS SDK
 func (c *awsConfigManager) profile(p *AWSProfile) error {
 	name := p.name
-	if name != p.SourceProfile {
-		name = "profile " + name
-	}
 
 	s, err := c.config.GetSection(name)
 	if err != nil {
-		return err
+		s, err = c.config.GetSection("profile " + name)
+		if err != nil {
+			return session.SharedConfigProfileNotExistsError{Profile: name, Err: err}
+		}
 	}
 
 	if err := s.MapTo(p); err != nil {
