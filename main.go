@@ -198,6 +198,9 @@ func main() {
 				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
 				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
 			}
+			if len(p.Region) > 0 {
+				os.Setenv("AWS_REGION", p.Region)
+			}
 
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin
@@ -210,7 +213,7 @@ func main() {
 				log.Fatalf("%v", err)
 			}
 		} else {
-			printCredentials(creds)
+			printCredentials(p, creds)
 		}
 	}
 }
@@ -227,11 +230,15 @@ func iamUser(s *session.Session) *iam.User {
 	return u.User
 }
 
-func printCredentials(creds credentials.Value) {
+func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
 	exportToken := "export"
 	switch runtime.GOOS {
 	case "windows":
 		exportToken = "set"
+	}
+
+	if len(p.Region) > 0 {
+		fmt.Printf("%s %s='%s'\n", exportToken, "AWS_REGION", p.Region)
 	}
 
 	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
