@@ -157,7 +157,7 @@ func main() {
 			RoleArn:              "",
 			MfaSerial:            *mfaArn,
 		}
-		t, err := lib.NewSessionTokenProvider(sess, p, &opts)
+		t, err := lib.NewSessionTokenProvider(p, &opts)
 		if err != nil {
 			log.Fatalf("Unable to build credential provider: %v", err)
 		}
@@ -184,12 +184,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", sentance_tense, fmt_t, hmn_t)
 		}
 
-		//if !*sesCreds {
-		//	creds, err = credProvider.AssumeRole(profile_cfg)
-		//	if err != nil {
-		//		log.Fatalf("Error doing AssumeRole: %+v", err)
-		//	}
-		//}
+		if !*sesCreds {
+			creds, err = t.AssumeRole()
+			if err != nil {
+				log.Fatalf("Error doing AssumeRole: %+v", err)
+			}
+		}
 
 		if len(*cmd) > 0 {
 			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
