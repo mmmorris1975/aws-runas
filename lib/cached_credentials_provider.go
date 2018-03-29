@@ -168,7 +168,7 @@ func (p *awsAssumeRoleProvider) IsExpired() bool {
 // credentials are expired, or there is no cache, a new set of
 // session token credentials will be created and stored.
 //
-// On error, the error return argument will be non-nil and an empty
+// On error, the error return value will be non-nil with an empty
 // credentials.Value
 //
 // satisfies credentials.Provider
@@ -193,7 +193,7 @@ func (p *awsAssumeRoleProvider) Retrieve() (credentials.Value, error) {
 				AccessKeyID:     *creds.AccessKeyId,
 				SecretAccessKey: *creds.SecretAccessKey,
 				SessionToken:    *creds.SessionToken,
-				ProviderName: "CachedCredentialsProvider",
+				ProviderName:    "CachedCredentialsProvider",
 			},
 		}
 		p.creds = c
