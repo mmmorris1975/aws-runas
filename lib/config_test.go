@@ -25,8 +25,8 @@ func TestEmptyDefaultProfile(t *testing.T) {
 		t.Errorf("Error getting default profile: %v", err)
 	}
 
-	if p.name != "default" {
-		t.Errorf("Unexpected profile name, expected: default, got: %s", p.name)
+	if p.Name != "default" {
+		t.Errorf("Unexpected profile name, expected: default, got: %s", p.Name)
 	}
 }
 
@@ -38,7 +38,7 @@ func ExampleDefaultProfile() {
 	}
 
 	if p != nil {
-		fmt.Println(p.name)
+		fmt.Println(p.Name)
 		fmt.Println(p.Region)
 	}
 	// Output:
@@ -59,7 +59,7 @@ func ExampleDefaultProfileEnv() {
 	os.Unsetenv("AWS_DEFAULT_PROFILE")
 
 	if p != nil {
-		fmt.Println(p.name)
+		fmt.Println(p.Name)
 		fmt.Println(p.Region)
 		fmt.Println(p.MfaSerial)
 	}
@@ -158,7 +158,7 @@ func ExampleGetProfileNoRoleMfa() {
 		fmt.Printf("Error getting profile %s: %v", name, err)
 	}
 
-	fmt.Println(p.name)
+	fmt.Println(p.Name)
 	fmt.Println(p.Region)
 	fmt.Println(p.SourceProfile)
 	fmt.Println(p.RoleArn)
@@ -180,7 +180,7 @@ func ExampleGetProfileRoleNoMfa() {
 		fmt.Printf("Error getting profile %s: %v", name, err)
 	}
 
-	fmt.Println(p.name)
+	fmt.Println(p.Name)
 	fmt.Println(p.SourceProfile)
 	fmt.Println(p.RoleArn)
 	fmt.Println(p.MfaSerial)
@@ -200,7 +200,7 @@ func ExampleGetProfileRoleMfa() {
 		fmt.Printf("Error getting profile %s: %v", name, err)
 	}
 
-	fmt.Println(p.name)
+	fmt.Println(p.Name)
 	fmt.Println(p.SourceProfile)
 	fmt.Println(p.RoleArn)
 	fmt.Println(p.MfaSerial)
@@ -220,7 +220,7 @@ func ExampleGetProfileRoleInheritMfa() {
 		fmt.Printf("Error getting profile %s: %v", name, err)
 	}
 
-	fmt.Println(p.name)
+	fmt.Println(p.Name)
 	fmt.Println(p.SourceProfile)
 	fmt.Println(p.RoleArn)
 	fmt.Println(p.MfaSerial)

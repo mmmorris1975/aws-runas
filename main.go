@@ -192,6 +192,7 @@ func main() {
 		}
 
 		if len(*cmd) > 0 {
+			os.Setenv("AWS_PROFILE", *profile)
 			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
@@ -231,6 +232,7 @@ func iamUser(s *session.Session) *iam.User {
 }
 
 func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
+	format := "%s %s='%s'\n"
 	exportToken := "export"
 	switch runtime.GOOS {
 	case "windows":
@@ -241,8 +243,9 @@ func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
 		fmt.Printf("%s %s='%s'\n", exportToken, "AWS_REGION", p.Region)
 	}
 
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
-	fmt.Printf("%s %s='%s'\n", exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
+	fmt.Printf(format, exportToken, "AWS_PROFILE", p.Name)
+	fmt.Printf(format, exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	fmt.Printf(format, exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+	fmt.Printf(format, exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
+	fmt.Printf(format, exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
 }

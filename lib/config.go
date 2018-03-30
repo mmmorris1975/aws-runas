@@ -23,7 +23,7 @@ type AWSProfile struct {
 	ExternalId      string `ini:"external_id"`
 	RoleSessionName string `ini:"role_session_name"`
 	Region          string `ini:"region"`
-	name            string
+	Name            string
 	sourceProfile   *AWSProfile
 }
 
@@ -67,7 +67,7 @@ type awsConfigManager struct {
 // and if not set, use a value of "default"
 func (c *awsConfigManager) DefaultProfile() (*AWSProfile, error) {
 	s := defaultSection()
-	p := &AWSProfile{name: s}
+	p := &AWSProfile{Name: s}
 	if err := c.profile(p); err != nil {
 		return nil, err
 	}
@@ -89,7 +89,7 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		return nil, err
 	}
 
-	profile := &AWSProfile{name: *p, Region: dp.Region}
+	profile := &AWSProfile{Name: *p, Region: dp.Region}
 
 	if err := c.profile(profile); err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 			return nil, fmt.Errorf("role_arn configured, but missing required source_profile")
 		}
 
-		sp := &AWSProfile{name: profile.SourceProfile}
+		sp := &AWSProfile{Name: profile.SourceProfile}
 		if err := c.profile(sp); err != nil {
 			return nil, err
 		}
@@ -144,7 +144,7 @@ func (c *awsConfigManager) BuildConfig(r Roles, mfa *string) error {
 // or 'profile name'.  See session.setFromIniFile() in
 // aws/session/shared_config.go in the AWS SDK
 func (c *awsConfigManager) profile(p *AWSProfile) error {
-	name := p.name
+	name := p.Name
 
 	s, err := c.config.GetSection(name)
 	if err != nil {
