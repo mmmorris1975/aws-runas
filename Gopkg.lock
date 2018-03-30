@@ -20,6 +20,7 @@
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
+    "aws/arn",
     "aws/awserr",
     "aws/awsutil",
     "aws/client",
@@ -79,6 +80,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ed30db349a9dfe17234f60da726c12fd1edbcdc67176e220e66767eec8873acd"
+  inputs-digest = "def40d37c5148c21a4d150afaf5ddf47337e65602cde27743c709d7bbca54ea5"
   solver-name = "gps-cdcl"
   solver-version = 1
