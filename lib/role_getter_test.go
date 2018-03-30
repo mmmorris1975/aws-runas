@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"testing"
 )
 
@@ -50,4 +51,32 @@ func TestNilRoleGetter(t *testing.T) {
 	if len(r) != 0 {
 		t.Errorf("Found unexpected roles from nil input")
 	}
+}
+
+func TestNewAwsRoleGetterDefault(t *testing.T) {
+	defer func() {
+		if x := recover(); x != nil {
+			t.Errorf("panic() from default NewAwsRoleGetter()")
+		}
+	}()
+	s, err := session.NewSessionWithOptions(session.Options{})
+	if err != nil {
+		t.Errorf("Error creating AWS session: %v", err)
+	}
+	NewAwsRoleGetter(s, "u", new(RoleGetterOptions))
+}
+
+func TestNewAwsRoleGetterNilOpts(t *testing.T) {
+	defer func() {
+		if x := recover(); x != nil {
+			t.Logf("Got expected panic() from default NewAwsRoleGetter()")
+		} else {
+			t.Errorf("Did not see expected panic() with nil options")
+		}
+	}()
+	s, err := session.NewSessionWithOptions(session.Options{})
+	if err != nil {
+		t.Errorf("Error creating AWS session: %v", err)
+	}
+	NewAwsRoleGetter(s, "u", nil)
 }
