@@ -36,7 +36,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.56, and kingpin.v2 v2.2.6
+Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.13.10, and kingpin.v2 v2.2.6
 *NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 
 ### Build Steps
@@ -96,23 +96,21 @@ The following API calls are used by the `-l` option to find assume-able roles fo
     Create an environment for interacting with the AWS API using an assumed role
 
     Flags:
-      -h, --help              Show context-sensitive help (also try --help-long and --help-man).
-      -d, --duration=12h0m0s  duration of the retrieved session token
-      -l, --list-roles        list role ARNs you are able to assume
-      -m, --list-mfa          list the ARN of the MFA device associated with your account
-      -e, --expiration        Show token expiration time
-      -s, --session           print eval()-able session token info, or run command using session token credentials
-      -r, --refresh           force a refresh of the cached credentials
-      -v, --verbose           print verbose/debug messages
-      -V, --version           Show application version.
+        -h, --help                  Show context-sensitive help (also try --help-long and --help-man).
+        -d, --duration=12h0m0s      duration of the retrieved session token
+        -a, --role-duration=1h0m0s  duration of the assume role credentials
+        -l, --list-roles            list role ARNs you are able to assume
+        -m, --list-mfa              list the ARN of the MFA device associated with your account
+        -e, --expiration            Show token expiration time
+        -s, --session               print eval()-able session token info, or run command using session token credentials
+        -r, --refresh               force a refresh of the cached credentials
+        -v, --verbose               print verbose/debug messages
+        -M, --mfa-arn=MFA-ARN       ARN of MFA device needed to perform Assume Role operation
+        -V, --version               Show application version.
 
     Args:
       [<profile>]  name of profile
       [<cmd>]      command to execute using configured profile
-
-*NOTE:* When running a command which includes options using '-' or '--', you may need to modify the aws-runas command, to
-signal to aws-runas that the options should not be processed by aws-runs, but passed to the command instead:
-`aws-runas my-profile -- my command --with --options`
 
 ### Listing available roles
 
@@ -144,6 +142,7 @@ the given profile, otherwise use the `default` profile.
 Example:
 
     $ aws-runas -s
+    export AWS_REGION='rrrrrr'
     export AWS_ACCESS_KEY_ID='xxxxxx'
     export AWS_SECRET_ACCESS_KEY='yyyyyy'
     export AWS_SESSION_TOKEN='zzzzz'
@@ -161,6 +160,7 @@ variables for the assumed role credentials which can be added to the current ses
 Example:
 
     $ aws-runas admin-profile
+    export AWS_REGION='rrrrrr'
     export AWS_ACCESS_KEY_ID='xxxxxx'
     export AWS_SECRET_ACCESS_KEY='yyyyyy'
     export AWS_SESSION_TOKEN='zzzzz'
