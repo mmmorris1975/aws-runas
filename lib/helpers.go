@@ -93,8 +93,9 @@ func VersionCheck(version string) error {
 		v := f[len(f)-1]
 
 		if v != version {
-			fmt.Printf("New version of aws-runas available: %s\nDownload available at: %s", v, u)
+			fmt.Printf("New version of aws-runas available: %s\nDownload available at: %s\n", v, u)
 		}
+		return nil
 	}
 
 	return fmt.Errorf("Version check failed, bad HTTP Status: %d", res.StatusCode)
