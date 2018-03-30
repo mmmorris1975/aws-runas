@@ -1,0 +1,37 @@
+Functional
+==========
+Split code to library and cli
+ - main should be a cli facade over the library
+
+Add option to check for program update
+
+Add unit tests
+
+Add functional tests
+
+Document code
+
+Provide better integration with AWS SDK env vars (see https://docs.aws.amazon.com/sdk-for-go/api/aws/session/)
+ - AWS_ACCESS_KEY_ID / AWS_ACCESS_KEY
+ - AWS_SECRET_ACCESS_KEY / AWS_SECRET_KEY
+ - AWS_SESSION_TOKEN / AWS_SECURITY_TOKEN
+ - AWS_REGION / AWS_DEFAULT_REGION
+ - AWS_PROFILE / AWS_DEFAULT_PROFILE
+ - AWS_SHARED_CREDENTIALS_FILE
+ - AWS_CONFIG_FILE
+
+Support setting session and assume role cred durations in config file (and env vars?)
+
+
+Non-Functional
+===============
+Move repo
+ - make this the 'official' aws-runas repo, move & deprecate python version
+
+Integrate with external tools
+ - AWS code pipeline, CircleCI, Travis, Concourse, etc...
+
+Submit project to awesome-go list
+
+
+
