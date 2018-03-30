@@ -66,7 +66,7 @@ func (p *AWSConfigParser) lookupProfile(profile *string, cfg *ini.File) (*AWSPro
 	if err != nil {
 		return nil, err
 	}
-	if err := s.MapTo(profile_t);err != nil {
+	if err := s.MapTo(profile_t); err != nil {
 		return nil, err
 	}
 

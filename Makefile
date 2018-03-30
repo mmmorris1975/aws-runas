@@ -1,5 +1,5 @@
 EXE := aws-runas
-PKG := github.com/mmmorris1975/go-aws-runas
+PKG := github.com/mmmorris1975/aws-runas
 VER := $(shell git describe --tags)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)

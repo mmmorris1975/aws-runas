@@ -90,21 +90,21 @@ func (p *CachingSessionTokenProvider) IsExpired() bool {
 	return expired
 }
 
-func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (credentials.Value, error) {
+func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile, duration *time.Duration) (credentials.Value, error) {
 	p.Logger.Debug("In AssumeRole()")
 	username := "__"
-	user, err := user.Current()
+	u, err := user.Current()
 	if err == nil {
 		// On Windows, this could return DOMAIN\user, and '\' is not a valid character for RoleSessionName
 		// AWS API docs say that regex [[:word:]=,.@-] is the valid characters for RoleSessionName
 		re := regexp.MustCompile("[^[:word:]=,.@-]")
-		username = re.ReplaceAllLiteralString(user.Username, "_")
+		username = re.ReplaceAllLiteralString(u.Username, "_")
 	}
 
 	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
 	p.Logger.Debugf("Setting AssumeRole session name to: %s", *sesName)
 	input := sts.AssumeRoleInput{
-		DurationSeconds: aws.Int64(int64(3600)),
+		DurationSeconds: aws.Int64(int64(duration.Seconds())),
 		RoleArn:         aws.String(profile_cfg.RoleArn),
 		RoleSessionName: sesName,
 	}
@@ -120,13 +120,14 @@ func (p *CachingSessionTokenProvider) AssumeRole(profile_cfg *AWSProfile) (crede
 		Config:            aws.Config{Credentials: credentials.NewStaticCredentialsFromCreds(creds)},
 	}
 	s := session.Must(session.NewSessionWithOptions(sesOpts))
-	sts := sts.New(s)
-	res, err := sts.AssumeRole(&input)
+	sts_c := sts.New(s)
+	res, err := sts_c.AssumeRole(&input)
 	if err != nil {
 		return credentials.Value{}, err
 	}
 
 	c := res.Credentials
+	p.Logger.Debugf("Assume Role credentials will expire in %.0f minutes", time.Until(*c.Expiration).Round(time.Minute).Minutes())
 	v := credentials.Value{
 		AccessKeyID:     *c.AccessKeyId,
 		SecretAccessKey: *c.SecretAccessKey,

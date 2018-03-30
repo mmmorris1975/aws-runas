@@ -24,38 +24,42 @@ const (
 )
 
 var (
-	listRoles       *bool
-	listMfa         *bool
-	showExpire      *bool
-	sesCreds        *bool
-	refresh         *bool
-	verbose         *bool
-	makeConf        *bool
-	profile         *string
-	mfaArn          *string
-	duration        *time.Duration
-	cmd             *[]string
-	defaultDuration = time.Duration(12) * time.Hour
-	logLevel        = logo.WARN
+	listRoles           *bool
+	listMfa             *bool
+	showExpire          *bool
+	sesCreds            *bool
+	refresh             *bool
+	verbose             *bool
+	makeConf            *bool
+	profile             *string
+	mfaArn              *string
+	duration            *time.Duration
+	roleDuration        *time.Duration
+	cmd                 *[]string
+	defaultDuration     = 12 * time.Hour
+	defaultRoleDuration = 1 * time.Hour
+	logLevel            = logo.WARN
 )
 
 func init() {
 	const (
-		cmdDesc         = "Create an environment for interacting with the AWS API using an assumed role"
-		durationArgDesc = "duration of the retrieved session token"
-		listRoleArgDesc = "list role ARNs you are able to assume"
-		listMfaArgDesc  = "list the ARN of the MFA device associated with your account"
-		showExpArgDesc  = "Show token expiration time"
-		sesCredArgDesc  = "print eval()-able session token info, or run command using session token credentials"
-		refreshArgDesc  = "force a refresh of the cached credentials"
-		verboseArgDesc  = "print verbose/debug messages"
-		profileArgDesc  = "name of profile, or role ARN"
-		cmdArgDesc      = "command to execute using configured profile"
-		mfaArnDesc      = "ARN of MFA device needed to perform Assume Role operation"
-		makeConfArgDesc = "Build an AWS extended switch-role plugin configuration for all available roles"
+		cmdDesc             = "Create an environment for interacting with the AWS API using an assumed role"
+		durationArgDesc     = "duration of the retrieved session token"
+		roleDurationArgDesc = "duration of the assume role credentials"
+		listRoleArgDesc     = "list role ARNs you are able to assume"
+		listMfaArgDesc      = "list the ARN of the MFA device associated with your account"
+		showExpArgDesc      = "Show token expiration time"
+		sesCredArgDesc      = "print eval()-able session token info, or run command using session token credentials"
+		refreshArgDesc      = "force a refresh of the cached credentials"
+		verboseArgDesc      = "print verbose/debug messages"
+		profileArgDesc      = "name of profile, or role ARN"
+		cmdArgDesc          = "command to execute using configured profile"
+		mfaArnDesc          = "ARN of MFA device needed to perform Assume Role operation"
+		makeConfArgDesc     = "Build an AWS extended switch-role plugin configuration for all available roles"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration.String()).Duration()
+	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Default(defaultRoleDuration.String()).Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
@@ -274,7 +278,7 @@ func main() {
 		}
 
 		if !*sesCreds {
-			creds, err = credProvider.AssumeRole(profile_cfg)
+			creds, err = credProvider.AssumeRole(profile_cfg, roleDuration)
 			if err != nil {
 				log.Fatalf("Error doing AssumeRole: %+v", err)
 			}
