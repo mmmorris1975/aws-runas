@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/mmmorris1975/aws-runas/lib"
 	"os"
+	"runtime"
 	"testing"
 )
 
@@ -39,4 +41,26 @@ func TestAwsProfile(t *testing.T) {
 	})
 
 	os.Unsetenv("AWS_CONFIG_FILE")
+}
+
+func ExamplePrintCredentials() {
+	switch runtime.GOOS {
+	case "windows":
+		return
+	}
+
+	p := lib.AWSProfile{Region: "us-east-1", Name: "mock"}
+	c := credentials.Value{
+		AccessKeyID:     "MockKey",
+		SecretAccessKey: "MockSecret",
+		SessionToken:    "MockSession",
+	}
+	printCredentials(&p, c)
+	// Output:
+	// export AWS_REGION='us-east-1'
+	// export AWS_PROFILE='mock'
+	// export AWS_ACCESS_KEY_ID='MockKey'
+	// export AWS_SECRET_ACCESS_KEY='MockSecret'
+	// export AWS_SESSION_TOKEN='MockSession'
+	// export AWS_SECURITY_TOKEN='MockSession'
 }
