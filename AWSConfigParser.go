@@ -18,6 +18,7 @@ type AWSProfile struct {
 	RoleArn       string `ini:"role_arn"`
 	MfaSerial     string `ini:"mfa_serial"`
 	Region        string `ini:"region"`
+	Name          string
 }
 
 func NewAWSProfile(profile_name *string, mfa_arn *string) (*AWSProfile, error) {
@@ -109,6 +110,7 @@ func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
 			}
 		}
 	}
+	profile_t.Name = *profile
 
 	p.Logger.Debugf("PROFILE: %+v", *profile_t)
 	return profile_t, nil
