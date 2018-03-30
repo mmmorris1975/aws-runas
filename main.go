@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -12,6 +14,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime"
+	"strings"
 	"time"
 )
 
@@ -149,16 +152,15 @@ func main() {
 		// TODO check github releases page for update
 		log.Debug("Update check")
 	default:
-		// FIXME don't call GetProfile if profile looks like a role ARN
-		p, err := cm.GetProfile(profile)
+		p, err := awsProfile(cm, *profile)
 		if err != nil {
-			log.Fatalf("Unable to get configuration for profile '%s': %v", *profile, err)
+			log.Fatalf("Error building profile: %v", err)
 		}
 
 		opts := lib.SessionTokenProviderOptions{
 			LogLevel:             logLevel,
 			SessionTokenDuration: *duration,
-			RoleArn:              "",
+			RoleArn:              p.RoleArn,
 			MfaSerial:            *mfaArn,
 		}
 		t, err := lib.NewSessionTokenProvider(p, &opts)
@@ -233,6 +235,26 @@ func iamUser(s *session.Session) *iam.User {
 
 	log.Debugf("USER: %+v", u)
 	return u.User
+}
+
+func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
+	var p *lib.AWSProfile
+
+	a, err := arn.Parse(name)
+	if err != nil {
+		p, err = cm.GetProfile(aws.String(name))
+		if err != nil {
+			return nil, fmt.Errorf("Unable to get configuration for profile '%s': %v", name, err)
+		}
+	} else {
+		if strings.HasPrefix(a.String(), lib.IAM_ARN) {
+			p = &lib.AWSProfile{RoleArn: a.String()}
+		} else {
+			return nil, fmt.Errorf("profile argument is not an IAM role ARN")
+		}
+	}
+
+	return p, nil
 }
 
 func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
