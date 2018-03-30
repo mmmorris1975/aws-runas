@@ -40,3 +40,9 @@ func ExamplePromptForMfa() {
 	// Output:
 	// Enter MFA Code:
 }
+
+func TestVersionCheck(t *testing.T) {
+	if err := VersionCheck(""); err != nil {
+		t.Errorf("Unexpected error from VersionCheck: %v", err)
+	}
+}

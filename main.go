@@ -149,8 +149,10 @@ func main() {
 			}
 		}
 	case *updateFlag:
-		// TODO check github releases page for update
 		log.Debug("Update check")
+		if err := lib.VersionCheck(VERSION); err != nil {
+			log.Debugf("Error from VersionCheck(): %v", err)
+		}
 	default:
 		p, err := awsProfile(cm, *profile)
 		if err != nil {

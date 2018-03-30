@@ -6,7 +6,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"net/http"
 	"os"
+	"strings"
 )
 
 // Lookup the MFA devices configured for the calling user's IAM account
@@ -64,4 +66,36 @@ func AwsSession(profile string) *session.Session {
 	}
 
 	return session.Must(session.NewSessionWithOptions(opts))
+}
+
+func VersionCheck(version string) error {
+	u := "https://github.com/mmmorris1975/aws-runas/releases/latest"
+	r, err := http.NewRequest(http.MethodHead, u, http.NoBody)
+	if err != nil {
+		return err
+	}
+
+	// Get in the weeds so we don't follow redirects
+	res, err := http.DefaultTransport.RoundTrip(r)
+	if err != nil {
+		return err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode == http.StatusFound {
+		url, err := res.Location()
+		if err != nil {
+			return err
+		}
+
+		p := strings.Trim(url.Path, `/`)
+		f := strings.Split(p, `/`)
+		v := f[len(f)-1]
+
+		if v != version {
+			fmt.Printf("New version of aws-runas available: %s\nDownload available at: %s", v, u)
+		}
+	}
+
+	return fmt.Errorf("Version check failed, bad HTTP Status: %d", res.StatusCode)
 }
