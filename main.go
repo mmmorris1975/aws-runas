@@ -98,7 +98,7 @@ func dedupAndSort(ary *[]string) *[]string {
 }
 
 func printCredentials(p *AWSProfile, creds credentials.Value) {
-	format := "%s %s='%s'"
+	format := "%s %s='%s'\n"
 	exportToken := "export"
 	switch runtime.GOOS {
 	case "windows":

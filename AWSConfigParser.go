@@ -2,11 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
 	"os"
-	"os/user"
-	"path/filepath"
 	"strings"
 )
 
@@ -62,8 +61,12 @@ func (p *AWSConfigParser) lookupProfile(profile *string, cfg *ini.File) (*AWSPro
 
 	p.Logger.Debugf("Looking for profile data in section: '%s'", section)
 	profile_t := &AWSProfile{SourceProfile: *profile}
-	err := cfg.Section(section).MapTo(profile_t)
+
+	s, err := cfg.GetSection(section)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.MapTo(profile_t);err != nil {
 		return nil, err
 	}
 
@@ -113,14 +116,7 @@ func (p *AWSConfigParser) GetProfile(profile *string) (*AWSProfile, error) {
 
 func (p *AWSConfigParser) _readConfig() (*ini.File, error) {
 	p.Logger.Debug("In _readConfig()")
-
-	u, err := user.Current()
-	if err != nil {
-		p.Logger.Debug("Unable to determine current user: %+v", err)
-		return nil, err
-	}
-
-	cfgFile := filepath.Join(u.HomeDir, ".aws", "config")
+	cfgFile := defaults.SharedConfigFilename()
 
 	val, ok := os.LookupEnv("AWS_CONFIG_FILE")
 	if ok {
