@@ -41,7 +41,7 @@ func (m *mockSessionTokenProvider) Retrieve() (credentials.Value, error) {
 	return m.creds.Value, nil
 }
 
-func (m *mockSessionTokenProvider) AssumeRole() (credentials.Value, error) {
+func (m *mockSessionTokenProvider) AssumeRole(d *time.Duration) (credentials.Value, error) {
 	v := credentials.Value{
 		AccessKeyID:     "MockAssumeRoleAccessKey",
 		SecretAccessKey: "MockAssumeRoleSecretKey",
@@ -72,7 +72,8 @@ func TestProviderDefaults(t *testing.T) {
 		}
 	})
 	t.Run("AssumeRole", func(t *testing.T) {
-		c, err := m.AssumeRole()
+		d := ASSUME_ROLE_MAX_DURATION
+		c, err := m.AssumeRole(&d)
 		if err != nil {
 			t.Errorf("Unexpected error during AssumeRole(): %v", err)
 		}
@@ -194,14 +195,23 @@ func TestNewProviderParams(t *testing.T) {
 			t.Errorf("Session token duration is not max value")
 		}
 	})
+	t.Run("DefaultRoleDuration", func(t *testing.T) {
+		d := time.Duration(0)
+		m.validateRoleDuration(&d)
+		if m.assumeRoleDuration != ASSUME_ROLE_DEFAULT_DURATION {
+			t.Errorf("Assume role duration is not default value")
+		}
+	})
 	t.Run("BelowMinRoleDuration", func(t *testing.T) {
 		m.setAttrs(new(AWSProfile), &SessionTokenProviderOptions{SessionTokenDuration: 1 * time.Minute})
+		m.validateRoleDuration(&m.sessionTokenDuration)
 		if m.assumeRoleDuration != ASSUME_ROLE_MIN_DURATION {
 			t.Errorf("Assume role duration is not min value")
 		}
 	})
 	t.Run("AboveMaxRoleDuration", func(t *testing.T) {
 		m.setAttrs(new(AWSProfile), &SessionTokenProviderOptions{SessionTokenDuration: 18 * time.Hour})
+		m.validateRoleDuration(&m.sessionTokenDuration)
 		if m.assumeRoleDuration != ASSUME_ROLE_MAX_DURATION {
 			t.Errorf("Assume role duration is not max value")
 		}
