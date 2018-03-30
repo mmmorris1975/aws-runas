@@ -217,3 +217,17 @@ func TestNewProviderParams(t *testing.T) {
 		}
 	})
 }
+
+func TestNewSessionTokenProviderDefault(t *testing.T) {
+	_, err := NewSessionTokenProvider(new(AWSProfile), new(SessionTokenProviderOptions))
+	if err != nil {
+		t.Errorf("Unexpected error calling NewSessionTokenProvider(): %v", err)
+	}
+}
+
+func TestNewSessionTokenProviderBadRole(t *testing.T) {
+	_, err := NewSessionTokenProvider(new(AWSProfile), &SessionTokenProviderOptions{RoleArn: "x"})
+	if err == nil {
+		t.Errorf("Expected an error from NewSessionTokenProvider() with malformed ARN")
+	}
+}

@@ -34,3 +34,9 @@ func TestAwsSessionProfile(t *testing.T) {
 func TestAwsSessionNoProfile(t *testing.T) {
 	AwsSession("")
 }
+
+func ExamplePromptForMfa() {
+	PromptForMfa()
+	// Output:
+	// Enter MFA Code:
+}
