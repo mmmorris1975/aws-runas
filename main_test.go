@@ -58,7 +58,6 @@ func ExamplePrintCredentials() {
 	printCredentials(&p, c)
 	// Output:
 	// export AWS_REGION='us-east-1'
-	// export AWS_PROFILE='mock'
 	// export AWS_ACCESS_KEY_ID='MockKey'
 	// export AWS_SECRET_ACCESS_KEY='MockSecret'
 	// export AWS_SESSION_TOKEN='MockSession'

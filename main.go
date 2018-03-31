@@ -200,7 +200,6 @@ func main() {
 		}
 
 		if len(*cmd) > 0 {
-			os.Setenv("AWS_PROFILE", *profile)
 			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 			if len(creds.SessionToken) > 0 {
@@ -210,6 +209,7 @@ func main() {
 			if len(p.Region) > 0 {
 				os.Setenv("AWS_REGION", p.Region)
 			}
+			os.Unsetenv("AWS_PROFILE")
 
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin
@@ -271,7 +271,6 @@ func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
 		fmt.Printf("%s %s='%s'\n", exportToken, "AWS_REGION", p.Region)
 	}
 
-	fmt.Printf(format, exportToken, "AWS_PROFILE", p.Name)
 	fmt.Printf(format, exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
 	fmt.Printf(format, exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
 	fmt.Printf(format, exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
