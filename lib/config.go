@@ -68,11 +68,15 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 
 	cfg := &config.AwsConfig{Name: *p}
 	opts := &config.ConfigHandlerOpts{LogLevel: c.opts.LogLevel}
-
-	ch := config.NewSharedCfgConfigHandler(opts)
+	ch := config.DefaultConfigHandler(opts)
 	if err := ch.Config(cfg); err != nil {
 		return nil, err
 	}
+
+	//ch := config.NewSharedCfgConfigHandler(opts)
+	//if err := ch.Config(cfg); err != nil {
+	//	return nil, err
+	//}
 	profile := new(AWSProfile)
 
 	if len(cfg.RoleArn) > 0 {
@@ -99,10 +103,10 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		profile.RoleSessionName = cfg.RoleSessionName
 	}
 
-	env := config.NewEnvConfigHandler(opts)
-	if err := env.Config(cfg); err != nil {
-		return nil, err
-	}
+	//env := config.NewEnvConfigHandler(opts)
+	//if err := env.Config(cfg); err != nil {
+	//	return nil, err
+	//}
 
 	profile.Region = cfg.GetRegion()
 	profile.MfaSerial = cfg.GetMfaSerial()

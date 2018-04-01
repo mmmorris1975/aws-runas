@@ -86,12 +86,13 @@ type ConfigHandler interface {
 // The default ConfigHandler, which will lookup configuration in this order:
 // Shared configuration
 // Environment variables
-// The handler will be configured to use the INFO logging level.
-var DefaultConfigHandler = NewChainConfigHandler(
-	DefaultConfigHandlerOpts,
-	NewSharedCfgConfigHandler(DefaultConfigHandlerOpts),
-	NewEnvConfigHandler(DefaultConfigHandlerOpts),
-)
+func DefaultConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
+	return NewChainConfigHandler(
+		opts,
+		NewSharedCfgConfigHandler(opts),
+		NewEnvConfigHandler(opts),
+	)
+}
 
 // default config handling (low to high priority)...
 // config files

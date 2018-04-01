@@ -17,7 +17,7 @@ func ExampleChainConfigHandler_Config() {
 	defer os.Unsetenv("CREDENTIALS_DURATION")
 
 	c := new(AwsConfig)
-	h := DefaultConfigHandler
+	h := DefaultConfigHandler(DefaultConfigHandlerOpts)
 	if err := h.Config(c); err != nil {
 		fmt.Printf("Unexpected error during Config(): %v\n", err)
 	}
@@ -34,7 +34,7 @@ func ExampleChainConfigHandler_Config() {
 }
 
 func TestChainConfigHandler_Add(t *testing.T) {
-	h := DefaultConfigHandler.(*ChainConfigHandler)
+	h := DefaultConfigHandler(DefaultConfigHandlerOpts).(*ChainConfigHandler)
 	h.Add(NewCmdlineConfigHandler(new(ConfigHandlerOpts), new(CmdlineOptions)))
 
 	if len(h.handlers) != 3 {
@@ -48,7 +48,7 @@ func TestChainConfigHandler_ConfigNil(t *testing.T) {
 			t.Errorf("Unexpected panic calling Config() with nil argument")
 		}
 	}()
-	h := DefaultConfigHandler
+	h := DefaultConfigHandler(DefaultConfigHandlerOpts)
 	if err := h.Config(nil); err != nil {
 		t.Errorf("Unexpected error calling Config() will nil argument")
 	}
