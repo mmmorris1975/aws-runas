@@ -10,10 +10,6 @@ import (
 	"strings"
 )
 
-// Prefix for role ARNs and Virtual MFA devices
-// (physical MFA devices use device serial number, not ARN)
-const IAM_ARN = "arn:aws:iam::"
-
 // Profile information from known configuration attributes
 // in the aws sdk configuration file
 type AWSProfile struct {

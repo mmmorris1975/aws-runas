@@ -2,6 +2,7 @@ package lib
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -10,6 +11,10 @@ import (
 	"os"
 	"strings"
 )
+
+// Prefix for role ARNs and Virtual MFA devices
+// (physical MFA devices use device serial number, not ARN)
+const IAM_ARN = "arn:aws:iam::"
 
 // Lookup the MFA devices configured for the calling user's IAM account
 func LookupMfa(sess *session.Session) ([]*iam.MFADevice, error) {
@@ -59,6 +64,7 @@ func AwsSession(profile string) *session.Session {
 	opts := session.Options{
 		SharedConfigState:       session.SharedConfigEnable,
 		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
+		Config:                  aws.Config{CredentialsChainVerboseErrors: aws.Bool(true)},
 	}
 
 	if len(profile) > 0 {
