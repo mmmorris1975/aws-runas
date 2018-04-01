@@ -31,9 +31,8 @@ type SharedCfgConfigHandler struct {
 // AWS_PROFILE will set the profile name to gather the configuration
 func NewSharedCfgConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 	h := SharedCfgConfigHandler{
-		confFile: defaults.SharedConfigFilename(),
-		credFile: defaults.SharedCredentialsFilename(),
-		//profile:    session.DefaultSharedConfigProfile,
+		confFile:   defaults.SharedConfigFilename(),
+		credFile:   defaults.SharedCredentialsFilename(),
 		defProfile: session.DefaultSharedConfigProfile,
 	}
 	if opts != nil {
@@ -138,7 +137,6 @@ func (h *SharedCfgConfigHandler) readEnv() {
 	dp, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
 	if ok {
 		h.defProfile = dp
-		//h.profile = dp
 	}
 
 	p, ok := os.LookupEnv("AWS_PROFILE")

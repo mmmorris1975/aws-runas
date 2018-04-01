@@ -76,6 +76,8 @@ type ConfigHandlerOpts struct {
 	LogLevel logo.Level
 }
 
+var DefaultConfigHandlerOpts = &ConfigHandlerOpts{LogLevel: logo.INFO}
+
 // The interface specifying the contract for all conforming ConfigHandlers
 type ConfigHandler interface {
 	Config(c *AwsConfig) error
@@ -86,9 +88,9 @@ type ConfigHandler interface {
 // Environment variables
 // The handler will be configured to use the INFO logging level.
 var DefaultConfigHandler = NewChainConfigHandler(
-	&ConfigHandlerOpts{LogLevel: logo.INFO},
-	NewSharedCfgConfigHandler(&ConfigHandlerOpts{LogLevel: logo.INFO}),
-	NewEnvConfigHandler(&ConfigHandlerOpts{LogLevel: logo.INFO}),
+	DefaultConfigHandlerOpts,
+	NewSharedCfgConfigHandler(DefaultConfigHandlerOpts),
+	NewEnvConfigHandler(DefaultConfigHandlerOpts),
 )
 
 // default config handling (low to high priority)...
