@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"github.com/mbndr/logo"
 	"os"
 )
@@ -32,24 +31,19 @@ func (h *ChainConfigHandler) Add(ch ConfigHandler) ConfigHandler {
 }
 
 // Call Config() on each of the configured handlers using the provided AwsConfig
-// object.  Error from the called handlers will be logged at the DEBUG level, and
-// will not stop processing the remaining chains in the list
+// object.  All providers in the chain must succeed. The first call to the
+// underlying Config() which fails will be reported back
 func (h *ChainConfigHandler) Config(c *AwsConfig) error {
 	if c == nil {
 		return nil
 	}
-	errCount := 0
 
 	for _, i := range h.handlers {
 		if err := i.Config(c); err != nil {
-			h.log.Warnf("Error loading config from %T: %v", i, err)
-			errCount++
+			h.log.Debugf("Error loading config from %T: %v", i, err)
+			return err
 		}
-		h.log.Warnf("%T CONFIG: %+v", i, c)
 	}
 
-	if errCount >= len(h.handlers) {
-		return fmt.Errorf("all handlers returned an error")
-	}
 	return nil
 }
