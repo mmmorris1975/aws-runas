@@ -227,7 +227,7 @@ func (p *awsAssumeRoleProvider) AssumeRole(d *time.Duration) (credentials.Value,
 	sesName := aws.String(fmt.Sprintf("AWS-RUNAS-%s-%d", username, time.Now().Unix()))
 	p.log.Debugf("Setting AssumeRole session name to: %s", *sesName)
 	in := sts.AssumeRoleInput{
-		RoleArn:         aws.String(p.profile.RoleArn),
+		RoleArn:         aws.String(p.profile.RoleArn.String()),
 		RoleSessionName: sesName,
 		DurationSeconds: aws.Int64(int64(p.assumeRoleDuration.Seconds())),
 	}
@@ -305,7 +305,7 @@ func (p *awsAssumeRoleProvider) setAttrs(profile *AWSProfile, opts *SessionToken
 		if err != nil {
 			return err
 		}
-		profile.RoleArn = a.String()
+		profile.RoleArn = a
 	}
 
 	if len(opts.MfaSerial) > 0 {

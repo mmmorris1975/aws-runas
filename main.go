@@ -162,7 +162,7 @@ func main() {
 		opts := lib.SessionTokenProviderOptions{
 			LogLevel:             logLevel,
 			SessionTokenDuration: *duration,
-			RoleArn:              p.RoleArn,
+			RoleArn:              p.RoleArn.String(),
 			MfaSerial:            *mfaArn,
 		}
 		t, err := lib.NewSessionTokenProvider(p, &opts)
@@ -246,11 +246,11 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 	if err != nil {
 		p, err = cm.GetProfile(aws.String(name))
 		if err != nil {
-			return nil, fmt.Errorf("Unable to get configuration for profile '%s': %v", name, err)
+			return nil, fmt.Errorf("unable to get configuration for profile '%s': %v", name, err)
 		}
 	} else {
 		if strings.HasPrefix(a.String(), lib.IAM_ARN) {
-			p = &lib.AWSProfile{RoleArn: a.String()}
+			p = &lib.AWSProfile{RoleArn: a}
 		} else {
 			return nil, fmt.Errorf("profile argument is not an IAM role ARN")
 		}

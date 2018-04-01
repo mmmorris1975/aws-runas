@@ -40,9 +40,9 @@ Support setting session and assume role cred durations in config file (and env v
    -- other
    - region
 
-   -- NEW (aws-runas specific)
-   - session_token_duration_minutes (explicitly describe these as session token settings)
-   - credentials_duration_minutes   (keeping a similar convention as other assume role config attrs)
+   -- NEW (aws-runas specific ... both values provided as golang duration strings to match cli)
+   - session_token_duration (explicitly describe these as session token settings)
+   - credentials_duration   (keeping a similar convention as other assume role config attrs)
 
 
 Non-Functional

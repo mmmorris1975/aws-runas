@@ -3,24 +3,25 @@ package lib
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/go-ini/ini"
 	"github.com/mbndr/logo"
+	"github.com/mmmorris1975/aws-runas/lib/config"
 	"os"
 	"strings"
+	"time"
 )
 
 // Profile information from known configuration attributes
 // in the aws sdk configuration file
 type AWSProfile struct {
-	SourceProfile   string `ini:"source_profile"`
-	RoleArn         string `ini:"role_arn"`
-	MfaSerial       string `ini:"mfa_serial"`
-	ExternalId      string `ini:"external_id"`
-	RoleSessionName string `ini:"role_session_name"`
-	Region          string `ini:"region"`
 	Name            string
-	sourceProfile   *AWSProfile
+	Region          string
+	SourceProfile   string  // requires RoleArn
+	RoleArn         arn.ARN // requires SourceProfile
+	MfaSerial       string  // may be ARN (virtual MFA), or other string (physical MFA)
+	ExternalId      string
+	RoleSessionName string
+	SessionDuration time.Duration
+	CredDuration    time.Duration
 }
 
 // Interface for managing an ini-formatted configuration file
@@ -28,7 +29,6 @@ type AWSProfile struct {
 // by name, and to build a configuration file based on a
 // given list of Roles
 type ConfigManager interface {
-	DefaultProfile() (*AWSProfile, error)
 	GetProfile(name *string) (*AWSProfile, error)
 	BuildConfig(roles Roles, mfa *string) error
 }
@@ -38,62 +38,46 @@ type ConfigManagerOptions struct {
 }
 
 // A ConfigManager specific to the aws sdk configuration.  It will use
-// the environment variable AWS_CONFIG_FILE to determine the file to
-// load, and if not defined fall back to the SDK default value.
+// the ConfigHandler defined in the provided options, or the DefaultConfigHandler
+// which will look up config from the aws config files, and override certain config
+// values provided by environment variables.
 func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
-	cf := AwsConfigFile()
-	f, err := ini.Load(cf)
-	if err != nil {
-		return nil, session.SharedConfigLoadError{Filename: cf, Err: err}
+	cm := new(awsConfigManager)
+
+	if opts != nil {
+		cm.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.ConfigManager", true)
+		cm.opts = opts
 	}
-	f.BlockMode = false
 
-	logger := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.ConfigManager", true)
-
-	return &awsConfigManager{config: f, log: logger}, nil
+	return cm, nil
 }
 
 type awsConfigManager struct {
-	config *ini.File
-	log    *logo.Logger
+	log  *logo.Logger
+	opts *ConfigManagerOptions
 }
 
-// Return an AWSProfile for the default aws configuration profile.
-// The profile name set in the AWS_DEFAULT_PROFILE environment variable
-// and if not set, use a value of "default"
-func (c *awsConfigManager) DefaultProfile() (*AWSProfile, error) {
-	s := defaultSection()
-	p := &AWSProfile{Name: s}
-	if err := c.profile(p); err != nil {
-		return nil, err
-	}
-	return p, nil
-}
-
-// Retrieve an AWSProfile by name.  The default profile will be looked up
-// first to provide some default settings, then the profile-specific values
-// will be retrieved.  If the specified profile contains a role_arn setting
-// that value will be checked to ensure it's a valid IAM arn, and that the
-// required source_profile setting is valid.
+// Retrieve an AWSProfile by name using the configured ConfigHandler.
+// If the specified profile contains a role_arn setting, that value will
+// be checked to ensure it's a valid IAM arn, and that the required
+// source_profile setting is valid.
 func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 	if p == nil || len(*p) < 1 {
 		return nil, fmt.Errorf("nil or empty profile name")
 	}
 
-	dp, err := c.DefaultProfile()
-	if err != nil {
+	cfg := &config.AwsConfig{Name: *p}
+	opts := &config.ConfigHandlerOpts{LogLevel: c.opts.LogLevel}
+
+	ch := config.NewSharedCfgConfigHandler(opts)
+	if err := ch.Config(cfg); err != nil {
 		return nil, err
 	}
+	profile := new(AWSProfile)
 
-	profile := &AWSProfile{Name: *p, Region: dp.Region}
-
-	if err := c.profile(profile); err != nil {
-		return nil, err
-	}
-
-	if len(profile.RoleArn) > 0 {
+	if len(cfg.RoleArn) > 0 {
 		// Validate that RoleArn is a correctly formatted ARN
-		a, err := arn.Parse(profile.RoleArn)
+		a, err := arn.Parse(cfg.RoleArn)
 		if err != nil {
 			return nil, err
 		}
@@ -105,23 +89,36 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 
 		// The source_profile config is required (and only valid) with role_arn
 		// Ensure that it exists, and is valid
-		if len(profile.SourceProfile) < 1 {
+		if len(cfg.SourceProfile) < 1 {
 			return nil, fmt.Errorf("role_arn configured, but missing required source_profile")
 		}
 
-		sp := &AWSProfile{Name: profile.SourceProfile}
-		if err := c.profile(sp); err != nil {
-			return nil, err
-		}
-
-		if len(sp.MfaSerial) > 0 && len(profile.MfaSerial) < 1 {
-			// MFA not explicitly configured in our profile, but is in the source profile
-			// bubble up source profile config to top-level profile.  This isn't standard
-			// AWS SDK behavior, but feels like it's a nice to have.
-			profile.MfaSerial = sp.MfaSerial
-		}
-		profile.sourceProfile = sp
+		profile.RoleArn = a
+		profile.SourceProfile = cfg.SourceProfile
+		profile.ExternalId = cfg.ExternalId
+		profile.RoleSessionName = cfg.RoleSessionName
 	}
+
+	env := config.NewEnvConfigHandler(opts)
+	if err := env.Config(cfg); err != nil {
+		return nil, err
+	}
+
+	profile.Region = cfg.GetRegion()
+	profile.MfaSerial = cfg.GetMfaSerial()
+
+	cd, err := time.ParseDuration(cfg.GetCredDuration())
+	if err != nil {
+		cd = ASSUME_ROLE_DEFAULT_DURATION
+	}
+	profile.CredDuration = cd
+
+	sd, err := time.ParseDuration(cfg.GetSessionDuration())
+	if err != nil {
+		sd = SESSION_TOKEN_DEFAULT_DURATION
+	}
+	profile.SessionDuration = sd
+	profile.Name = cfg.Name
 
 	return profile, nil
 }
@@ -134,33 +131,4 @@ func (c *awsConfigManager) BuildConfig(r Roles, mfa *string) error {
 	// TODO build config based on provided Roles using file name in c.config
 	// Do NOT overwrite file if it already exists!
 	return nil
-}
-
-// Support looking up a profile by sections named 'name'
-// or 'profile name'.  See session.setFromIniFile() in
-// aws/session/shared_config.go in the AWS SDK
-func (c *awsConfigManager) profile(p *AWSProfile) error {
-	name := p.Name
-
-	s, err := c.config.GetSection(name)
-	if err != nil {
-		s, err = c.config.GetSection("profile " + name)
-		if err != nil {
-			return session.SharedConfigProfileNotExistsError{Profile: name, Err: err}
-		}
-	}
-
-	if err := s.MapTo(p); err != nil {
-		return err
-	}
-	return nil
-}
-
-func defaultSection() string {
-	s := session.DefaultSharedConfigProfile
-	v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
-	if ok {
-		s = v
-	}
-	return s
 }

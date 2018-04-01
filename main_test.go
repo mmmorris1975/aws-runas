@@ -8,8 +8,14 @@ import (
 	"testing"
 )
 
+func init() {
+	os.Unsetenv("AWS_PROFILE")
+	os.Unsetenv("AWS_DEFAULT_PROFILE")
+	os.Unsetenv("AWS_REGION")
+}
+
 func TestAwsProfile(t *testing.T) {
-	os.Setenv("AWS_CONFIG_FILE", "lib/test/aws.cfg")
+	os.Setenv("AWS_CONFIG_FILE", "lib/config/test/aws.cfg")
 	cm, err := lib.NewAwsConfigManager(new(lib.ConfigManagerOptions))
 	if err != nil {
 		t.Errorf("Error from NewAwsConfigManager(): %v", err)
@@ -28,9 +34,9 @@ func TestAwsProfile(t *testing.T) {
 		}
 	})
 	t.Run("badArn", func(t *testing.T) {
-		_, err = awsProfile(cm, "x")
+		p, err := awsProfile(cm, "x")
 		if err == nil {
-			t.Errorf("Did not get expected error from awsProfile() with bad ARN")
+			t.Errorf("Did not get expected error from awsProfile() with bad profile, got %+v", p)
 		}
 	})
 	t.Run("invalidArn", func(t *testing.T) {
