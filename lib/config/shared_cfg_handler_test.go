@@ -2,6 +2,7 @@ package config
 
 import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/mbndr/logo"
 	"os"
 	"testing"
 )
@@ -77,7 +78,7 @@ func TestSharedCfgConfigHandler(t *testing.T) {
 		os.Setenv("AWS_PROFILE", "has_role_inherit_mfa")
 		defer os.Unsetenv("AWS_PROFILE")
 
-		c := new(AwsConfig)
+		c := &AwsConfig{Name: "bogus"}
 		h := NewSharedCfgConfigHandler(nil)
 		if err := h.Config(c); err != nil {
 			t.Errorf("Error getting config: %v", err)
@@ -112,4 +113,27 @@ func TestSharedCfgConfigHandler(t *testing.T) {
 			t.Errorf("Error getting config: %v", err)
 		}
 	})
+}
+
+func TestSharedCfgConfigHandler_ConfigBadProfiles(t *testing.T) {
+	d := AwsConfig{Name: "no_default"}
+	c := AwsConfig{Name: "no_profile", defaultProfile: &d}
+
+	h := NewSharedCfgConfigHandler(&ConfigHandlerOpts{LogLevel: logo.DEBUG})
+	if err := h.Config(&c); err == nil {
+		t.Errorf("Did not get expected error from bad profile name")
+	}
+}
+
+func TestSharedCfgConfigHandler_ConfigBadSourceProfile(t *testing.T) {
+	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
+	defer os.Unsetenv("AWS_CONFIG_FILE")
+	d := AwsConfig{Name: "no_default"}
+	c := AwsConfig{Name: "basic", SourceProfile: "no_source", defaultProfile: &d, RoleArn: "mock"}
+
+	h := NewSharedCfgConfigHandler(&ConfigHandlerOpts{LogLevel: logo.DEBUG})
+	h.(*SharedCfgConfigHandler).defProfile = "bad_default"
+	if err := h.Config(&c); err == nil {
+		t.Errorf("Did not get expected error from bad source profile name")
+	}
 }

@@ -109,7 +109,6 @@ func (h *SharedCfgConfigHandler) mapConfig(p string, c *AwsConfig, f *ini.File) 
 	// first try lookup of bare profile name
 	s, err := f.GetSection(p)
 	if err != nil {
-		//h.log.Warnf("Profile lookup of '%s' failed, trying 'profile %s'", p, p)
 		s, err = f.GetSection(fmt.Sprintf("profile %s", p))
 		if err != nil {
 			return err

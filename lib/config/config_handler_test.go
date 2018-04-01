@@ -1,6 +1,9 @@
 package config
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestAwsConfigDefault(t *testing.T) {
 	c := new(AwsConfig)
@@ -9,14 +12,34 @@ func TestAwsConfigDefault(t *testing.T) {
 	}
 }
 
-func TestAwsConfigOnlyDefaultProfile(t *testing.T) {
+func ExampleAwsConfigOnlyDefaultProfile() {
 	c := new(AwsConfig)
 	c.defaultProfile = &AwsConfig{Region: "eu-mock-1", SessionDuration: "1m", CredDuration: "5m", MfaSerial: "0"}
 
-	if c.GetRegion() != "eu-mock-1" || c.GetSessionDuration() != "1m" ||
-		c.GetCredDuration() != "5m" || c.GetMfaSerial() != "0" {
-		t.Errorf("Unexpected data for Region and SessionDuration")
-	}
+	fmt.Println(c.GetRegion())
+	fmt.Println(c.GetSessionDuration())
+	fmt.Println(c.GetCredDuration())
+	fmt.Println(c.GetMfaSerial())
+	// Output:
+	// eu-mock-1
+	// 1m
+	// 5m
+	// 0
+}
+
+func ExampleAwsConfigOnlySourceProfile() {
+	c := new(AwsConfig)
+	c.sourceProfile = &AwsConfig{Region: "ap-mock-1", SessionDuration: "1h", CredDuration: "5h", MfaSerial: "000"}
+
+	fmt.Println(c.GetRegion())
+	fmt.Println(c.GetSessionDuration())
+	fmt.Println(c.GetCredDuration())
+	fmt.Println(c.GetMfaSerial())
+	// Output:
+	// ap-mock-1
+	// 1h
+	// 5h
+	// 000
 }
 
 func TestAwsConfig(t *testing.T) {

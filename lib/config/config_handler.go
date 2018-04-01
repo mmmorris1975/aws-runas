@@ -22,53 +22,62 @@ type AwsConfig struct {
 // Lookup the region value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetRegion() string {
-	if len(c.Region) < 1 {
+	r := c.Region
+	if len(r) < 1 {
+		if c.defaultProfile != nil {
+			r = c.defaultProfile.Region
+		}
 		if c.sourceProfile != nil {
-			return c.sourceProfile.Region
-		} else {
-			return c.defaultProfile.Region
+			r = c.sourceProfile.Region
 		}
 	}
-	return c.Region
+	return r
 }
 
 // Lookup the mfa_serial value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetMfaSerial() string {
-	if len(c.MfaSerial) < 1 {
+	m := c.MfaSerial
+	if len(m) < 1 {
+		if c.defaultProfile != nil {
+			m = c.defaultProfile.MfaSerial
+		}
 		if c.sourceProfile != nil {
-			return c.sourceProfile.MfaSerial
-		} else {
-			return c.defaultProfile.MfaSerial
+			m = c.sourceProfile.MfaSerial
 		}
 	}
-	return c.MfaSerial
+	return m
 }
 
 // Lookup the session_token_duration value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetSessionDuration() string {
-	if len(c.SessionDuration) < 1 {
-		if c.sourceProfile != nil {
-			return c.sourceProfile.SessionDuration
-		} else {
-			return c.defaultProfile.SessionDuration
+	d := c.SessionDuration
+	if len(d) < 1 {
+		if c.defaultProfile != nil {
+			d = c.defaultProfile.SessionDuration
 		}
+		if c.sourceProfile != nil {
+			d = c.sourceProfile.SessionDuration
+		}
+
 	}
-	return c.SessionDuration
+	return d
 }
 
 // Lookup the credentials_duration value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetCredDuration() string {
-	if len(c.CredDuration) < 1 {
+	d := c.CredDuration
+	if len(d) < 1 {
+		if c.defaultProfile != nil {
+			d = c.defaultProfile.CredDuration
+		}
 		if c.sourceProfile != nil {
-			return c.sourceProfile.CredDuration
-		} else {
-			return c.defaultProfile.CredDuration
+			d = c.sourceProfile.CredDuration
 		}
 	}
-	return c.CredDuration
+	return d
 }
 
 // Options used to configure the ConfigHandlers
@@ -93,37 +102,3 @@ func DefaultConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 		NewEnvConfigHandler(opts),
 	)
 }
-
-// default config handling (low to high priority)...
-// config files
-//  -- shouldn't this be handled by SDK for all but our custom configs?
-//  -- may want to grab region and profile from here? (the brad bug)
-//  -- still allow certain settings to be rolled up in source profile?
-//     - mfa serial, new session and assume role durations
-//     - differs with SDK behavior
-// env vars
-//  -- SDK should pick these up
-//  -- values would be expected to be passed on to forked process
-// runas options
-//  -- profile
-//     - Should this be set in the earliest new session request?
-//     - Set as AWS_PROFILE env var in runas so it is inherited by forked procs? (this may be bad)
-//  -- role arn
-//     - Used instead of profile, only applicable with assume role api call
-//  -- mfa arn
-//     - Only valid if role arn used? (not profile)
-//     - only applicable with session token api call
-//  -- session cred duration, assume role cred duration
-// called command options
-//  -- up to command to handle, we'll expose necessary env vars
-//
-//
-// create initial session with share config and verbose credential errors enabled,
-// set profile option if it's not an ARN.  Useful when listing roles and mfa ...
-// I wonder if we need to account for source_profile settings if they don't reference
-// default profile/creds?
-//
-// Session creds will need to reference source profile if configured for roles,
-// Assume Role will use session creds
-//
-// So at what point do I need to deal with the config file?
