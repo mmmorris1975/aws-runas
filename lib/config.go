@@ -73,10 +73,6 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		return nil, err
 	}
 
-	//ch := config.NewSharedCfgConfigHandler(opts)
-	//if err := ch.Config(cfg); err != nil {
-	//	return nil, err
-	//}
 	profile := new(AWSProfile)
 
 	if len(cfg.RoleArn) > 0 {
@@ -102,11 +98,6 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		profile.ExternalId = cfg.ExternalId
 		profile.RoleSessionName = cfg.RoleSessionName
 	}
-
-	//env := config.NewEnvConfigHandler(opts)
-	//if err := env.Config(cfg); err != nil {
-	//	return nil, err
-	//}
 
 	profile.Region = cfg.GetRegion()
 	profile.MfaSerial = cfg.GetMfaSerial()

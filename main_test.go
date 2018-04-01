@@ -55,8 +55,8 @@ func TestAwsProfile(t *testing.T) {
 func TestAssumeRoleInput(t *testing.T) {
 	t.Run("Default", func(t *testing.T) {
 		i := assumeRoleInput(new(lib.AWSProfile))
-		if *i.DurationSeconds != 0 {
-			t.Errorf("Expected default DurationSeconds to be 0, got %d", *i.DurationSeconds)
+		if *i.DurationSeconds != 3600 {
+			t.Errorf("Expected default DurationSeconds to be 3600, got %d", *i.DurationSeconds)
 		}
 	})
 	t.Run("NilProfile", func(t *testing.T) {

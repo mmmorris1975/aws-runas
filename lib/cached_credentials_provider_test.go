@@ -63,8 +63,9 @@ func TestProviderDefaults(t *testing.T) {
 		}
 	})
 	t.Run("ExpirationEpoch", func(t *testing.T) {
+		m.cacheFile = ""
 		if !m.ExpirationTime().Equal(time.Unix(0, 0)) {
-			t.Errorf("Expiration time for unset credentials != Unix epoch time")
+			t.Errorf("Expiration time for unset credentials != Unix epoch time: %v", m.ExpirationTime())
 		}
 	})
 	t.Run("NoCreds", func(t *testing.T) {
@@ -87,6 +88,7 @@ func TestProviderDefaults(t *testing.T) {
 
 func TestProviderCustomConfig(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", "aws.cfg")
+	defer os.Unsetenv("AWS_CONFIG_FILE")
 	p := AWSProfile{
 		Region: "us-west-1",
 	}
@@ -98,6 +100,7 @@ func TestProviderCustomConfig(t *testing.T) {
 	}
 	m := new(mockSessionTokenProvider)
 	m.setAttrs(&p, &opts)
+	defer os.Remove(m.CacheFile())
 
 	t.Run("CacheFile", func(t *testing.T) {
 		if m.CacheFile() != ".aws_session_token_" {
@@ -136,17 +139,15 @@ func TestProviderCustomConfig(t *testing.T) {
 		}
 	})
 	t.Run("ExpiredCredentials", func(t *testing.T) {
+		m.cacheFile = ""
 		m.creds.Expiration = time.Now().Add(-5 * time.Second).Unix()
 		if m.ExpirationTime().After(time.Now()) {
-			t.Errorf("Unexpected future credential expiration time")
+			t.Errorf("Unexpected future credential expiration time: %v", m.ExpirationTime())
 		}
 		if !m.IsExpired() {
 			t.Errorf("Expected expired credentials, but received valid")
 		}
 	})
-
-	os.Remove(m.CacheFile())
-	os.Unsetenv("AWS_CONFIG_FILE")
 }
 
 func TestNewProviderParams(t *testing.T) {

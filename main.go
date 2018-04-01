@@ -59,8 +59,7 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 	)
 
-	duration = kingpin.Flag("duration", durationArgDesc).Short('d').
-		Default(lib.SESSION_TOKEN_DEFAULT_DURATION.String()).Duration()
+	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
 	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
@@ -160,18 +159,23 @@ func main() {
 		}
 
 		// Add command-line option overrides
-		if roleDuration != nil {
+		if duration != nil && (*duration).Nanoseconds() > 0 {
+			p.SessionDuration = *duration
+		}
+
+		if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
 			p.CredDuration = *roleDuration
 		}
 
-		if mfaArn != nil || len(*mfaArn) > 0 {
+		if mfaArn != nil && len(*mfaArn) > 0 {
 			p.MfaSerial = *mfaArn
 		}
+		log.Debugf("RESOLVED PROFILE: %+v", p)
 
 		opts := lib.SessionTokenProviderOptions{
 			LogLevel:             logLevel,
-			SessionTokenDuration: *duration,
-			MfaSerial:            *mfaArn,
+			SessionTokenDuration: p.SessionDuration,
+			MfaSerial:            p.MfaSerial,
 		}
 		t, err := lib.NewSessionTokenProvider(p, &opts)
 		if err != nil {
@@ -196,13 +200,16 @@ func main() {
 
 		var creds credentials.Value
 		if *sesCreds {
+			log.Debugf("Getting SESSION TOKEN credentials")
 			c := credentials.NewCredentials(t)
 			creds, err = c.Get()
 			if err != nil {
 				log.Fatalf("Unable to get SessionToken credentials: %v", err)
 			}
 		} else {
-			res, err := t.AssumeRole(assumeRoleInput(p))
+			log.Debugf("Getting ASSUME ROLE credentials")
+			in := assumeRoleInput(p)
+			res, err := t.AssumeRole(in)
 			if err != nil {
 				log.Fatalf("Error doing AssumeRole: %+v", err)
 			}
@@ -236,7 +243,11 @@ func main() {
 
 func assumeRoleInput(p *lib.AWSProfile) *sts.AssumeRoleInput {
 	i := new(sts.AssumeRoleInput)
-	i.DurationSeconds = aws.Int64(int64(p.CredDuration.Seconds()))
+	if p.CredDuration.Seconds() == 0 {
+		i.DurationSeconds = aws.Int64(int64(lib.ASSUME_ROLE_DEFAULT_DURATION.Seconds()))
+	} else {
+		i.DurationSeconds = aws.Int64(int64(p.CredDuration.Seconds()))
+	}
 
 	if len(p.RoleArn.String()) > 0 {
 		i.RoleArn = aws.String(p.RoleArn.String())
