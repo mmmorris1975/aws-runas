@@ -7,7 +7,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
-	humanize "github.com/dustin/go-humanize"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/dustin/go-humanize"
 	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -23,23 +24,21 @@ const (
 )
 
 var (
-	listRoles           *bool
-	listMfa             *bool
-	showExpire          *bool
-	sesCreds            *bool
-	refresh             *bool
-	verbose             *bool
-	makeConf            *bool
-	updateFlag          *bool
-	profile             *string
-	mfaArn              *string
-	duration            *time.Duration
-	roleDuration        *time.Duration
-	cmd                 *[]string
-	defaultDuration     = 12 * time.Hour
-	roleDefaultDuration = 1 * time.Hour
-	logLevel            = logo.WARN
-	log                 *logo.Logger
+	listRoles    *bool
+	listMfa      *bool
+	showExpire   *bool
+	sesCreds     *bool
+	refresh      *bool
+	verbose      *bool
+	makeConf     *bool
+	updateFlag   *bool
+	profile      *string
+	mfaArn       *string
+	duration     *time.Duration
+	roleDuration *time.Duration
+	cmd          *[]string
+	logLevel     = logo.WARN
+	log          *logo.Logger
 )
 
 func init() {
@@ -60,8 +59,9 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 	)
 
-	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Default(defaultDuration.String()).Duration()
-	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Default(roleDefaultDuration.String()).Duration()
+	duration = kingpin.Flag("duration", durationArgDesc).Short('d').
+		Default(lib.SESSION_TOKEN_DEFAULT_DURATION.String()).Duration()
+	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
 	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
@@ -159,10 +159,18 @@ func main() {
 			log.Fatalf("Error building profile: %v", err)
 		}
 
+		// Add command-line option overrides
+		if roleDuration != nil {
+			p.CredDuration = *roleDuration
+		}
+
+		if mfaArn != nil || len(*mfaArn) > 0 {
+			p.MfaSerial = *mfaArn
+		}
+
 		opts := lib.SessionTokenProviderOptions{
 			LogLevel:             logLevel,
 			SessionTokenDuration: *duration,
-			RoleArn:              p.RoleArn.String(),
 			MfaSerial:            *mfaArn,
 		}
 		t, err := lib.NewSessionTokenProvider(p, &opts)
@@ -174,43 +182,42 @@ func main() {
 			os.Remove(t.CacheFile())
 		}
 
-		c := credentials.NewCredentials(t)
-		creds, err := c.Get()
-		if err != nil {
-			log.Fatalf("Unable to get SessionToken credentials: %v", err)
-		}
-
 		if *showExpire {
 			exp_t := t.ExpirationTime()
 			fmt_t := exp_t.Format("2006-01-02 15:04:05")
 			hmn_t := humanize.Time(exp_t)
 
-			sentance_tense := "will expire"
+			tense := "will expire"
 			if exp_t.Before(time.Now()) {
-				sentance_tense = "expired"
+				tense = "expired"
 			}
-			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", sentance_tense, fmt_t, hmn_t)
+			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", tense, fmt_t, hmn_t)
 		}
 
-		if !*sesCreds {
-			creds, err = t.AssumeRole(roleDuration)
+		var creds credentials.Value
+		if *sesCreds {
+			c := credentials.NewCredentials(t)
+			creds, err = c.Get()
+			if err != nil {
+				log.Fatalf("Unable to get SessionToken credentials: %v", err)
+			}
+		} else {
+			res, err := t.AssumeRole(assumeRoleInput(p))
 			if err != nil {
 				log.Fatalf("Error doing AssumeRole: %+v", err)
 			}
+			c := res.Credentials
+			creds = credentials.Value{
+				AccessKeyID:     *c.AccessKeyId,
+				SecretAccessKey: *c.SecretAccessKey,
+				SessionToken:    *c.SessionToken,
+				ProviderName:    "CachedCredentialsProvider",
+			}
 		}
 
-		if len(*cmd) > 0 {
-			os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-			os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-			if len(creds.SessionToken) > 0 {
-				os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
-				os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
-			}
-			if len(p.Region) > 0 {
-				os.Setenv("AWS_REGION", p.Region)
-			}
-			os.Unsetenv("AWS_PROFILE")
+		updateEnv(creds, p.Region)
 
+		if len(*cmd) > 0 {
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin
 			c.Stdout = os.Stdout
@@ -222,8 +229,53 @@ func main() {
 				log.Fatalf("%v", err)
 			}
 		} else {
-			printCredentials(p, creds)
+			printCredentials()
 		}
+	}
+}
+
+func assumeRoleInput(p *lib.AWSProfile) *sts.AssumeRoleInput {
+	i := new(sts.AssumeRoleInput)
+	i.DurationSeconds = aws.Int64(int64(p.CredDuration.Seconds()))
+
+	if len(p.RoleArn.String()) > 0 {
+		i.RoleArn = aws.String(p.RoleArn.String())
+	}
+
+	if len(p.RoleSessionName) > 0 {
+		i.RoleSessionName = aws.String(p.RoleSessionName)
+	}
+
+	if len(p.ExternalId) > 0 {
+		i.ExternalId = aws.String(p.ExternalId)
+	}
+
+	return i
+}
+
+func updateEnv(creds credentials.Value, region string) {
+	// Explicitly unset AWS_PROFILE to avoid unintended consequences
+	os.Unsetenv("AWS_PROFILE")
+
+	// Pass AWS_REGION through if it was set in our env, or found in config.
+	// Ensure that called program gets the expected region
+	if len(region) > 0 {
+		os.Setenv("AWS_REGION", region)
+	}
+
+	os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+
+	// If session token creds were returned, set them. Otherwise explicitly
+	// unset them to keep the sdk from getting confused.  AFAIK, we should
+	// always have SessionTokens, since our entire process revolves around them.
+	// But always code defensively
+	if len(creds.SessionToken) > 0 {
+		os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
+		os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
+	} else {
+		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv("AWS_SECURITY_TOKEN")
 	}
 }
 
@@ -259,7 +311,7 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 	return p, nil
 }
 
-func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
+func printCredentials() {
 	format := "%s %s='%s'\n"
 	exportToken := "export"
 	switch runtime.GOOS {
@@ -267,12 +319,16 @@ func printCredentials(p *lib.AWSProfile, creds credentials.Value) {
 		exportToken = "set"
 	}
 
-	if len(p.Region) > 0 {
-		fmt.Printf("%s %s='%s'\n", exportToken, "AWS_REGION", p.Region)
+	envVars := []string{
+		"AWS_REGION",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
 	}
 
-	fmt.Printf(format, exportToken, "AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-	fmt.Printf(format, exportToken, "AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-	fmt.Printf(format, exportToken, "AWS_SESSION_TOKEN", creds.SessionToken)
-	fmt.Printf(format, exportToken, "AWS_SECURITY_TOKEN", creds.SessionToken)
+	for _, v := range envVars {
+		val, ok := os.LookupEnv(v)
+		if ok {
+			fmt.Printf(format, exportToken, v, val)
+		}
+	}
 }

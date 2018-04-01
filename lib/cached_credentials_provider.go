@@ -84,6 +84,7 @@ type SessionTokenProviderOptions struct {
 // The specific value can be obtained via a call to CacheFile()
 func NewSessionTokenProvider(profile *AWSProfile, opts *SessionTokenProviderOptions) (SessionTokenProvider, error) {
 	p := new(awsAssumeRoleProvider)
+	p.ProviderName = "CachedCredentialsProvider"
 
 	if err := p.setAttrs(profile, opts); err != nil {
 		return nil, err
@@ -106,6 +107,7 @@ type awsAssumeRoleProvider struct {
 	profile              *AWSProfile
 	creds                *CachableCredentials
 	sess                 *session.Session
+	ProviderName         string
 }
 
 // Check if a set of credentials have expired (or are within the
@@ -159,7 +161,7 @@ func (p *awsAssumeRoleProvider) Retrieve() (credentials.Value, error) {
 				AccessKeyID:     *creds.AccessKeyId,
 				SecretAccessKey: *creds.SecretAccessKey,
 				SessionToken:    *creds.SessionToken,
-				ProviderName:    "CachedCredentialsProvider",
+				ProviderName:    p.ProviderName,
 			},
 		}
 		p.creds = c
