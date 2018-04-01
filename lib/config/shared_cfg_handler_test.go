@@ -137,3 +137,18 @@ func TestSharedCfgConfigHandler_ConfigBadSourceProfile(t *testing.T) {
 		t.Errorf("Did not get expected error from bad source profile name")
 	}
 }
+
+func TestSharedCfgConfigHandler_ConfigDurations(t *testing.T) {
+	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
+	defer os.Unsetenv("AWS_CONFIG_FILE")
+
+	c := &AwsConfig{Name: "has_role"}
+	h := NewSharedCfgConfigHandler(new(ConfigHandlerOpts))
+	if err := h.Config(c); err != nil {
+		t.Errorf("Unexpected error calling Config(): %v", err)
+	}
+
+	if c.SessionDuration != "18h" || c.CredDuration != "6h" {
+		t.Errorf("Unexpected duration values in Config: %v", c)
+	}
+}

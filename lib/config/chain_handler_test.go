@@ -53,3 +53,24 @@ func TestChainConfigHandler_ConfigNil(t *testing.T) {
 		t.Errorf("Unexpected error calling Config() will nil argument")
 	}
 }
+
+func TestChainConfigHandler_Config(t *testing.T) {
+	os.Unsetenv("AWS_REGION")
+	os.Unsetenv("AWS_DEFAULT_PROFILE")
+	os.Unsetenv("SESSION_TOKEN_DURATION")
+	os.Setenv("AWS_CONFIG_FILE", "test/aws.cfg")
+	os.Setenv("AWS_PROFILE", "has_role")
+	os.Setenv("CREDENTIALS_DURATION", "4h")
+	defer os.Unsetenv("AWS_PROFILE")
+	defer os.Unsetenv("CREDENTIALS_DURATION")
+
+	c := new(AwsConfig)
+	h := DefaultConfigHandler(DefaultConfigHandlerOpts)
+	if err := h.Config(c); err != nil {
+		t.Errorf("Unexpected error during Config(): %v", err)
+	}
+
+	if c.GetCredDuration() != "4h" || c.GetSessionDuration() != "18h" {
+		t.Errorf("Unexpected duration values from config & env: %+v", c)
+	}
+}
