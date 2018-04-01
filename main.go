@@ -70,7 +70,15 @@ func init() {
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
 	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
-	profile = kingpin.Arg("profile", profileArgDesc).Default(os.Getenv("AWS_PROFILE")).String()
+
+	// if AWS_PROFILE envvar is not set, it MUST be 1st non-flag arg
+	// if AWS_PROFILE envvar is set, all non-flag args will be treated as cmd
+	if v, ok := os.LookupEnv("AWS_PROFILE"); !ok {
+		profile = kingpin.Arg("profile", profileArgDesc).String()
+	} else {
+		profile = aws.String(v)
+	}
+
 	cmd = CmdArg(kingpin.Arg("cmd", cmdArgDesc))
 
 	kingpin.Version(VERSION)
