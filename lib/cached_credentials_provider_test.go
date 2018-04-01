@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/mbndr/logo"
 	"os"
@@ -93,7 +94,6 @@ func TestProviderCustomConfig(t *testing.T) {
 	opts := SessionTokenProviderOptions{
 		LogLevel:             logo.INFO,
 		SessionTokenDuration: 8 * time.Hour,
-		RoleArn:              "arn:aws:iam::0123456789:role/mock-role",
 		MfaSerial:            "mock-mfa",
 	}
 	m := new(mockSessionTokenProvider)
@@ -173,11 +173,6 @@ func TestNewProviderParams(t *testing.T) {
 		}()
 		m.setAttrs(new(AWSProfile), nil)
 	})
-	t.Run("BadArn", func(t *testing.T) {
-		if err := m.setAttrs(new(AWSProfile), &SessionTokenProviderOptions{RoleArn: "bogus"}); err == nil {
-			t.Errorf("Did not see expected error using bad RoleArn option")
-		}
-	})
 	t.Run("DefaultSessionDuration", func(t *testing.T) {
 		if m.sessionTokenDuration != SESSION_TOKEN_DEFAULT_DURATION {
 			t.Errorf("Session token duration is not default value")
@@ -195,27 +190,6 @@ func TestNewProviderParams(t *testing.T) {
 			t.Errorf("Session token duration is not max value")
 		}
 	})
-	t.Run("DefaultRoleDuration", func(t *testing.T) {
-		d := time.Duration(0)
-		m.validateRoleDuration(&d)
-		if m.assumeRoleDuration != ASSUME_ROLE_DEFAULT_DURATION {
-			t.Errorf("Assume role duration is not default value")
-		}
-	})
-	t.Run("BelowMinRoleDuration", func(t *testing.T) {
-		m.setAttrs(new(AWSProfile), &SessionTokenProviderOptions{SessionTokenDuration: 1 * time.Minute})
-		m.validateRoleDuration(&m.sessionTokenDuration)
-		if m.assumeRoleDuration != ASSUME_ROLE_MIN_DURATION {
-			t.Errorf("Assume role duration is not min value")
-		}
-	})
-	t.Run("AboveMaxRoleDuration", func(t *testing.T) {
-		m.setAttrs(new(AWSProfile), &SessionTokenProviderOptions{SessionTokenDuration: 18 * time.Hour})
-		m.validateRoleDuration(&m.sessionTokenDuration)
-		if m.assumeRoleDuration != ASSUME_ROLE_MAX_DURATION {
-			t.Errorf("Assume role duration is not max value")
-		}
-	})
 }
 
 func TestNewSessionTokenProviderDefault(t *testing.T) {
@@ -225,9 +199,75 @@ func TestNewSessionTokenProviderDefault(t *testing.T) {
 	}
 }
 
-func TestNewSessionTokenProviderBadRole(t *testing.T) {
-	_, err := NewSessionTokenProvider(new(AWSProfile), &SessionTokenProviderOptions{RoleArn: "x"})
-	if err == nil {
-		t.Errorf("Expected an error from NewSessionTokenProvider() with malformed ARN")
-	}
+func TestValidateRoleSessionName(t *testing.T) {
+	p := awsAssumeRoleProvider{}
+	t.Run("NameValid", func(t *testing.T) {
+		v := "test"
+		n := p.validateRoleSessionName(aws.String(v))
+		if *n != v {
+			t.Errorf("Expected RoleSessionName == test value, but got: %v", n)
+		}
+	})
+	t.Run("NameNil", func(t *testing.T) {
+		n := p.validateRoleSessionName(nil)
+		if !strings.HasPrefix(*n, "AWS-RUNAS-") {
+			t.Errorf("Expected generated RoleSessionName, but got: %v", n)
+		}
+	})
+}
+
+func TestValidateArn(t *testing.T) {
+	p := awsAssumeRoleProvider{}
+	t.Run("ArnValid", func(t *testing.T) {
+		arn := "arn:aws:iam::666:/role/mock"
+		if err := p.validateArn(aws.String(arn)); err != nil {
+			t.Errorf("Unexpected error validating valid arn: %v", err)
+		}
+	})
+	t.Run("ArnInvalid", func(t *testing.T) {
+		arn := "aws:iam::666:/role/mock"
+		if err := p.validateArn(aws.String(arn)); err == nil {
+			t.Errorf("Invalid arn was successfully validated, expecting error")
+		}
+	})
+	t.Run("ArnNotIam", func(t *testing.T) {
+		arn := "arn:aws:s3:::bucket"
+		if err := p.validateArn(aws.String(arn)); err == nil {
+			t.Errorf("non-IAM arn was successfully validated, expecting error")
+		}
+	})
+	t.Run("ArnNil", func(t *testing.T) {
+		if err := p.validateArn(nil); err == nil {
+			t.Errorf("nil arn was successfully validated, expecting error")
+		}
+	})
+}
+
+func TestValidateRoleDuration(t *testing.T) {
+	p := awsAssumeRoleProvider{}
+	t.Run("DurationValid", func(t *testing.T) {
+		d := int64(10800)
+		v := p.validateRoleDuration(aws.Int64(d))
+		if *v != d {
+			t.Errorf("Validation modified expected valid value, wanted: %d, got: %d", d, *v)
+		}
+	})
+	t.Run("DurationMin", func(t *testing.T) {
+		v := p.validateRoleDuration(aws.Int64(10))
+		if *v != int64(ASSUME_ROLE_MIN_DURATION.Seconds()) {
+			t.Errorf("Validation did not return expected min value, got %d", *v)
+		}
+	})
+	t.Run("DurationMax", func(t *testing.T) {
+		v := p.validateRoleDuration(aws.Int64(1e6))
+		if *v != int64(ASSUME_ROLE_MAX_DURATION.Seconds()) {
+			t.Errorf("Validation did not return expected max value, got %d", *v)
+		}
+	})
+	t.Run("DurationNil", func(t *testing.T) {
+		v := p.validateRoleDuration(nil)
+		if *v != int64(ASSUME_ROLE_DEFAULT_DURATION.Seconds()) {
+			t.Errorf("Expected nil role duration to get set to default, got %d", *v)
+		}
+	})
 }
