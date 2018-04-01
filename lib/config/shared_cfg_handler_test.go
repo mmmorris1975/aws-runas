@@ -64,7 +64,7 @@ func TestNewSharedCfgConfigHandlerCustomDefaultProfile(t *testing.T) {
 	if err := h.Config(c); err != nil {
 		t.Errorf("Error getting config: %v", err)
 	}
-	t.Logf("DP: %+v", c.defaultProfile)
+
 	if c.GetRegion() != "us-west-1" || c.GetMfaSerial() != "12345678" {
 		t.Errorf("Unexpected result in Config object: %+v", c)
 	}

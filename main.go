@@ -71,8 +71,8 @@ func init() {
 	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 
-	// if AWS_PROFILE envvar is not set, it MUST be 1st non-flag arg
-	// if AWS_PROFILE envvar is set, all non-flag args will be treated as cmd
+	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
+	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
 	if v, ok := os.LookupEnv("AWS_PROFILE"); !ok {
 		profile = kingpin.Arg("profile", profileArgDesc).String()
 	} else {
