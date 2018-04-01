@@ -208,6 +208,16 @@ func (p *awsAssumeRoleProvider) CacheFile() string {
 	return p.cacheFile
 }
 
+// implements sts.AssumeRoler
+//func (p *awsAssumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
+//
+//}
+
+// not an sts interface, but does make us signature compatible
+//func (p *awsAssumeRoleProvider) GetSessionToken(input *sts.GetSessionTokenInput) (*sts.GetSessionTokenOutput, error) {
+//	return nil, nil
+//}
+
 // Perform an AWS AssumeRole API call to get the Assume Role credentials
 // based on the session token credentials with requested duration.
 func (p *awsAssumeRoleProvider) AssumeRole(d *time.Duration) (credentials.Value, error) {
