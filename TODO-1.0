@@ -7,13 +7,12 @@ X Add option to check for program update
 
 X Add unit tests
 
-Add functional tests
+Add functional tests (serverspec/rspec)
  - Various combinations of env vars
  - Various combinations of config file attrs
  - Various combinations of cmdline options
  - Various combinations of the above
  - session tokens and assume role without mfa (testing with MFA requires user interaction)
- -- consider cucumber or rspec for test execution (go test -json won't work, since it's not junit-compatible)
 
 X Document code
 
@@ -51,10 +50,10 @@ Non-Functional
 X Move repo
 X  - make this the 'official' aws-runas repo, move & deprecate python version
 
-Update project README
+X Update project README
 
-Integrate with external tools
- - AWS code build/pipeline, CircleCI, Travis, Concourse, etc...
-   - Going to land on Circle for the time being ... will be broken until we merge release/1.0 branch to master
+X Integrate with external tools
+X  - AWS code build/pipeline, CircleCI, Travis, Concourse, etc...
+X    - Going to land on Circle for the time being ... will be broken until we merge release/1.0 branch to master
 
 Submit project to awesome-go list

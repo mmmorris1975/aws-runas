@@ -30,13 +30,13 @@ See the following for more information on AWS SDK configuration files:
 
 ## Installing
 
-Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/go-aws-runas/releases/latest)
+Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/aws-runas/releases/latest)
 
 ## Building
 
 ### Build Requirements
 
-Developed and tested using the go 1.9 tool chain, aws-sdk-go v1.12.56, and kingpin.v2 v2.2.6
+Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6
 *NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 
 ### Build Steps
@@ -63,7 +63,7 @@ Example (compatible with awscli `--profile` option):
     role_arn = arn:aws:iam::987654321098:role/admin_role
     mfa_serial = arn:aws:iam::123456789098:mfa/iam_user
 
-Example (NOT compatible with awscli `--profile` option, if MFA requred for AssumeRole):
+Example (NOT compatible with awscli `--profile` option, if MFA required for AssumeRole):
 
     [default]
     mfa_serial = arn:aws:iam::123456789098:mfa/iam_user
@@ -71,6 +71,30 @@ Example (NOT compatible with awscli `--profile` option, if MFA requred for Assum
     [profile admin]
     source_profile = default
     role_arn = arn:aws:iam::987654321098:role/admin_role
+
+### Custom configuration attributes
+
+The program supports custom configuration attributes in the .aws/config file to specify the session token and assume role
+credential lifetime.  These are non-standard attributes to the AWS SDK, but should be ignored by the SDK and not cause any
+issues.  Values are specified as golang time.Duration strings (https://golang.org/pkg/time/#ParseDuration)
+
+  * `session_token_duration` This attribute specifies the lifetime of the session token credentials (which carry the MFA information)
+  * `credentials_duration` This attribute specifies the lifetime of the assume role credentials requested by aws-runas
+
+### Environment variables
+
+Standard AWS SDK environment variables are supported by this program.  (See the `Environment Variables` section in
+https://docs.aws.amazon.com/sdk-for-go/api/aws/session/) Most will be passed through to the calling program except
+for the `AWS_PROFILE` environment variable which will be explicitly unset before aws-runas calls the program.  (It can
+only affect the environment variable for the execution of aws-runas, the setting in the original environment is unaffected)
+
+If the `AWS_PROFILE` environment variable is set, it will be used in place of the 'profile' argument to the command.  In
+this example, the 'aws s3 ls' command will be executed using the profile 'my_profile'
+
+    $ AWS_PROFILE=my_profile aws-runas aws s3 ls
+
+Additionally, the custom config attributes above are also available as the environment variables `SESSION_TOKEN_DURATION`
+and `CREDENTIALS_DURATION`
 
 ### Required AWS permissions
 
@@ -96,23 +120,25 @@ The following API calls are used by the `-l` option to find assume-able roles fo
     Create an environment for interacting with the AWS API using an assumed role
 
     Flags:
-      -h, --help              Show context-sensitive help (also try --help-long and --help-man).
-      -d, --duration=12h0m0s  duration of the retrieved session token
-      -l, --list-roles        list role ARNs you are able to assume
-      -m, --list-mfa          list the ARN of the MFA device associated with your account
-      -e, --expiration        Show token expiration time
-      -s, --session           print eval()-able session token info, or run command using session token credentials
-      -r, --refresh           force a refresh of the cached credentials
-      -v, --verbose           print verbose/debug messages
-      -V, --version           Show application version.
+      -h, --help               Show context-sensitive help (also try --help-long and --help-man).
+      -d, --duration=DURATION  duration of the retrieved session token
+      -a, --role-duration=ROLE-DURATION
+                               duration of the assume role credentials
+      -l, --list-roles         list role ARNs you are able to assume
+      -m, --list-mfa           list the ARN of the MFA device associated with your account
+      -e, --expiration         Show token expiration time
+      -c, --make-conf          Build an AWS extended switch-role plugin configuration for all available roles
+      -s, --session            print eval()-able session token info, or run command using session token credentials
+      -r, --refresh            force a refresh of the cached credentials
+      -v, --verbose            print verbose/debug messages
+      -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
+      -u, --update             Check for updates to aws-runas
+      -V, --version            Show application version.
 
     Args:
-      [<profile>]  name of profile
+      [<profile>]  name of profile, or role ARN
       [<cmd>]      command to execute using configured profile
 
-*NOTE:* When running a command which includes options using '-' or '--', you may need to modify the aws-runas command, to
-signal to aws-runas that the options should not be processed by aws-runs, but passed to the command instead:
-`aws-runas my-profile -- my command --with --options`
 
 ### Listing available roles
 
@@ -199,6 +225,15 @@ the session tokens (using MFA), if required)
 Example (run the terraform, using native AssumeRole configuraiton in terraform, with session tokens):
 
     $ aws-runas -s admin-profile terraform plan
+
+### Running command using role arn from the command line
+
+The program supports supplying the 'profile' argument as a role ARN instead of a profile in the config file.  This may
+be useful for cases where it's not desirable/feasible to keep a local copy of the config file, and the role ARN is static.
+
+If necessary, the ARN for an MFA token can be provided via the `-M` command line option.
+
+    $ aws-runas [-M mfa serial] arn:aws:iam::1234567890:role/my-role terraform plan
 
 ## Contributing
 

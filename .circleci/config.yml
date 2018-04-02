@@ -15,11 +15,6 @@ jobs:
       # specify the version
       - image: "circleci/golang:1.10"
 
-      # Specify service dependencies here if necessary
-      # CircleCI maintains a library of pre-built images
-      # documented at https://circleci.com/docs/2.0/circleci-images/
-      # - image: circleci/postgres:9.4
-
     <<: *defaults
     steps:
       - checkout
@@ -29,7 +24,7 @@ jobs:
       - run: go get -v -t -d ./...
       - run: go vet -tests=false ./...
       - run: go test -v ./...
-      - run: mkdir build
+      - run: mkdir -p build
       - run: go build -v -o build/aws-runas
 
       - persist_to_workspace:
@@ -43,6 +38,7 @@ jobs:
     <<: *defaults
     steps:
       - checkout
+
       - attach_workspace:
           at: build
 
@@ -51,6 +47,7 @@ jobs:
       -run:
         command: bundle exec rspec
         when: always
+
       - store_test_results:
           path: /var/tmp/rspec
 
