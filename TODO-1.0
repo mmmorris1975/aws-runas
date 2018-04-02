@@ -50,7 +50,9 @@ Non-Functional
 X Move repo
 X  - make this the 'official' aws-runas repo, move & deprecate python version
 
+Update project README
+
 Integrate with external tools
- - AWS code pipeline, CircleCI, Travis, Concourse, etc...
+ - AWS code build/pipeline, CircleCI, Travis, Concourse, etc...
 
 Submit project to awesome-go list
