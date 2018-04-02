@@ -110,14 +110,14 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 	profile.Region = cfg.GetRegion()
 	profile.MfaSerial = cfg.GetMfaSerial()
 
-	cd, err := time.ParseDuration(cfg.GetCredDuration())
-	if err != nil {
+	cd := cfg.GetCredDuration()
+	if cd < 1 {
 		cd = ASSUME_ROLE_DEFAULT_DURATION
 	}
 	profile.CredDuration = cd
 
-	sd, err := time.ParseDuration(cfg.GetSessionDuration())
-	if err != nil {
+	sd := cfg.GetSessionDuration()
+	if sd < 1 {
 		sd = SESSION_TOKEN_DEFAULT_DURATION
 	}
 	profile.SessionDuration = sd

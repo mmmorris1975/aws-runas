@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/mbndr/logo"
 	"os"
+	"time"
 )
 
 // The options available for configuration by this handler.
@@ -52,11 +53,19 @@ func (h *CmdlineConfigHandler) Config(c *AwsConfig) error {
 	}
 
 	if len(opts.CredDuration) > 0 {
-		c.CredDuration = opts.CredDuration
+		d, err := time.ParseDuration(opts.CredDuration)
+		if err != nil {
+			return err
+		}
+		c.CredDuration = d
 	}
 
 	if len(opts.TokenDuration) > 0 {
-		c.SessionDuration = opts.TokenDuration
+		d, err := time.ParseDuration(opts.TokenDuration)
+		if err != nil {
+			return err
+		}
+		c.SessionDuration = d
 	}
 
 	return nil

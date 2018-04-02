@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 )
 
 func ExampleChainConfigHandler_Config() {
@@ -30,7 +31,7 @@ func ExampleChainConfigHandler_Config() {
 	// has_bad_role
 	// aws:iam::012345678901:mfa/my_iam_user
 	// 12345678
-	// 4h
+	// 4h0m0s
 }
 
 func TestChainConfigHandler_Add(t *testing.T) {
@@ -70,7 +71,7 @@ func TestChainConfigHandler_Config(t *testing.T) {
 		t.Errorf("Unexpected error during Config(): %v", err)
 	}
 
-	if c.GetCredDuration() != "4h" || c.GetSessionDuration() != "18h" {
+	if c.GetCredDuration() != 4*time.Hour || c.GetSessionDuration() != 18*time.Hour {
 		t.Errorf("Unexpected duration values from config & env: %+v", c)
 	}
 }

@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/mbndr/logo"
 	"os"
+	"time"
 )
 
 // A ConfigHandler which will lookup some configuration items via environment
@@ -53,12 +54,20 @@ func (h *EnvConfigHandler) Config(c *AwsConfig) error {
 
 	v, ok = os.LookupEnv(h.sesDurationEnvVar)
 	if ok {
-		c.SessionDuration = v
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return err
+		}
+		c.SessionDuration = d
 	}
 
 	v, ok = os.LookupEnv(h.arDurationEnvVar)
 	if ok {
-		c.CredDuration = v
+		d, err := time.ParseDuration(v)
+		if err != nil {
+			return err
+		}
+		c.CredDuration = d
 	}
 
 	return nil

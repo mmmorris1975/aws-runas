@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestAwsConfigDefault(t *testing.T) {
@@ -14,7 +15,7 @@ func TestAwsConfigDefault(t *testing.T) {
 
 func ExampleAwsConfigOnlyDefaultProfile() {
 	c := new(AwsConfig)
-	c.defaultProfile = &AwsConfig{Region: "eu-mock-1", SessionDuration: "1m", CredDuration: "5m", MfaSerial: "0"}
+	c.defaultProfile = &AwsConfig{Region: "eu-mock-1", SessionDuration: 1 * time.Minute, CredDuration: 5 * time.Minute, MfaSerial: "0"}
 
 	fmt.Println(c.GetRegion())
 	fmt.Println(c.GetSessionDuration())
@@ -22,14 +23,14 @@ func ExampleAwsConfigOnlyDefaultProfile() {
 	fmt.Println(c.GetMfaSerial())
 	// Output:
 	// eu-mock-1
-	// 1m
-	// 5m
+	// 1m0s
+	// 5m0s
 	// 0
 }
 
 func ExampleAwsConfigOnlySourceProfile() {
 	c := new(AwsConfig)
-	c.sourceProfile = &AwsConfig{Region: "ap-mock-1", SessionDuration: "1h", CredDuration: "5h", MfaSerial: "000"}
+	c.sourceProfile = &AwsConfig{Region: "ap-mock-1", SessionDuration: 1 * time.Hour, CredDuration: 5 * time.Hour, MfaSerial: "000"}
 
 	fmt.Println(c.GetRegion())
 	fmt.Println(c.GetSessionDuration())
@@ -37,18 +38,18 @@ func ExampleAwsConfigOnlySourceProfile() {
 	fmt.Println(c.GetMfaSerial())
 	// Output:
 	// ap-mock-1
-	// 1h
-	// 5h
+	// 1h0m0s
+	// 5h0m0s
 	// 000
 }
 
 func TestAwsConfig(t *testing.T) {
 	d := &AwsConfig{Region: "us-east-1", Name: "default"}
-	s := &AwsConfig{Region: "us-east-2", Name: "ohio", SessionDuration: "12h", MfaSerial: "24687531"}
-	c := &AwsConfig{CredDuration: "4h", Name: "config", RoleArn: "myRole", defaultProfile: d, sourceProfile: s}
+	s := &AwsConfig{Region: "us-east-2", Name: "ohio", SessionDuration: 12 * time.Hour, MfaSerial: "24687531"}
+	c := &AwsConfig{CredDuration: 4 * time.Hour, Name: "config", RoleArn: "myRole", defaultProfile: d, sourceProfile: s}
 
 	t.Run("GetCredDuration", func(t *testing.T) {
-		if c.GetCredDuration() != "4h" {
+		if c.GetCredDuration() != 4*time.Hour {
 			t.Errorf("Unexpected value for CredDuration, Wanted: %s, Got: %s", "4h", c.GetCredDuration())
 		}
 	})
@@ -63,7 +64,7 @@ func TestAwsConfig(t *testing.T) {
 		}
 	})
 	t.Run("GetSessionDuration", func(t *testing.T) {
-		if c.GetSessionDuration() != "12h" {
+		if c.GetSessionDuration() != 12*time.Hour {
 			t.Errorf("Unexpected value for SessionDuration, Wanted: %s, Got: %s", "12h", c.GetSessionDuration())
 		}
 	})

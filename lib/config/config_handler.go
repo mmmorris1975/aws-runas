@@ -1,19 +1,22 @@
 package config
 
-import "github.com/mbndr/logo"
+import (
+	"github.com/mbndr/logo"
+	"time"
+)
 
 // The struct holding the configuration information for a profile.
 // Values are mapped from the SDK config file locations, if using the
 // SharedCfgConfigHandler
 type AwsConfig struct {
-	SourceProfile   string `ini:"source_profile"` // requires role_arn
-	RoleArn         string `ini:"role_arn"`       // requires source_profile
-	MfaSerial       string `ini:"mfa_serial"`
-	ExternalId      string `ini:"external_id"`
-	RoleSessionName string `ini:"role_session_name"`
-	Region          string `ini:"region"`
-	SessionDuration string `ini:"session_token_duration"`
-	CredDuration    string `ini:"credentials_duration"`
+	SourceProfile   string        `ini:"source_profile"` // requires role_arn
+	RoleArn         string        `ini:"role_arn"`       // requires source_profile
+	MfaSerial       string        `ini:"mfa_serial"`
+	ExternalId      string        `ini:"external_id"`
+	RoleSessionName string        `ini:"role_session_name"`
+	Region          string        `ini:"region"`
+	SessionDuration time.Duration `ini:"session_token_duration"`
+	CredDuration    time.Duration `ini:"credentials_duration"`
 	Name            string
 	sourceProfile   *AwsConfig
 	defaultProfile  *AwsConfig
@@ -51,9 +54,9 @@ func (c *AwsConfig) GetMfaSerial() string {
 
 // Lookup the session_token_duration value, checking source_profile
 // if not found by usual means.
-func (c *AwsConfig) GetSessionDuration() string {
+func (c *AwsConfig) GetSessionDuration() time.Duration {
 	d := c.SessionDuration
-	if len(d) < 1 {
+	if d < 1 {
 		if c.defaultProfile != nil {
 			d = c.defaultProfile.SessionDuration
 		}
@@ -67,9 +70,9 @@ func (c *AwsConfig) GetSessionDuration() string {
 
 // Lookup the credentials_duration value, checking source_profile
 // if not found by usual means.
-func (c *AwsConfig) GetCredDuration() string {
+func (c *AwsConfig) GetCredDuration() time.Duration {
 	d := c.CredDuration
-	if len(d) < 1 {
+	if d < 1 {
 		if c.defaultProfile != nil {
 			d = c.defaultProfile.CredDuration
 		}

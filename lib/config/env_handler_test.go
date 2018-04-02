@@ -30,9 +30,9 @@ func ExampleEnvConfigHandler_Config() {
 	defer os.Unsetenv("AWS_PROFILE")
 	os.Setenv("AWS_REGION", "mock_region")
 	defer os.Unsetenv("AWS_REGION")
-	os.Setenv("SESSION_TOKEN_DURATION", "mock_session_duration")
+	os.Setenv("SESSION_TOKEN_DURATION", "24h")
 	defer os.Unsetenv("SESSION_TOKEN_DURATION")
-	os.Setenv("CREDENTIALS_DURATION", "mock_cred_duration")
+	os.Setenv("CREDENTIALS_DURATION", "6h")
 	defer os.Unsetenv("CREDENTIALS_DURATION")
 
 	c := new(AwsConfig)
@@ -46,14 +46,14 @@ func ExampleEnvConfigHandler_Config() {
 	// Output:
 	// mock_profile
 	// mock_region
-	// mock_session_duration
-	// mock_cred_duration
+	// 24h0m0s
+	// 6h0m0s
 }
 
 func ExampleEnvConfigHandler_ConfigPartial() {
 	os.Setenv("AWS_PROFILE", "mock_profile")
 	defer os.Unsetenv("AWS_PROFILE")
-	os.Setenv("SESSION_TOKEN_DURATION", "mock_session_duration")
+	os.Setenv("SESSION_TOKEN_DURATION", "15h")
 	defer os.Unsetenv("SESSION_TOKEN_DURATION")
 
 	c := new(AwsConfig)
@@ -66,7 +66,8 @@ func ExampleEnvConfigHandler_ConfigPartial() {
 	fmt.Println(c.Region)
 	// Output:
 	// mock_profile
-	// mock_session_duration
+	// 15h0m0s
+	// 0s
 	//
-	//
+
 }

@@ -5,6 +5,7 @@ import (
 	"github.com/mbndr/logo"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestNewSharedCfgConfigHandlerNilOpts(t *testing.T) {
@@ -148,7 +149,7 @@ func TestSharedCfgConfigHandler_ConfigDurations(t *testing.T) {
 		t.Errorf("Unexpected error calling Config(): %v", err)
 	}
 
-	if c.SessionDuration != "18h" || c.CredDuration != "6h" {
+	if c.SessionDuration != 18*time.Hour || c.CredDuration != 6*time.Hour {
 		t.Errorf("Unexpected duration values in Config: %v", c)
 	}
 }

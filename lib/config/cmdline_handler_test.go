@@ -40,11 +40,13 @@ func ExampleCmdlineConfigHandler_Config() {
 		RoleArn:       "MockRole",
 		MfaSerial:     "MFA",
 		TokenDuration: "1s",
-		CredDuration:  "1d",
+		CredDuration:  "1m",
 	}
 	c := new(AwsConfig)
 	h := NewCmdlineConfigHandler(nil, &opts)
-	h.Config(c)
+	if err := h.Config(c); err != nil {
+		fmt.Printf("Unexpected error from Config(): %v\n", err)
+	}
 
 	fmt.Println(c.Name)
 	fmt.Println(c.RoleArn)
@@ -56,18 +58,20 @@ func ExampleCmdlineConfigHandler_Config() {
 	// MockRole
 	// MFA
 	// 1s
-	// 1d
+	// 1m0s
 }
 
 func ExampleCmdlineConfigHandler_ConfigPartialOpts() {
 	opts := CmdlineOptions{
 		Profile:       "mock",
 		TokenDuration: "1s",
-		CredDuration:  "1d",
+		CredDuration:  "10h",
 	}
 	c := new(AwsConfig)
 	h := NewCmdlineConfigHandler(nil, &opts)
-	h.Config(c)
+	if err := h.Config(c); err != nil {
+		fmt.Printf("Unexpected error from Config(): %v\n", err)
+	}
 
 	fmt.Println(c.Name)
 	fmt.Println(c.SessionDuration)
@@ -77,7 +81,23 @@ func ExampleCmdlineConfigHandler_ConfigPartialOpts() {
 	// Output:
 	// mock
 	// 1s
-	// 1d
+	// 10h0m0s
 	//
 	//
+}
+
+func ExampleCmdlineConfigHandler_BadDuration() {
+	opts := CmdlineOptions{
+		Profile:       "mock",
+		TokenDuration: "1s",
+		CredDuration:  "1d",
+	}
+	c := new(AwsConfig)
+	h := NewCmdlineConfigHandler(nil, &opts)
+	if err := h.Config(c); err != nil {
+		fmt.Printf("Unexpected error from Config(): %v\n", err)
+	}
+
+	// Output:
+	// Unexpected error from Config(): time: unknown unit d in duration 1d
 }
