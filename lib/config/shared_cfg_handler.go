@@ -111,7 +111,7 @@ func (h *SharedCfgConfigHandler) mapConfig(p string, c *AwsConfig, f *ini.File) 
 	s, err := f.GetSection(p)
 	if err != nil {
 		if h.log != nil {
-			h.log.Debugf("Section'%s' not found, trying 'profile %s'", p, p)
+			h.log.Debugf("Section '%s' not found, trying 'profile %s'", p, p)
 		}
 		s, err = f.GetSection(fmt.Sprintf("profile %s", p))
 		if err != nil {
