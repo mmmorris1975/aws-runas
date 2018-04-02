@@ -79,7 +79,6 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 		if err := ch.Config(cfg); err != nil {
 			return nil, err
 		}
-		c.log.Infof("Finished DefaultConfigHandler()")
 	}
 
 	profile := new(AWSProfile)

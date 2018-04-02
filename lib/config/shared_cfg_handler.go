@@ -74,10 +74,11 @@ func (h *SharedCfgConfigHandler) Profile(p string) {
 }
 
 func (h *SharedCfgConfigHandler) loadProfile(c *AwsConfig) error {
-	f, err := ini.Load(h.credFile, h.confFile)
+	f, err := ini.Load(h.confFile)
 	if err != nil {
 		return err
 	}
+	f.BlockMode = false
 
 	// load default section
 	c.defaultProfile = new(AwsConfig)
@@ -109,6 +110,9 @@ func (h *SharedCfgConfigHandler) mapConfig(p string, c *AwsConfig, f *ini.File) 
 	// first try lookup of bare profile name
 	s, err := f.GetSection(p)
 	if err != nil {
+		if h.log != nil {
+			h.log.Debugf("Section'%s' not found, trying 'profile %s'", p, p)
+		}
 		s, err = f.GetSection(fmt.Sprintf("profile %s", p))
 		if err != nil {
 			return err
