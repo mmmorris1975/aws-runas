@@ -40,7 +40,9 @@ func (h *ChainConfigHandler) Config(c *AwsConfig) error {
 
 	for _, i := range h.handlers {
 		if err := i.Config(c); err != nil {
-			h.log.Debugf("Error loading config from %T: %v", i, err)
+			if h.log != nil {
+				h.log.Debugf("Error loading config from %T: %v", i, err)
+			}
 			return err
 		}
 	}

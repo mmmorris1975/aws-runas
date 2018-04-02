@@ -18,11 +18,15 @@ func TestNilProfileName(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", "config/test/aws.cfg")
 	defer os.Unsetenv("AWS_CONFIG_FILE")
 
+	// returns basic/default profile because values may come
+	// in from env or command line options
 	p, err := getProfile(nil)
-	if err == nil {
-		t.Errorf("Expected error with nil profile name, but received: %+v", p)
-	} else {
-		t.Logf("Expected nil profile name error: %v", err)
+	if err != nil {
+		t.Errorf("Unexpected error getting nil profile: %v", err)
+	}
+
+	if len(p.Name) > 0 || len(p.Region) > 0 {
+		t.Errorf("Unexpected data returned from nil profile lookup: %+v", p)
 	}
 }
 
@@ -31,10 +35,12 @@ func TestEmptyProfileName(t *testing.T) {
 	defer os.Unsetenv("AWS_CONFIG_FILE")
 
 	p, err := getProfile(aws.String(""))
-	if err == nil {
-		t.Errorf("Expected error for empty profile name, but received: %+v", p)
-	} else {
-		t.Logf("Expected empty profile name error: %v", err)
+	if err != nil {
+		t.Errorf("Unexpected error getting empty profile: %v", err)
+	}
+
+	if len(p.Name) > 0 || len(p.Region) > 0 {
+		t.Errorf("Unexpected data returned from empty profile lookup: %+v", p)
 	}
 }
 

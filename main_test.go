@@ -30,19 +30,20 @@ func TestAwsProfile(t *testing.T) {
 			t.Errorf("Unexpected error from awsProfile(): %v", err)
 		}
 	})
-	t.Run("arn", func(t *testing.T) {
+	t.Run("arnValid", func(t *testing.T) {
 		_, err = awsProfile(cm, "arn:aws:iam::1234:role/mock")
 		if err != nil {
 			t.Errorf("Unexpected error from awsProfile() with ARN: %v", err)
 		}
 	})
-	t.Run("badArn", func(t *testing.T) {
+	t.Run("arnBad", func(t *testing.T) {
+		// Anything that fails arn.Parse() gets treated like a profile name
 		p, err := awsProfile(cm, "x")
 		if err == nil {
 			t.Errorf("Did not get expected error from awsProfile() with bad profile, got %+v", p)
 		}
 	})
-	t.Run("invalidArn", func(t *testing.T) {
+	t.Run("ArnNotIam", func(t *testing.T) {
 		_, err = awsProfile(cm, "arn:aws:s3:::a")
 		if err == nil {
 			t.Errorf("Did not get expected error from awsProfile() with bad ARN")

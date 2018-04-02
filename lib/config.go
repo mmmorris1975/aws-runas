@@ -62,15 +62,24 @@ type awsConfigManager struct {
 // be checked to ensure it's a valid IAM arn, and that the required
 // source_profile setting is valid.
 func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
-	if p == nil || len(*p) < 1 {
-		return nil, fmt.Errorf("nil or empty profile name")
-	}
-
-	cfg := &config.AwsConfig{Name: *p}
+	cfg := new(config.AwsConfig)
 	opts := &config.ConfigHandlerOpts{LogLevel: c.opts.LogLevel}
-	ch := config.DefaultConfigHandler(opts)
-	if err := ch.Config(cfg); err != nil {
-		return nil, err
+	var ch config.ConfigHandler
+
+	if p == nil || len(*p) < 1 {
+		ch = config.NewEnvConfigHandler(opts)
+		if err := ch.Config(cfg); err != nil {
+			return nil, err
+		}
+	} else {
+		// must set cfg.Name here, for config file lookups to behave as expected
+		// we know it's not nil or empty in here
+		cfg.Name = *p
+		ch = config.DefaultConfigHandler(opts)
+		if err := ch.Config(cfg); err != nil {
+			return nil, err
+		}
+		c.log.Infof("Finished DefaultConfigHandler()")
 	}
 
 	profile := new(AWSProfile)
