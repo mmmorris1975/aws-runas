@@ -1,6 +1,13 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
+defaults: &defaults
+  #### TEMPLATE_NOTE: go expects specific checkout path representing url
+  #### expecting it in the form of
+  ####   /go/src/github.com/circleci/go-tool
+  ####   /go/src/bitbucket.org/circleci/go-tool
+  working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+
 version: 2
 jobs:
   build:
@@ -13,15 +20,40 @@ jobs:
       # documented at https://circleci.com/docs/2.0/circleci-images/
       # - image: circleci/postgres:9.4
 
-    #### TEMPLATE_NOTE: go expects specific checkout path representing url
-    #### expecting it in the form of
-    ####   /go/src/github.com/circleci/go-tool
-    ####   /go/src/bitbucket.org/circleci/go-tool
-    working_directory: /go/src/github.com/{{ORG_NAME}}/{{REPO_NAME}}
+    <<: *defaults
     steps:
       - checkout
 
       # specify any bash command here prefixed with `run: `
+      # 'go get' only pulls from master branch, and circleci doesn't support dep
       - run: go get -v -t -d ./...
       - run: go vet -tests=false ./...
       - run: go test -v ./...
+      - run: mkdir build
+      - run: go build -v -o build/aws-runas
+
+      - persist_to_workspace:
+          root: build
+          paths: aws-runas
+
+  test:
+    docker:
+      - image: "circleci/ruby:2.5-stretch"
+
+    <<: *defaults
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+
+      -run: echo "TODO - run the tests"
+
+workflows:
+  version: 2
+
+  build_and_test:
+    jobs:
+      - build
+      - test
+        requires:
+          - build
