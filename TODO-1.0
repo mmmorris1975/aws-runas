@@ -12,7 +12,8 @@ Add functional tests
  - Various combinations of config file attrs
  - Various combinations of cmdline options
  - Various combinations of the above
- - session tokens and assume role with and without mfa
+ - session tokens and assume role without mfa (testing with MFA requires user interaction)
+ -- consider cucumber or rspec for test execution (go test -json won't work, since it's not junit-compatible)
 
 X Document code
 
@@ -54,5 +55,6 @@ Update project README
 
 Integrate with external tools
  - AWS code build/pipeline, CircleCI, Travis, Concourse, etc...
+   - Going to land on Circle for the time being ... will be broken until we merge release/1.0 branch to master
 
 Submit project to awesome-go list

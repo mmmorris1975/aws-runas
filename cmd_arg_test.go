@@ -16,5 +16,5 @@ func TestSetString(t *testing.T) {
 	if len(*c) != 2 {
 		t.Errorf("Expected 2 items, got %d", len(*c))
 	}
-	c.String()
+	t.Log(c.String())
 }
