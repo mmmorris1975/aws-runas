@@ -1,0 +1,2 @@
+--format progress
+--format RspecJunitFormatter -o /var/tmp/rspec/rspec.xml

@@ -4,7 +4,7 @@ VER := $(shell git describe --tags)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-$(EXE): Gopkg.lock *.go
+$(EXE): Gopkg.lock *.go lib/*.go
 	go build -v -o $@ $(PKG)
 
 Gopkg.lock: Gopkg.toml

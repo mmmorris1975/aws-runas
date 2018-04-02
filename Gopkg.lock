@@ -20,6 +20,7 @@
   name = "github.com/aws/aws-sdk-go"
   packages = [
     "aws",
+    "aws/arn",
     "aws/awserr",
     "aws/awsutil",
     "aws/client",
@@ -46,8 +47,8 @@
     "service/iam",
     "service/sts"
   ]
-  revision = "f0872da8a448f8cb10f4f0c95c2100e4f7356448"
-  version = "v1.13.16"
+  revision = "74ca63959be8b9a9a24cd86eaaea8bf99de8022d"
+  version = "v1.13.25"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -79,6 +80,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "ed30db349a9dfe17234f60da726c12fd1edbcdc67176e220e66767eec8873acd"
+  inputs-digest = "25408bacc4f6299b4684ec283b39bb1173ceb92df896920e3b3aecc61389098e"
   solver-name = "gps-cdcl"
   solver-version = 1
