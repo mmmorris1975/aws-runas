@@ -207,7 +207,7 @@ func main() {
 		}
 
 		var creds credentials.Value
-		if *sesCreds {
+		if *sesCreds || len(p.RoleArn.Resource) < 1 {
 			log.Debugf("Getting SESSION TOKEN credentials")
 			c := credentials.NewCredentials(t)
 			creds, err = c.Get()
