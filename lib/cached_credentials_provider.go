@@ -297,7 +297,11 @@ func (p *awsAssumeRoleProvider) setAttrs(profile *AWSProfile, opts *SessionToken
 	p.profile = profile
 
 	cacheDir := filepath.Dir(AwsConfigFile())
-	p.cacheFile = filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", profile.SourceProfile))
+	cacheFile := profile.SourceProfile
+	if len(cacheFile) < 1 {
+		cacheFile = profile.Name
+	}
+	p.cacheFile = filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", cacheFile))
 
 	return nil
 }
