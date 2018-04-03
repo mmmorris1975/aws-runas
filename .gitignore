@@ -18,3 +18,8 @@ vendor/
 .DS_Store
 
 *.lock
+
+.aws/.aws_session_token*
+
+.bundle
+build/
