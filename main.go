@@ -330,6 +330,9 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 				defProfile = v
 			}
 
+			// Unset AWS_PROFILE here, in case the role ARN came in via environment
+			// variable, otherwise is messes up GetProfile
+			os.Unsetenv("AWS_PROFILE")
 			p, err = cm.GetProfile(aws.String(defProfile))
 			if err != nil {
 				return nil, err
