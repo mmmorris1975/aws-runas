@@ -53,7 +53,7 @@ describe 'tests using a profile with a role' do
     #end
 
 
-    describe command ('aws-runas -v') do
+    describe command ('aws-runas -v arn:aws:iam::686784119290:role/circleci-role') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.*'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
