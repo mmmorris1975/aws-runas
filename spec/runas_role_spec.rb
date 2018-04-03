@@ -25,6 +25,7 @@ describe 'tests using a profile with a role' do
 
     describe command ('aws-runas -ve') do
       its(:exit_status) { should eq 0 }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stderr) { should match /\s+Found cached session token credentials/ }
       its(:stderr) { should match /^Session credentials will expire on/ }
       its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
@@ -32,6 +33,7 @@ describe 'tests using a profile with a role' do
 
     describe command ('aws-runas -vrd 10m') do
       its(:exit_status) { should eq 0 }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
@@ -42,6 +44,7 @@ describe 'tests using a profile with a role' do
 
     describe command ('aws-runas -vrd 360h') do
       its(:exit_status) { should eq 0 }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
