@@ -55,7 +55,6 @@ describe 'tests using a profile with a role' do
 
     describe command ('aws-runas -v') do
       its(:exit_status) { should eq 0 }
-      its(:stdout) { should match /^export AWS_REGION='.*'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
@@ -70,16 +69,15 @@ describe 'tests using a profile with a role' do
       its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
     end
 
-    #    describe command ('aws-runas -vrd 10m') do
-    #      its(:exit_status) { should eq 0 }
-    #      its(:stdout) { should match /^export AWS_REGION='.*'$/ }
-    #      its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-    #      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-    #      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-    #      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
-    #      its(:stderr) { should match /\s+Detected expired or unset session token credentials, refreshing/ }
-    #      its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
-    #    end
+    describe command ('aws-runas -vrd 10m') do
+      its(:exit_status) { should eq 0 }
+      its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stderr) { should match /\s+Detected expired or unset session token credentials, refreshing/ }
+      its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
+    end
 
     #    describe command ('aws-runas -vrd 360h') do
     #      its(:exit_status) { should eq 0 }
