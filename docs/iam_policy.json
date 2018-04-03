@@ -1,0 +1,48 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "GetSelfIam",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetUser",
+        "iam:GetUserPolicy",
+        "iam:ListAttachedUserPolicies",
+        "iam:ListGroupsForUser",
+        "iam:ListUserPolicies"
+      ],
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
+    },
+    {
+      "Sid": "SessionToken",
+      "Effect": "Allow",
+      "Action": "sts:GetSessionToken",
+      "Resource": "arn:aws:iam::*:user/${aws:username}"
+    },
+    {
+      "Sid": "GetPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetPolicy",
+        "iam:GetPolicyVersion"
+      ],
+      "Resource": "arn:aws:iam::*:policy/*"
+    },
+    {
+      "Sid": "ListGroupPolicies",
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetGroupPolicy",
+        "iam:ListAttachedGroupPolicies",
+        "iam:ListGroupPolicies"
+      ],
+      "Resource": "arn:aws:iam::*:group/*"
+    },
+    {
+      "Sid": "ListMFA",
+      "Effect": "Allow",
+      "Action": "iam:ListMFADevices",
+      "Resource": "*"
+    }
+  ]
+}

@@ -109,10 +109,16 @@ The following API calls are used by the `-l` option to find assume-able roles fo
   * ListGroupsForUser
   * GetUserPolicy
   * ListUserPolicies
-  * GetGroupPolicies
+  * GetGroupPolicy
   * ListGroupPolicies
   * GetPolicy
   * GetPolicyVersion
+
+A generic sample policy can be found [here](https://github.com/mmmorris1975/aws-runas/docs/iam_policy.json). The document
+is missing permissions to perform the AssumeRole operation, since that operation is highly-privileged it should be created
+as needed outside of this policy.  Also consider removing the '*' character in the account number field of the `Resource`
+ARNs, and replace with your specific AWS account number (The Resource: * configuration for the ListMFA permission is
+required, do not change that)
 
 ## Usage
     usage: aws-runas [<flags>] [<profile>] [<cmd>...]
