@@ -1,13 +1,13 @@
 require 'spec_helper'
 
 describe 'tests using a profile with a role' do
-    #before(:each) do
-    #  ENV['AWS_PROFILE']='circle-role'
-    #end
+    before(:each) do
+      ENV['AWS_PROFILE']='arn:aws:iam::686784119290:role/circleci-role'
+    end
 
-    #after(:each) do
-    #  ENV.delete('AWS_PROFILE')
-    #end
+    after(:each) do
+      ENV.delete('AWS_PROFILE')
+    end
 
     #describe command ('aws-runas -vs') do
     #  its(:exit_status) { should eq 0 }
@@ -53,7 +53,7 @@ describe 'tests using a profile with a role' do
     #end
 
 
-    describe command ('aws-runas -v arn:aws:iam::686784119290:role/circleci-role') do
+    describe command ('aws-runas -v') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
@@ -62,7 +62,7 @@ describe 'tests using a profile with a role' do
       its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
     end
 
-    describe command ('aws-runas -ve arn:aws:iam::686784119290:role/circleci-role') do
+    describe command ('aws-runas -ve') do
       its(:exit_status) { should eq 0 }
       its(:stderr) { should match /\s+Found cached session token credentials/ }
       its(:stderr) { should match /^Session credentials will expire on/ }
