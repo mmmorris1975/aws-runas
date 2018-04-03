@@ -1,13 +1,13 @@
 require 'spec_helper'
 
 describe 'tests using a profile with a role' do
-    before(:each) do
-      ENV['AWS_PROFILE']='circle-role'
-    end
+    #before(:each) do
+    #  ENV['AWS_PROFILE']='circle-role'
+    #end
 
-    after(:each) do
-      ENV.delete('AWS_PROFILE')
-    end
+    #after(:each) do
+    #  ENV.delete('AWS_PROFILE')
+    #end
 
     #describe command ('aws-runas -vs') do
     #  its(:exit_status) { should eq 0 }
@@ -64,7 +64,7 @@ describe 'tests using a profile with a role' do
       its(:stderr) { should match /\s+ASSUME ROLE OUTPUT:/ }
     end
 
-    describe command ('aws-runas -ve') do
+    describe command ('aws-runas -ve arn:aws:iam::686784119290:role/circleci-role') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.*'$/ }
       its(:stderr) { should match /\s+Found cached session token credentials/ }
