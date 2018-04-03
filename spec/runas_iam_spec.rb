@@ -1,13 +1,13 @@
 require 'spec_helper'
 
 describe 'tests using a profile without a role' do
-    before(:each) do
-      ENV['AWS_PROFILE']='circleci'
-    end
+    #before(:each) do
+    #  ENV['AWS_PROFILE']='circleci'
+    #end
 
-    after(:each) do
-      ENV.delete('AWS_PROFILE')
-    end
+    #after(:each) do
+    #  ENV.delete('AWS_PROFILE')
+    #end
 
     describe command ('aws-runas -vl') do
       its(:exit_status) { should eq 0 }
