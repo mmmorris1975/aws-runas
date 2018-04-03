@@ -1,13 +1,6 @@
 # Golang CircleCI 2.0 configuration file
 #
 # Check https://circleci.com/docs/2.0/language-go/ for more details
-defaults: &defaults
-  #### TEMPLATE_NOTE: go expects specific checkout path representing url
-  #### expecting it in the form of
-  ####   /go/src/github.com/circleci/go-tool
-  ####   /go/src/bitbucket.org/circleci/go-tool
-  working_directory: /go/src/github.com/mmmorris1975/aws-runas
-
 version: 2
 jobs:
   build:
@@ -15,7 +8,7 @@ jobs:
       # specify the version
       - image: "circleci/golang:1.10"
 
-    <<: *defaults
+    working_directory: /go/src/github.com/mmmorris1975/aws-runas
     steps:
       - checkout
 
@@ -35,7 +28,6 @@ jobs:
     docker:
       - image: "circleci/ruby:2.5-stretch"
 
-    <<: *defaults
     steps:
       - checkout
 
