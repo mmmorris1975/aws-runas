@@ -321,9 +321,19 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 		}
 	} else {
 		if strings.HasPrefix(a.String(), lib.IAM_ARN) {
-			// Even though we were passed a role ARN, attempt profile info lookup
-			// so we can capture any default configuration. (Ignore any errors)
-			p, _ = cm.GetProfile(aws.String(a.String()))
+			// Even though we were passed a role ARN, attempt profile info lookup so
+			// we can capture any default configuration. (Ignore any errors). Lookup
+			// default profile name first, so we don't blow up checking config files
+			defProfile := session.DefaultSharedConfigProfile
+			v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
+			if ok {
+				defProfile = v
+			}
+
+			p, err = cm.GetProfile(aws.String(defProfile))
+			if err != nil {
+				return nil, err
+			}
 			p.RoleArn = a
 		} else {
 			return nil, fmt.Errorf("profile argument is not an IAM role ARN")
