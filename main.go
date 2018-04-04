@@ -180,15 +180,12 @@ func main() {
 		}
 		log.Debugf("RESOLVED PROFILE: %+v", p)
 
-		opts := lib.SessionTokenProviderOptions{
-			LogLevel:             logLevel,
-			SessionTokenDuration: p.SessionDuration,
-			MfaSerial:            p.MfaSerial,
+		opts := lib.CachedCredentialsProviderOptions{
+			LogLevel:           logLevel,
+			CredentialDuration: p.SessionDuration,
+			MfaSerial:          p.MfaSerial,
 		}
-		t, err := lib.NewSessionTokenProvider(p, &opts)
-		if err != nil {
-			log.Fatalf("Unable to build credential provider: %v", err)
-		}
+		t := lib.NewSessionTokenProvider(p, &opts)
 
 		if *refresh {
 			os.Remove(t.CacheFile())

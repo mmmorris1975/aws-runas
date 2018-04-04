@@ -21,10 +21,11 @@ const (
 // Interface defining the methods needed to manage AWS session token credentials
 type SessionTokenProvider interface {
 	credentials.Provider
+	CachedCredentialProvider
 }
 
 type sessionTokenProvider struct {
-	CachedCredentialsProvider
+	cachedCredentialsProvider
 }
 
 // Create a new SessionTokenProvider for the given profile. Unspecified
@@ -47,7 +48,7 @@ func NewSessionTokenProvider(profile *AWSProfile, opts *CachedCredentialsProvide
 	opts.cacheFilePrefix = ".aws_session_token"
 	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.SessionTokenProvider", true)
 
-	p.CachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
+	p.cachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
 
 	return p
 }

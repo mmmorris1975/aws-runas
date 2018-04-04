@@ -24,7 +24,7 @@ const (
 
 // Interface defining the methods needed to manage AWS assume role credentials
 type AssumeRoleProvider interface {
-	credentials.Provider
+	SessionTokenProvider
 	stscreds.AssumeRoler
 }
 
@@ -56,7 +56,7 @@ func NewAssumeRoleProvider(profile *AWSProfile, opts *CachedCredentialsProviderO
 	opts.cacheFilePrefix = ".aws_assume_role"
 	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.AssumeRoleProvider", true)
 
-	p.CachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
+	p.cachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
 
 	return p
 }

@@ -9,6 +9,11 @@ import (
 	"time"
 )
 
+type CachedCredentialProvider interface {
+	CacheFile() string
+	ExpirationTime() time.Time
+}
+
 // Options applicable to all kinds of CachedCredentialsProviders
 type CachedCredentialsProviderOptions struct {
 	LogLevel           logo.Level
@@ -17,7 +22,7 @@ type CachedCredentialsProviderOptions struct {
 	cacheFilePrefix    string
 }
 
-type CachedCredentialsProvider struct {
+type cachedCredentialsProvider struct {
 	providerName string
 	profile      *AWSProfile
 	log          *logo.Logger
@@ -30,7 +35,7 @@ type CachedCredentialsProvider struct {
 // Create a new CachedCredentialsProvider for the given profile.
 // The returned value is the base type for building other, more sophisticated
 // credential.Providers
-func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsProviderOptions) CachedCredentialsProvider {
+func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsProviderOptions) cachedCredentialsProvider {
 	if profile == nil {
 		panic("invalid profile argument to NewCachedCredentialsProvider")
 	}
@@ -43,7 +48,7 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 		prof = profile.SourceProfile
 	}
 
-	p := new(CachedCredentialsProvider)
+	p := new(cachedCredentialsProvider)
 	p.profile = profile
 	p.opts = opts
 	p.sess = AwsSession(prof)
@@ -63,7 +68,7 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 // verified non-expired credentials will report as not expired.
 //
 // satisfies credentials.Provider
-func (p *CachedCredentialsProvider) IsExpired() bool {
+func (p *cachedCredentialsProvider) IsExpired() bool {
 	c := p.creds
 	if c == nil {
 		if p.log != nil {
@@ -84,4 +89,19 @@ func (p *CachedCredentialsProvider) IsExpired() bool {
 	}
 
 	return c.IsExpired()
+}
+
+func (p *cachedCredentialsProvider) CacheFile() string {
+	return p.cacher.CacheFile()
+}
+
+func (p *cachedCredentialsProvider) ExpirationTime() time.Time {
+	c := p.creds
+	if c == nil {
+		if p.log != nil {
+			p.log.Debugf("No credentials set, returning epoch time")
+		}
+		return time.Unix(0, 0)
+	}
+	return time.Unix(c.Expiration, 0)
 }
