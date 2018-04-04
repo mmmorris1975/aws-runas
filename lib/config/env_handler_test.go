@@ -71,3 +71,25 @@ func ExampleEnvConfigHandler_ConfigPartial() {
 	//
 
 }
+
+func TestEnvConfigHandler_ConfigBadDurations(t *testing.T) {
+	h := NewEnvConfigHandler(new(ConfigHandlerOpts))
+
+	t.Run("BadSessionDuration", func(t *testing.T) {
+		os.Setenv("SESSION_TOKEN_DURATION", "1d")
+		defer os.Unsetenv("SESSION_TOKEN_DURATION")
+
+		if err := h.Config(new(AwsConfig)); err == nil {
+			t.Errorf("Expected error when setting invalid duration for SESSION_TOKEN_DURATION")
+		}
+	})
+
+	t.Run("BadCredentialsDuration", func(t *testing.T) {
+		os.Setenv("CREDENTIALS_DURATION", "1w")
+		defer os.Unsetenv("CREDENTIALS_DURATION")
+
+		if err := h.Config(new(AwsConfig)); err == nil {
+			t.Errorf("Expected error when setting invalid duration for CREDENTIALS_DURATION")
+		}
+	})
+}

@@ -101,3 +101,11 @@ func ExampleCmdlineConfigHandler_BadDuration() {
 	// Output:
 	// Unexpected error from Config(): time: unknown unit d in duration 1d
 }
+
+func TestCmdlineConfigHandler_Config(t *testing.T) {
+	opts := CmdlineOptions{TokenDuration: "1w"}
+	h := NewCmdlineConfigHandler(nil, &opts)
+	if err := h.Config(new(AwsConfig)); err == nil {
+		t.Errorf("Expected error when setting invalid value for TokenDuration")
+	}
+}
