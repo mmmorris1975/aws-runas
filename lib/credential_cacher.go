@@ -59,12 +59,16 @@ func (c *credentialsCacher) Fetch() (*CachableCredentials, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.log.Debugf("Read data from %s", c.file)
+	if c.log != nil {
+		c.log.Debugf("Read data from %s", c.file)
+	}
 
 	if err := json.Unmarshal(data, creds); err != nil {
 		return nil, err
 	}
-	c.log.Debugf("Unmarshaled credentials:\n%s", data)
+	if c.log != nil {
+		c.log.Debugf("Unmarshaled credentials:\n%s", data)
+	}
 
 	return creds, nil
 }
@@ -82,12 +86,16 @@ func (c *credentialsCacher) Store(creds *CachableCredentials) error {
 	if err != nil {
 		return err
 	}
-	c.log.Debugf("Marshaled credentials:\n%+s", data)
+	if c.log != nil {
+		c.log.Debugf("Marshaled credentials:\n%+s", data)
+	}
 
 	if err := ioutil.WriteFile(c.file, data, 0600); err != nil {
 		return err
 	}
-	c.log.Debugf("Wrote credentials to: %s", c.file)
+	if c.log != nil {
+		c.log.Debugf("Wrote credentials to: %s", c.file)
+	}
 
 	return nil
 }
