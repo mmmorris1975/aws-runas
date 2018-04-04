@@ -74,8 +74,8 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 //
 // satisfies credentials.Provider
 func (p *cachedCredentialsProvider) IsExpired() bool {
-	c := p.creds
-	if c == nil {
+	c, err := p.cacher.Fetch()
+	if c == nil || err != nil {
 		if p.log != nil {
 			p.log.Debugf("No credentials loaded, returning expired = true")
 		}

@@ -37,8 +37,8 @@ var (
 	duration     *time.Duration
 	roleDuration *time.Duration
 	cmd          *[]string
-	logLevel     = logo.WARN
 	log          *logo.Logger
+	logLevel     = logo.WARN
 )
 
 func init() {

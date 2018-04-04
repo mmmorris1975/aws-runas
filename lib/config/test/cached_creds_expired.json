@@ -1,0 +1,7 @@
+{
+  "AccessKeyID": "ASIAMockAccessKey",
+  "SecretAccessKey": "MockSecretKey",
+  "SessionToken": "MockToken",
+  "ProviderName": "MockCredentialsProvider",
+  "Expiration": 1522000000
+}

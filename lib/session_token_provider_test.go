@@ -2,10 +2,8 @@ package lib
 
 import (
 	"github.com/mbndr/logo"
-	"os"
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestNewSessionTokenProvider(t *testing.T) {
@@ -37,8 +35,7 @@ func TestSessionTokenProvider_IsExpired(t *testing.T) {
 
 	t.Run("True", func(t *testing.T) {
 		p := NewSessionTokenProvider(new(AWSProfile), opts)
-		p.(*sessionTokenProvider).creds = &CachableCredentials{Expiration: 500}
-		p.(*sessionTokenProvider).cacher = &credentialsCacher{file: os.DevNull}
+		p.(*sessionTokenProvider).cacher = &credentialsCacher{file: "config/test/cached_creds_expired.json"}
 		if !p.IsExpired() {
 			t.Errorf("Expected IsExpired() to be true for expired creds")
 		}
@@ -46,8 +43,7 @@ func TestSessionTokenProvider_IsExpired(t *testing.T) {
 
 	t.Run("False", func(t *testing.T) {
 		p := NewSessionTokenProvider(new(AWSProfile), opts)
-		p.(*sessionTokenProvider).creds = &CachableCredentials{Expiration: time.Now().Unix() + 500}
-		p.(*sessionTokenProvider).cacher = &credentialsCacher{file: os.DevNull}
+		p.(*sessionTokenProvider).cacher = &credentialsCacher{file: "config/test/cached_creds_valid.json"}
 		if p.IsExpired() {
 			t.Errorf("Expected IsExpired() to be false for non-expired creds")
 		}

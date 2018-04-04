@@ -3,7 +3,6 @@ package lib
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mbndr/logo"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -38,8 +37,7 @@ func TestAssumeRoleProvider_IsExpired(t *testing.T) {
 
 	t.Run("True", func(t *testing.T) {
 		p := NewAssumeRoleProvider(new(AWSProfile), opts)
-		p.(*assumeRoleProvider).creds = &CachableCredentials{Expiration: 500}
-		p.(*assumeRoleProvider).cacher = &credentialsCacher{file: os.DevNull}
+		p.(*assumeRoleProvider).cacher = &credentialsCacher{file: "config/test/cached_creds_expired.json"}
 		if !p.IsExpired() {
 			t.Errorf("Expected IsExpired() to be true for expired creds")
 		}
@@ -47,8 +45,7 @@ func TestAssumeRoleProvider_IsExpired(t *testing.T) {
 
 	t.Run("False", func(t *testing.T) {
 		p := NewAssumeRoleProvider(new(AWSProfile), opts)
-		p.(*assumeRoleProvider).creds = &CachableCredentials{Expiration: time.Now().Unix() + 500}
-		p.(*assumeRoleProvider).cacher = &credentialsCacher{file: os.DevNull}
+		p.(*assumeRoleProvider).cacher = &credentialsCacher{file: "config/test/cached_creds_valid.json"}
 		if p.IsExpired() {
 			t.Errorf("Expected IsExpired() to be false for non-expired creds")
 		}
