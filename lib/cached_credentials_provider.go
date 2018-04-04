@@ -19,7 +19,7 @@ type CachedCredentialsProviderOptions struct {
 	LogLevel           logo.Level
 	CredentialDuration time.Duration
 	MfaSerial          string
-	cacheFilePrefix    string
+	cacheFileName      string
 }
 
 type cachedCredentialsProvider struct {
@@ -48,13 +48,18 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 		prof = profile.SourceProfile
 	}
 
+	file := opts.cacheFileName
+	if len(file) < 1 {
+		file = fmt.Sprintf(".aws_cached_credentials_%s", prof)
+	}
+
 	p := new(cachedCredentialsProvider)
 	p.profile = profile
 	p.opts = opts
 	p.sess = AwsSession(prof)
 
 	cacheDir := filepath.Dir(AwsConfigFile())
-	cacheFile := filepath.Join(cacheDir, fmt.Sprintf("%s_%s", opts.cacheFilePrefix, prof))
+	cacheFile := filepath.Join(cacheDir, file)
 	cacheOpts := new(CredentialsCacherOptions)
 	cacheOpts.LogLevel = opts.LogLevel
 

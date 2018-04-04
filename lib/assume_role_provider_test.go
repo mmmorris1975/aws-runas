@@ -2,6 +2,7 @@ package lib
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/mbndr/logo"
 	"os"
 	"strings"
 	"testing"
@@ -27,6 +28,7 @@ func TestNewAssumeRoleProvider(t *testing.T) {
 }
 
 func TestAssumeRoleProvider_IsExpired(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("CredsNil", func(t *testing.T) {
 		p := NewAssumeRoleProvider(new(AWSProfile), opts)
 		if !p.IsExpired() {

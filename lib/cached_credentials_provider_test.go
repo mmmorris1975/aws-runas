@@ -8,10 +8,8 @@ import (
 	"time"
 )
 
-// common provider options
-var opts = &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG, cacheFilePrefix: "test"}
-
 func TestNewCachedCredentialsProvider(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("ProfileNil", func(t *testing.T) {
 		defer func() {
 			if x := recover(); x == nil {
@@ -24,16 +22,17 @@ func TestNewCachedCredentialsProvider(t *testing.T) {
 	t.Run("OptionsNil", func(t *testing.T) {
 		p := NewCachedCredentialsProvider(new(AWSProfile), nil)
 		if !strings.HasSuffix(p.cacher.CacheFile(), "_") {
-			t.Errorf("Unexpected value returned calling NewCachedCredentialsProvider with nil options")
+			t.Errorf("Unexpected value returned calling NewCachedCredentialsProvider with nil options: %s", p.cacher.CacheFile())
 		}
 	})
 }
 
 func TestCachedCredentialsProvider_CacheFile(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("SourceProfileSet", func(t *testing.T) {
 		prof := &AWSProfile{Name: "mock", SourceProfile: "source"}
 		p := NewCachedCredentialsProvider(prof, opts)
-		if !strings.HasSuffix(p.CacheFile(), ".aws_assume_role_source") {
+		if !strings.HasSuffix(p.CacheFile(), ".aws_cached_credentials_source") {
 			t.Errorf("Unexpected value for cache file name with profile name set: %s", p.CacheFile())
 		}
 	})
@@ -41,13 +40,14 @@ func TestCachedCredentialsProvider_CacheFile(t *testing.T) {
 	t.Run("SourceProfileUnset", func(t *testing.T) {
 		prof := &AWSProfile{Name: "mock", SourceProfile: ""}
 		p := NewCachedCredentialsProvider(prof, opts)
-		if !strings.HasSuffix(p.CacheFile(), ".aws_assume_role_mock") {
+		if !strings.HasSuffix(p.CacheFile(), ".aws_cached_credentials_mock") {
 			t.Errorf("Unexpected value for cache file name with profile name set: %s", p.CacheFile())
 		}
 	})
 }
 
 func TestCachedCredentialsProvider_IsExpired(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("CredsNil", func(t *testing.T) {
 		p := NewCachedCredentialsProvider(new(AWSProfile), opts)
 		if !p.IsExpired() {
@@ -75,6 +75,7 @@ func TestCachedCredentialsProvider_IsExpired(t *testing.T) {
 }
 
 func TestCachedCredentialsProvider_ExpirationTime(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("CredsNil", func(t *testing.T) {
 		p := NewCachedCredentialsProvider(new(AWSProfile), opts)
 		if p.ExpirationTime() != time.Unix(0, 0) {

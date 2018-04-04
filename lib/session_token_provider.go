@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -45,10 +46,15 @@ func NewSessionTokenProvider(profile *AWSProfile, opts *CachedCredentialsProvide
 	if opts == nil {
 		opts = new(CachedCredentialsProviderOptions)
 	}
-	opts.cacheFilePrefix = ".aws_session_token"
-	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.SessionTokenProvider", true)
+
+	prof := profile.Name
+	if len(profile.SourceProfile) > 0 {
+		prof = profile.SourceProfile
+	}
+	opts.cacheFileName = fmt.Sprintf(".aws_session_token_%s", prof)
 
 	p.cachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
+	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.SessionTokenProvider", true)
 
 	return p
 }

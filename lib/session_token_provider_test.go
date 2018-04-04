@@ -1,6 +1,7 @@
 package lib
 
 import (
+	"github.com/mbndr/logo"
 	"os"
 	"strings"
 	"testing"
@@ -26,6 +27,7 @@ func TestNewSessionTokenProvider(t *testing.T) {
 }
 
 func TestSessionTokenProvider_IsExpired(t *testing.T) {
+	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("CredsNil", func(t *testing.T) {
 		p := NewSessionTokenProvider(new(AWSProfile), opts)
 		if !p.IsExpired() {

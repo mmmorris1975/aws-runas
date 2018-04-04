@@ -53,10 +53,10 @@ func NewAssumeRoleProvider(profile *AWSProfile, opts *CachedCredentialsProviderO
 	if opts == nil {
 		opts = new(CachedCredentialsProviderOptions)
 	}
-	opts.cacheFilePrefix = ".aws_assume_role"
-	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.AssumeRoleProvider", true)
+	opts.cacheFileName = fmt.Sprintf(".aws_assume_role_%s", profile.Name)
 
 	p.cachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
+	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.AssumeRoleProvider", true)
 
 	return p
 }
@@ -116,11 +116,17 @@ func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 		profile := p.profile
 
 		input = new(sts.AssumeRoleInput)
-		input.SerialNumber = aws.String(profile.MfaSerial)
-		input.ExternalId = aws.String(profile.ExternalId)
 		input.RoleArn = aws.String(profile.RoleArn.String())
 		input.RoleSessionName = p.validateSessionName(profile.RoleSessionName)
-		input.DurationSeconds = p.validateDuration(profile.CredDuration) // What about opts.CredentialDuration?
+		input.DurationSeconds = p.validateDuration(profile.CredDuration)
+
+		if len(profile.MfaSerial) > 0 {
+			input.SerialNumber = aws.String(profile.MfaSerial)
+		}
+
+		if len(profile.ExternalId) > 0 {
+			input.ExternalId = aws.String(profile.ExternalId)
+		}
 
 		if len(p.opts.MfaSerial) > 0 {
 			input.SerialNumber = aws.String(p.opts.MfaSerial)
