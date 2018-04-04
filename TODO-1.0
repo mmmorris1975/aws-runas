@@ -7,12 +7,12 @@ X Add option to check for program update
 
 X Add unit tests
 
-Add functional tests (serverspec/rspec)
- - Various combinations of env vars
- - Various combinations of config file attrs
- - Various combinations of cmdline options
- - Various combinations of the above
- - session tokens and assume role without mfa (testing with MFA requires user interaction)
+X Add functional tests (serverspec/rspec)
+X  - Various combinations of env vars
+X  - Various combinations of config file attrs
+X  - Various combinations of cmdline options
+X  - Various combinations of the above
+X  - session tokens and assume role without mfa (testing with MFA requires user interaction)
 
 X Document code
 
