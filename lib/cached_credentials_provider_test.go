@@ -72,8 +72,8 @@ func TestCachedCredentialsProvider_IsExpired(t *testing.T) {
 }
 
 func TestCachedCredentialsProvider_ExpirationTime(t *testing.T) {
-	opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 	t.Run("CredsNil", func(t *testing.T) {
+		opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 		p := NewCachedCredentialsProvider(new(AWSProfile), opts)
 		if p.ExpirationTime() != time.Unix(0, 0) {
 			t.Errorf("Expected nil credentials to have epoch expiration time, got :%v", p.ExpirationTime())
@@ -81,8 +81,9 @@ func TestCachedCredentialsProvider_ExpirationTime(t *testing.T) {
 	})
 
 	t.Run("CredsValid", func(t *testing.T) {
+		opts := &CachedCredentialsProviderOptions{LogLevel: logo.DEBUG}
 		p := NewCachedCredentialsProvider(new(AWSProfile), opts)
-		p.creds = &CachableCredentials{Expiration: time.Now().Unix()}
+		p.cacher = &credentialsCacher{file: "config/test/cached_creds_valid.json"}
 		if p.ExpirationTime() == time.Unix(0, 0) {
 			t.Errorf("Expected valid credentials to not have epoch expiration time, got :%v", p.ExpirationTime())
 		}

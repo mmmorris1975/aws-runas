@@ -64,6 +64,7 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 	cacheOpts.LogLevel = opts.LogLevel
 
 	p.cacher = NewCredentialsCacher(cacheFile, cacheOpts)
+	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.CachedCredentialsProvider", true)
 
 	return *p
 }
@@ -101,8 +102,8 @@ func (p *cachedCredentialsProvider) CacheFile() string {
 }
 
 func (p *cachedCredentialsProvider) ExpirationTime() time.Time {
-	c := p.creds
-	if c == nil {
+	c, err := p.cacher.Fetch()
+	if c == nil || err != nil {
 		if p.log != nil {
 			p.log.Debugf("No credentials set, returning epoch time")
 		}
