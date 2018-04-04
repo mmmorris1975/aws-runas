@@ -181,17 +181,18 @@ func main() {
 		log.Debugf("RESOLVED PROFILE: %+v", p)
 
 		opts := lib.CachedCredentialsProviderOptions{
-			LogLevel:           logLevel,
-			CredentialDuration: p.SessionDuration,
-			MfaSerial:          p.MfaSerial,
+			LogLevel:  logLevel,
+			MfaSerial: p.MfaSerial,
 		}
 
 		var credProvider lib.SessionTokenProvider
 		if *sesCreds || len(p.RoleArn.Resource) < 1 {
 			log.Debugf("Getting SESSION TOKEN credentials")
+			opts.CredentialDuration = p.SessionDuration
 			credProvider = lib.NewSessionTokenProvider(p, &opts)
 		} else {
 			log.Debugf("Getting ASSUME ROLE credentials")
+			opts.CredentialDuration = p.CredDuration
 			credProvider = lib.NewAssumeRoleProvider(p, &opts)
 			if p.CredDuration <= 1*time.Hour && len(p.MfaSerial) > 0 {
 				// TODO if assume role duration < 1 hour, and we're doing MFA,
