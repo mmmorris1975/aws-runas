@@ -185,14 +185,26 @@ func main() {
 			CredentialDuration: p.SessionDuration,
 			MfaSerial:          p.MfaSerial,
 		}
-		t := lib.NewSessionTokenProvider(p, &opts)
+
+		var credProvider lib.SessionTokenProvider
+		if *sesCreds || len(p.RoleArn.Resource) < 1 {
+			log.Debugf("Getting SESSION TOKEN credentials")
+			credProvider = lib.NewSessionTokenProvider(p, &opts)
+		} else {
+			log.Debugf("Getting ASSUME ROLE credentials")
+			credProvider = lib.NewAssumeRoleProvider(p, &opts)
+			if p.CredDuration <= 1*time.Hour && len(p.MfaSerial) > 0 {
+				// TODO if assume role duration < 1 hour, and we're doing MFA,
+				// make call with session token token credentials?
+			}
+		}
 
 		if *refresh {
-			os.Remove(t.CacheFile())
+			os.Remove(credProvider.CacheFile())
 		}
 
 		if *showExpire {
-			exp_t := t.ExpirationTime()
+			exp_t := credProvider.ExpirationTime()
 			fmt_t := exp_t.Format("2006-01-02 15:04:05")
 			hmn_t := humanize.Time(exp_t)
 
@@ -203,28 +215,10 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", tense, fmt_t, hmn_t)
 		}
 
-		var creds credentials.Value
-		if *sesCreds || len(p.RoleArn.Resource) < 1 {
-			log.Debugf("Getting SESSION TOKEN credentials")
-			c := credentials.NewCredentials(t)
-			creds, err = c.Get()
-			if err != nil {
-				log.Fatalf("Unable to get SessionToken credentials: %v", err)
-			}
-		} else {
-			log.Debugf("Getting ASSUME ROLE credentials")
-			in := assumeRoleInput(p)
-			res, err := t.AssumeRole(in)
-			if err != nil {
-				log.Fatalf("Error doing AssumeRole: %+v", err)
-			}
-			c := res.Credentials
-			creds = credentials.Value{
-				AccessKeyID:     *c.AccessKeyId,
-				SecretAccessKey: *c.SecretAccessKey,
-				SessionToken:    *c.SessionToken,
-				ProviderName:    "CachedCredentialsProvider",
-			}
+		c := credentials.NewCredentials(credProvider)
+		creds, err := c.Get()
+		if err != nil {
+			log.Fatalf("Error getting credentials: %v", err)
 		}
 
 		updateEnv(creds, p.Region)
