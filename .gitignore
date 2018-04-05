@@ -20,7 +20,9 @@ vendor/
 *.lock
 
 .aws/.aws_session_token*
+.aws/.aws_assume_role*
 
 .bundle
-build/
 .idea
+
+build/

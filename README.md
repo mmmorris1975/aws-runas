@@ -7,16 +7,28 @@ It's still a command to provide a friendly way to do an AWS STS AssumeRole opera
 using a particular set of permissions.  Includes integration with roles requiring MFA authentication!  Works
 off of profile names configured in the AWS SDK configuration file.
 
-This tool initially performs an AWS STS GetSessionToken call to handle MFA credentials, caches the session credentials,
-then makes the AssumeRole call.  This allows us to not have to re-enter the MFA information (if required) every time
-AssumeRole is called (or when the AssumeRole credentials expire), only when new Session Tokens are requested
-(by default 12 hours).  These credentials are not compatible with credentials cached by awscli, however they should be
-compatible with versions of this tool built in different languages.
+AWS supports AssumeRole credentials which can be valid for up to 12 hours.  aws-runas supports specifying this duration
+via command-line options, environment variables, and custom configuration file attributes (see below).  The received credentials
+are cached on the local system and will be used until expiration.  To keep backwards compatibility with the behavior
+of previous aws-runas versions, requests for AssumeRole credentials of 1 hour (the default) or less, and using MFA, will
+first call GetSessionToken() to get a longer-lived set of session token credentials (12 hours, by default) which can carry
+the MFA activity for longer than 1 hour.  This alleviates the need to re-MFA every hour (or less) as the AssumeRole
+credentials expire, as the call to get new AssumeRole credentials will be made using the session token credentials instead
+of the (probably static) credentials, which would require input of a new MFA token code.
 
-If using MFA, when the credentials approach expiration you will be prompted to re-enter the MFA token value to refresh
-the credentials during the next execution of aws-runas. (Since this is a wrapper program, there's no way to know when
-credentials need to be refreshed in the middle of the called program execution) If MFA is not required for the assumed
-role, the credentials should refresh without user intervention when aws-runas is next executed.
+The credentials obtained from either the AssumeRole or GetSessionToken operations will be cached on the local system in
+the same directory where the SDK configuration file lives (by default $HOME/.aws/).  This allows a set of temporary
+credentials to be used multiple times, and carry along the status of any required MFA activities, until the credentials
+expire.  Credentials cached for the AssumeRole operation will be in a file specific to the role the credentials were
+requested for.  Session token credentials will be cached in a file specific to the profile used to call the
+GetSessionToken operation.  This is either the profile specified by the `source_profile` configuration, for a profile
+which uses roles, or the name of the profile directly (if profile not using roles).  This allows the session token
+credentials to be re-used across multiple roles configured to use the same source profile configuration.
+
+If using MFA, when the cached credentials approach expiration you will be prompted to re-enter the MFA token value to
+refresh the credentials during the next execution of aws-runas. (Since this is a wrapper program, there's no way to know
+when credentials need to be refreshed in the middle of the called program execution) If MFA is not required for the
+assumed role, the credentials should refresh without user intervention when aws-runas is next executed.
 
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just take the
 compiled executable and "go".  Like the original aws-runas, this program will cache the credentials returned for the
@@ -76,7 +88,9 @@ Example (NOT compatible with awscli `--profile` option, if MFA required for Assu
 
 The program supports custom configuration attributes in the .aws/config file to specify the session token and assume role
 credential lifetime.  These are non-standard attributes to the AWS SDK, but should be ignored by the SDK and not cause any
-issues.  Values are specified as golang time.Duration strings (https://golang.org/pkg/time/#ParseDuration)
+issues.  Values are specified as golang time.Duration strings (https://golang.org/pkg/time/#ParseDuration).  These attributes
+are handled the same way as the mfa_serial attribute: they can be specified as part of a profile directly, as part of a
+source_profile, or as part of the default profile.
 
   * `session_token_duration` This attribute specifies the lifetime of the session token credentials (which carry the MFA information)
   * `credentials_duration` This attribute specifies the lifetime of the assume role credentials requested by aws-runas
@@ -85,8 +99,8 @@ issues.  Values are specified as golang time.Duration strings (https://golang.or
 
 Standard AWS SDK environment variables are supported by this program.  (See the `Environment Variables` section in
 https://docs.aws.amazon.com/sdk-for-go/api/aws/session/) Most will be passed through to the calling program except
-for the `AWS_PROFILE` environment variable which will be explicitly unset before aws-runas calls the program.  (It can
-only affect the environment variable for the execution of aws-runas, the setting in the original environment is unaffected)
+for the `AWS_PROFILE` environment variable which will be explicitly unset before aws-runas calls the program.  (It only
+affects the environment variable for the execution of aws-runas, the setting in the original environment is unaffected)
 
 If the `AWS_PROFILE` environment variable is set, it will be used in place of the 'profile' argument to the command.  In
 this example, the 'aws s3 ls' command will be executed using the profile 'my_profile'
