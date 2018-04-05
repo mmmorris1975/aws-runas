@@ -36,7 +36,7 @@ describe 'tests using a profile without a role' do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stderr) { should match /\s+Found cached session token credentials/ }
-      its(:stderr) { should match /^Session credentials will expire on/ }
+      its(:stderr) { should match /^Credentials will expire on/ }
     end
 
     describe command ('aws-runas -vsrd 10m') do

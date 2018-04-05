@@ -59,30 +59,6 @@ func NewSessionTokenProvider(profile *AWSProfile, opts *CachedCredentialsProvide
 	return p
 }
 
-// Check if a set of credentials have expired (or are within the
-// expiration window).  Default case is to return true so that only
-// verified non-expired credentials will report as not expired.
-//
-// satisfies credentials.Provider
-//func (p *sessionTokenProvider) IsExpired() bool {
-//	c := p.creds
-//	if c == nil {
-//		p.log.Debugf("No credentials loaded, returning expired = true")
-//		return true
-//	}
-//
-//	stat, err := os.Stat(p.cacher.CacheFile())
-//	if err == nil {
-//		expTime := time.Unix(c.Expiration, 0)
-//		window := expTime.Sub(stat.ModTime()) / 10
-//		c.SetExpiration(expTime, window)
-//	} else {
-//		p.log.Debugf("Error calling Stat() on credential cache file: %v", err)
-//	}
-//
-//	return c.IsExpired()
-//}
-
 // Retrieve the session token credentials from the cache.  If the
 // credentials are expired, or there is no cache, a new set of
 // session token credentials will be created and stored.

@@ -194,10 +194,6 @@ func main() {
 			log.Debugf("Getting ASSUME ROLE credentials")
 			opts.CredentialDuration = p.CredDuration
 			credProvider = lib.NewAssumeRoleProvider(p, &opts)
-			if p.CredDuration <= 1*time.Hour && len(p.MfaSerial) > 0 {
-				// TODO if assume role duration < 1 hour, and we're doing MFA,
-				// make call with session token token credentials?
-			}
 		}
 
 		if *refresh {
@@ -213,7 +209,7 @@ func main() {
 			if exp_t.Before(time.Now()) {
 				tense = "expired"
 			}
-			fmt.Fprintf(os.Stderr, "Session credentials %s on %s (%s)\n", tense, fmt_t, hmn_t)
+			fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, fmt_t, hmn_t)
 		}
 
 		c := credentials.NewCredentials(credProvider)

@@ -27,7 +27,7 @@ describe 'tests using a profile with a role' do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stderr) { should match /\s+Found cached assume role credentials/ }
-      its(:stderr) { should match /^Session credentials will expire on/ }
+      its(:stderr) { should match /^Credentials will expire on/ }
       its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS:/ }
     end
 

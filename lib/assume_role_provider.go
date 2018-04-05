@@ -61,10 +61,6 @@ func NewAssumeRoleProvider(profile *AWSProfile, opts *CachedCredentialsProviderO
 	return p
 }
 
-//func (p *assumeRoleProvider) IsExpired() bool {
-//
-//}
-
 // Retrieve the assume role credentials from the cache.  If the
 // credentials are expired, or there is no cache, a new set of
 // assume role credentials will be created and stored.
@@ -112,9 +108,9 @@ func (p *assumeRoleProvider) Retrieve() (credentials.Value, error) {
 //
 // implements sts.AssumeRoler
 func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
-	if input == nil && p.profile != nil {
-		profile := p.profile
+	profile := p.profile
 
+	if input == nil && profile != nil {
 		input = new(sts.AssumeRoleInput)
 		input.RoleArn = aws.String(profile.RoleArn.String())
 		input.RoleSessionName = p.validateSessionName(profile.RoleSessionName)
@@ -137,11 +133,19 @@ func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 		}
 	}
 
+	s := sts.New(p.sess)
 	if input.SerialNumber != nil && len(*input.SerialNumber) > 0 {
-		input.TokenCode = aws.String(PromptForMfa())
+		if *input.DurationSeconds <= int64(ASSUME_ROLE_DEFAULT_DURATION.Seconds()) && profile != nil {
+			// If the duration is less than what AWS allows by default for assume role without extra
+			// configuration, and we're using MFA, use session token creds before doing assume role
+			sesProvider := NewSessionTokenProvider(profile, p.opts)
+			s = sts.New(p.sess, &aws.Config{Credentials: credentials.NewCredentials(sesProvider)})
+			input.SerialNumber = nil
+		} else {
+			input.TokenCode = aws.String(PromptForMfa())
+		}
 	}
 
-	s := sts.New(p.sess)
 	return s.AssumeRole(input)
 }
 
