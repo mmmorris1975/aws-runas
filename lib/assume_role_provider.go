@@ -115,23 +115,22 @@ func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 		input = new(sts.AssumeRoleInput)
 		input.RoleArn = aws.String(profile.RoleArn.String())
 		input.RoleSessionName = p.validateSessionName(profile.RoleSessionName)
-		input.DurationSeconds = p.validateDuration(profile.CredDuration)
-
-		if len(profile.MfaSerial) > 0 {
-			input.SerialNumber = aws.String(profile.MfaSerial)
-		}
 
 		if len(profile.ExternalId) > 0 {
 			input.ExternalId = aws.String(profile.ExternalId)
 		}
+	}
 
-		if len(p.opts.MfaSerial) > 0 {
-			input.SerialNumber = aws.String(p.opts.MfaSerial)
-		}
+	if len(p.opts.MfaSerial) > 0 {
+		input.SerialNumber = aws.String(p.opts.MfaSerial)
+	} else if len(profile.MfaSerial) > 0 {
+		input.SerialNumber = aws.String(profile.MfaSerial)
+	}
 
-		if p.opts.CredentialDuration > 0 {
-			input.DurationSeconds = p.validateDuration(p.opts.CredentialDuration)
-		}
+	if p.opts.CredentialDuration > 0 {
+		input.DurationSeconds = p.validateDuration(p.opts.CredentialDuration)
+	} else {
+		input.DurationSeconds = p.validateDuration(profile.CredDuration)
 	}
 
 	s := sts.New(p.sess)
@@ -175,15 +174,18 @@ func (p *assumeRoleProvider) validateSessionName(n string) *string {
 
 func (p *assumeRoleProvider) validateDuration(d time.Duration) *int64 {
 	if d == 0 {
+		p.log.Debug("Setting default assume role duration")
 		return aws.Int64(int64(ASSUME_ROLE_DEFAULT_DURATION.Seconds()))
 	}
 
 	dur := time.Duration(d).Seconds()
 	if dur < ASSUME_ROLE_MIN_DURATION.Seconds() {
+		p.log.Debug("Assume role duration too short, adjusting to min value")
 		return aws.Int64(int64(ASSUME_ROLE_MIN_DURATION.Seconds()))
 	}
 
 	if dur > ASSUME_ROLE_MAX_DURATION.Seconds() {
+		p.log.Debug("Assume role duration too long, adjusting to max value")
 		return aws.Int64(int64(ASSUME_ROLE_MAX_DURATION.Seconds()))
 	}
 
