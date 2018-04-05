@@ -32,6 +32,7 @@ type ConfigManager interface {
 	BuildConfig(roles Roles, mfa *string) error
 }
 
+// ConfigManagerOptions is the set of options supported to configure the ConfigManager
 type ConfigManagerOptions struct {
 	LogLevel logo.Level
 }

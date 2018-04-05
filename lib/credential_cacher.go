@@ -35,7 +35,7 @@ type credentialsCacher struct {
 	log  *logo.Logger
 }
 
-// NewCredenialsCacher returns a new CredentialsCacher which will store credentials in the provided file location
+// NewCredentialsCacher returns a new CredentialsCacher which will store credentials in the provided file location
 func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) CredentialsCacher {
 	if len(file) < 1 {
 		panic("invalid file argument to NewCredentialsCacher")

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	// The program version
+	// VERSION - The program version
 	VERSION = "1.0.0-beta3"
 )
 
