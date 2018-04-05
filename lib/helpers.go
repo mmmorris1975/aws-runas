@@ -48,6 +48,9 @@ func AwsConfigFile() string {
 	return c
 }
 
+// Return an AWS SDK session object to use for making API calls to AWS.  This session will be set to
+// get configuration from the shared configuration files, and enable verbose credential change logging.
+// If the profile argument is provided, the session will be set to use it for configuration.
 func AwsSession(profile string) *session.Session {
 	// Doing this kills the ability to use env vars, which may mess
 	// with the -M option, requiring the ~/.aws/credentials file
@@ -74,6 +77,7 @@ func AwsSession(profile string) *session.Session {
 	return session.Must(session.NewSessionWithOptions(opts))
 }
 
+// Check the program version against the latest release according to github
 func VersionCheck(version string) error {
 	u := "https://github.com/mmmorris1975/aws-runas/releases/latest"
 	r, err := http.NewRequest(http.MethodHead, u, http.NoBody)

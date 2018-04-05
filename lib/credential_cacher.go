@@ -18,12 +18,14 @@ type CachableCredentials struct {
 	Expiration         int64
 }
 
+// The interface defining the contract for a CredentialsCacher
 type CredentialsCacher interface {
 	Fetch() (*CachableCredentials, error)
 	Store(c *CachableCredentials) error
 	CacheFile() string
 }
 
+// Set of options used to configure an instance of a CredentialsCacher
 type CredentialsCacherOptions struct {
 	LogLevel logo.Level
 }
@@ -33,6 +35,7 @@ type credentialsCacher struct {
 	log  *logo.Logger
 }
 
+// Return a new CredentialsCacher which will store credentials in the provided file location
 func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) CredentialsCacher {
 	if len(file) < 1 {
 		panic("invalid file argument to NewCredentialsCacher")
@@ -48,10 +51,12 @@ func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) Credentia
 	return c
 }
 
+// Return the name of the credentials cache file
 func (c *credentialsCacher) CacheFile() string {
 	return c.file
 }
 
+// Retrieve the credentials from the cache file and return them as a suitable go struct
 func (c *credentialsCacher) Fetch() (*CachableCredentials, error) {
 	creds := new(CachableCredentials)
 
@@ -73,6 +78,7 @@ func (c *credentialsCacher) Fetch() (*CachableCredentials, error) {
 	return creds, nil
 }
 
+// Store the provided files as JSON in the configured cache file, overwriting any existing file.
 func (c *credentialsCacher) Store(creds *CachableCredentials) error {
 	if creds == nil {
 		return fmt.Errorf("nil credentials detected")

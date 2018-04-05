@@ -103,8 +103,9 @@ func (p *assumeRoleProvider) Retrieve() (credentials.Value, error) {
 	return p.creds.Value, nil
 }
 
-// Perform an AWS AssumeRole API call to get the Assume Role credentials
-// bypassing any the cached credentials
+// Perform an AWS AssumeRole API call to get the Assume Role credentials bypassing any
+// cached credentials, unless MFA is being used and the assume role duration is 1 hour
+// or less. (Use cached session tokens to call assume role instead to limit MFA re-entry)
 //
 // implements sts.AssumeRoler
 func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
@@ -136,8 +137,9 @@ func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 	s := sts.New(p.sess)
 	if input.SerialNumber != nil && len(*input.SerialNumber) > 0 {
 		if *input.DurationSeconds <= int64(ASSUME_ROLE_DEFAULT_DURATION.Seconds()) && profile != nil {
-			// If the duration is less than what AWS allows by default for assume role without extra
-			// configuration, and we're using MFA, use session token creds before doing assume role
+			// If we're using MFA, and the duration is less than the 1 hour limit AWS imposes on assume
+			// role credentials retrieved using session token credentials, use session token creds before
+			// doing assume role.  Preserves desired behavior from pre-1.0 versions to limit MFA re-entry
 			sesProvider := NewSessionTokenProvider(profile, p.opts)
 			s = sts.New(p.sess, &aws.Config{Credentials: credentials.NewCredentials(sesProvider)})
 			input.SerialNumber = nil
