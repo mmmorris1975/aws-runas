@@ -305,23 +305,27 @@ func iamUser(s *session.Session) *iam.User {
 func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 	var p *lib.AWSProfile
 
+	// Lookup default profile name, in case we were not passed a profile,
+	// or role_arn as part of the command
+	defProfile := session.DefaultSharedConfigProfile
+	v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
+	if ok {
+		defProfile = v
+	}
+
 	a, err := arn.Parse(name)
 	if err != nil {
 		p, err = cm.GetProfile(aws.String(name))
 		if err != nil {
 			return nil, fmt.Errorf("unable to get configuration for profile '%s': %v", name, err)
 		}
+
+		if len(p.Name) < 1 {
+			// helps keep cache file naming sane
+			p.Name = defProfile
+		}
 	} else {
 		if strings.HasPrefix(a.String(), lib.IAM_ARN) {
-			// Even though we were passed a role ARN, attempt profile info lookup so
-			// we can capture any default configuration. (Ignore any errors). Lookup
-			// default profile name first, so we don't blow up checking config files
-			defProfile := session.DefaultSharedConfigProfile
-			v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
-			if ok {
-				defProfile = v
-			}
-
 			// Unset AWS_PROFILE here, in case the role ARN came in via environment
 			// variable, otherwise is messes up GetProfile
 			os.Unsetenv("AWS_PROFILE")
