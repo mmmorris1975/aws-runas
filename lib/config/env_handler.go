@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-// A ConfigHandler which will lookup some configuration items via environment
-// variables.  The currently supported list is:
+// EnvConfigHandler is ConfigHandler which will lookup some configuration items via
+// environment variables.  The currently supported list is:
 // AWS_REGION
 // AWS_PROFILE
 // SESSION_TOKEN_DURATION
@@ -20,7 +20,7 @@ type EnvConfigHandler struct {
 	log               *logo.Logger
 }
 
-// Create a new ConfigHandler with the provided options.
+// NewEnvConfigHandler creates a new ConfigHandler with the provided options.
 func NewEnvConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 	h := &EnvConfigHandler{
 		regionEnvVar:      "AWS_REGION",
@@ -35,7 +35,7 @@ func NewEnvConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 	return h
 }
 
-// Look up the values of each environment variable, and if they exist,
+// Config will look up the values of each environment variable, and if they exist,
 // set the appropriate value in the Config object.
 func (h *EnvConfigHandler) Config(c *AwsConfig) error {
 	if c == nil {

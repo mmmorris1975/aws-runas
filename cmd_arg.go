@@ -20,6 +20,9 @@ func (i *cmdArg) IsCumulative() bool {
 	return true
 }
 
+// A custom kingpin type which allows consumption of multiple values
+// and treat them as a single value.  Used for consuming all remaining
+// command-line arguments to treat as the full command to wrap and execute.
 func CmdArg(s kingpin.Settings) (target *[]string) {
 	target = new([]string)
 	s.SetValue((*cmdArg)(target))

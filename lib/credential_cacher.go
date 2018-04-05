@@ -10,22 +10,22 @@ import (
 	"path/filepath"
 )
 
-// A credentials.Value compatible set of credentials with the
-// addition of expiration information, able to be serialized to a file
+// CachableCredentials is a credentials.Value compatible set of credentials with
+// the addition of expiration information, able to be serialized to a file
 type CachableCredentials struct {
 	credentials.Value
 	credentials.Expiry `json:"-"` // do not marshal
 	Expiration         int64
 }
 
-// The interface defining the contract for a CredentialsCacher
+// CredentialsCacher is the interface defining the contract for a CredentialsCacher
 type CredentialsCacher interface {
 	Fetch() (*CachableCredentials, error)
 	Store(c *CachableCredentials) error
 	CacheFile() string
 }
 
-// Set of options used to configure an instance of a CredentialsCacher
+// CredentialsCacherOptions is a set of options used to configure an instance of a CredentialsCacher
 type CredentialsCacherOptions struct {
 	LogLevel logo.Level
 }
@@ -35,7 +35,7 @@ type credentialsCacher struct {
 	log  *logo.Logger
 }
 
-// Return a new CredentialsCacher which will store credentials in the provided file location
+// NewCredenialsCacher returns a new CredentialsCacher which will store credentials in the provided file location
 func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) CredentialsCacher {
 	if len(file) < 1 {
 		panic("invalid file argument to NewCredentialsCacher")
@@ -51,12 +51,12 @@ func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) Credentia
 	return c
 }
 
-// Return the name of the credentials cache file
+// CacheFile returns the name of the credentials cache file
 func (c *credentialsCacher) CacheFile() string {
 	return c.file
 }
 
-// Retrieve the credentials from the cache file and return them as a suitable go struct
+// Fetch the credentials from the cache file and return them as a suitable go struct
 func (c *credentialsCacher) Fetch() (*CachableCredentials, error) {
 	creds := new(CachableCredentials)
 

@@ -12,11 +12,11 @@ import (
 	"strings"
 )
 
-// Prefix for role ARNs and Virtual MFA devices
+// IAM_ARN is the prefix for role ARNs and Virtual MFA devices
 // (physical MFA devices use device serial number, not ARN)
 const IAM_ARN = "arn:aws:iam::"
 
-// Lookup the MFA devices configured for the calling user's IAM account
+// LookupMfa retrieves the MFA devices configured for the calling user's IAM account
 func LookupMfa(sess *session.Session) ([]*iam.MFADevice, error) {
 	s := iam.New(sess)
 
@@ -28,7 +28,7 @@ func LookupMfa(sess *session.Session) ([]*iam.MFADevice, error) {
 	return res.MFADevices, nil
 }
 
-// Print prompt to enter MFA code and gather input
+// PromptForMfa will print a prompt to Stdout for a user to enter the MFA code
 func PromptForMfa() string {
 	var mfaCode string
 	fmt.Print("Enter MFA Code: ")
@@ -36,8 +36,8 @@ func PromptForMfa() string {
 	return mfaCode
 }
 
-// Return the location of the AWS SDK config file.  Use the value of
-// the AWS_CONFIG_FILE environment variable, if available, otherwise
+// AwsConfigFile returns the location of the AWS SDK config file.  Use the
+// value of the AWS_CONFIG_FILE environment variable, if available, otherwise
 // use the SDK default location
 func AwsConfigFile() string {
 	c := defaults.SharedConfigFilename()
@@ -48,9 +48,9 @@ func AwsConfigFile() string {
 	return c
 }
 
-// Return an AWS SDK session object to use for making API calls to AWS.  This session will be set to
-// get configuration from the shared configuration files, and enable verbose credential change logging.
-// If the profile argument is provided, the session will be set to use it for configuration.
+// AwsSession returns an AWS SDK session object to use for making API calls to AWS.  This session
+// will be set to get configuration from the shared configuration files, and enable verbose credential
+// chain logging. If the profile argument is provided, the session will be set to use it for configuration.
 func AwsSession(profile string) *session.Session {
 	// Doing this kills the ability to use env vars, which may mess
 	// with the -M option, requiring the ~/.aws/credentials file
@@ -77,7 +77,7 @@ func AwsSession(profile string) *session.Session {
 	return session.Must(session.NewSessionWithOptions(opts))
 }
 
-// Check the program version against the latest release according to github
+// VersionCheck will check the program version against the latest release according to github
 func VersionCheck(version string) error {
 	u := "https://github.com/mmmorris1975/aws-runas/releases/latest"
 	r, err := http.NewRequest(http.MethodHead, u, http.NoBody)

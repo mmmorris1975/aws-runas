@@ -9,12 +9,13 @@ import (
 	"time"
 )
 
+// CachedCredentialProvider provides the interface defining conforming providers.
 type CachedCredentialProvider interface {
 	CacheFile() string
 	ExpirationTime() time.Time
 }
 
-// Options applicable to all kinds of CachedCredentialsProviders
+// CachedCredentialsProviderOptions are the options applicable to all kinds of CachedCredentialsProviders
 type CachedCredentialsProviderOptions struct {
 	LogLevel           logo.Level
 	CredentialDuration time.Duration
@@ -32,7 +33,7 @@ type cachedCredentialsProvider struct {
 	cacher       CredentialsCacher
 }
 
-// Create a new CachedCredentialsProvider for the given profile.
+// NewCachedCredentialsProvider creates a new CachedCredentialsProvider for the given profile.
 // The returned value is the base type for building other, more sophisticated
 // credential.Providers
 func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsProviderOptions) cachedCredentialsProvider {
@@ -69,7 +70,7 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 	return *p
 }
 
-// Check if a set of credentials have expired (or are within the
+// IsExpired checks if a set of credentials have expired (or are within the
 // expiration window).  Default case is to return true so that only
 // verified non-expired credentials will report as not expired.
 //
@@ -97,10 +98,13 @@ func (p *cachedCredentialsProvider) IsExpired() bool {
 	return c.IsExpired()
 }
 
+// CacheFile returns the value of the cache file storing the credentials
 func (p *cachedCredentialsProvider) CacheFile() string {
 	return p.cacher.CacheFile()
 }
 
+// ExpirationTime converts the stored credentials expiration time as a
+// time.Time so it is useful for calculating differences between Times
 func (p *cachedCredentialsProvider) ExpirationTime() time.Time {
 	c, err := p.cacher.Fetch()
 	if c == nil || err != nil {

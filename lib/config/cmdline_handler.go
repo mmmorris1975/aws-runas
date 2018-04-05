@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// The options available for configuration by this handler.
+// CmdlineOptions is the set of options available for configuration by this handler.
 type CmdlineOptions struct {
 	Profile       string
 	RoleArn       string
@@ -15,15 +15,15 @@ type CmdlineOptions struct {
 	CredDuration  string
 }
 
-// A ConfigHandler to set various configuration options via command line
-// parameters.  This may be of limited utility outside of the aws-runas cli
+// CmdlineConfigHandler is a ConfigHandler to set various configuration options via
+// command line parameters.  This may be of limited utility outside of the aws-runas cli
 type CmdlineConfigHandler struct {
 	opts *CmdlineOptions
 	log  *logo.Logger
 }
 
-// Create a new ConfigHandler with the provided handler options
-// and CmdlineOptions.
+// NewCmdlineConfigHandler creates a new ConfigHandler with the provided handler
+// options and CmdlineOptions.
 func NewCmdlineConfigHandler(handlerOpts *ConfigHandlerOpts, cmdlineOpts *CmdlineOptions) ConfigHandler {
 	h := &CmdlineConfigHandler{opts: cmdlineOpts}
 	if handlerOpts != nil {
@@ -32,7 +32,7 @@ func NewCmdlineConfigHandler(handlerOpts *ConfigHandlerOpts, cmdlineOpts *Cmdlin
 	return h
 }
 
-// Set the provided command line options in the Config struct
+// Config sets the provided command line options as values in the Config struct
 func (h *CmdlineConfigHandler) Config(c *AwsConfig) error {
 	if c == nil {
 		return nil

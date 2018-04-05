@@ -20,6 +20,7 @@ import (
 )
 
 const (
+	// The program version
 	VERSION = "1.0.0-beta3"
 )
 
@@ -201,15 +202,15 @@ func main() {
 		}
 
 		if *showExpire {
-			exp_t := credProvider.ExpirationTime()
-			fmt_t := exp_t.Format("2006-01-02 15:04:05")
-			hmn_t := humanize.Time(exp_t)
+			exp := credProvider.ExpirationTime()
+			format := exp.Format("2006-01-02 15:04:05")
+			hmn := humanize.Time(exp)
 
 			tense := "will expire"
-			if exp_t.Before(time.Now()) {
+			if exp.Before(time.Now()) {
 				tense = "expired"
 			}
-			fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, fmt_t, hmn_t)
+			fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
 		}
 
 		c := credentials.NewCredentials(credProvider)

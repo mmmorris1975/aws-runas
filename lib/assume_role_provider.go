@@ -14,15 +14,15 @@ import (
 )
 
 const (
-	// AWS SDK minimum assume role credentials duration
+	// ASSUME_ROLE_MIN_DURATION is the AWS SDK minimum assume role credentials duration
 	ASSUME_ROLE_MIN_DURATION = SESSION_TOKEN_MIN_DURATION
-	// AWS SDK maximum assume role credentials duration
+	// ASSUME_ROLE_MAX_DURATION is the AWS SDK maximum assume role credentials duration
 	ASSUME_ROLE_MAX_DURATION = time.Duration(12 * time.Hour)
-	// AWS SDK default assume role credentials duration
+	// ASSUME_ROLE_DEFAULT_DURATION is the AWS SDK default assume role credentials duration
 	ASSUME_ROLE_DEFAULT_DURATION = time.Duration(1 * time.Hour)
 )
 
-// Interface defining the methods needed to manage AWS assume role credentials
+// AssumeRoleProvider is the interface defining the methods needed to manage AWS assume role credentials
 type AssumeRoleProvider interface {
 	SessionTokenProvider
 	stscreds.AssumeRoler
@@ -32,9 +32,9 @@ type assumeRoleProvider struct {
 	sessionTokenProvider
 }
 
-// Create a new AssumeRoleProvider for the given profile. Unspecified
-// credential durations will be set to their default value. Values outside
-// of the min and max range will be set to the respective min/max values.
+// NewAssumeRoleProvider creates a new AssumeRoleProvider for the given profile.
+// Unspecified credential durations will be set to their default value. Values
+// outside of the min and max range will be set to the respective min/max values.
 // If the CredentialDuration option is set, its value will override any value
 // set in the profile. Any value set for the DurationSeconds field of the
 // AssumeRoleInput will be given highest priority.
@@ -103,8 +103,8 @@ func (p *assumeRoleProvider) Retrieve() (credentials.Value, error) {
 	return p.creds.Value, nil
 }
 
-// Perform an AWS AssumeRole API call to get the Assume Role credentials bypassing any
-// cached credentials, unless MFA is being used and the assume role duration is 1 hour
+// AssumeRole performs an AWS AssumeRole API call to get the Assume Role credentials bypassing
+// any cached credentials, unless MFA is being used and the assume role duration is 1 hour
 // or less. (Use cached session tokens to call assume role instead to limit MFA re-entry)
 //
 // implements sts.AssumeRoler

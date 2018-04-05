@@ -10,8 +10,8 @@ import (
 	"time"
 )
 
-// Profile information from known configuration attributes
-// in the aws sdk configuration file
+// AWSProfile is the information from known configuration attributes
+// from the different configuration sources.
 type AWSProfile struct {
 	Name            string
 	Region          string
@@ -24,10 +24,9 @@ type AWSProfile struct {
 	CredDuration    time.Duration
 }
 
-// Interface for managing an ini-formatted configuration file
-// providing the ability to retrieve a default profile, profile
-// by name, and to build a configuration file based on a
-// given list of Roles
+// ConfigManager is the interface for managing an ini-formatted configuration
+// file providing the ability to retrieve a default profile, profile by name,
+// and to build a configuration file based on a given list of Roles
 type ConfigManager interface {
 	GetProfile(name *string) (*AWSProfile, error)
 	BuildConfig(roles Roles, mfa *string) error
@@ -37,10 +36,10 @@ type ConfigManagerOptions struct {
 	LogLevel logo.Level
 }
 
-// A ConfigManager specific to the aws sdk configuration.  It will use
-// the ConfigHandler defined in the provided options, or the DefaultConfigHandler
-// which will look up config from the aws config files, and override certain config
-// values provided by environment variables.
+// NewAwsConfigManager is a ConfigManager specific to the aws sdk configuration.  It will
+// use the ConfigHandler defined in the provided options, or the DefaultConfigHandler which
+// will look up config from the aws config files, and override certain config values
+// provided by environment variables.
 func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
 	cm := new(awsConfigManager)
 
@@ -57,7 +56,7 @@ type awsConfigManager struct {
 	opts *ConfigManagerOptions
 }
 
-// Retrieve an AWSProfile by name using the configured ConfigHandler.
+// GetProfile retrieves an AWSProfile by name using the configured ConfigHandler.
 // If the specified profile contains a role_arn setting, that value will
 // be checked to ensure it's a valid IAM arn, and that the required
 // source_profile setting is valid.
@@ -126,9 +125,9 @@ func (c *awsConfigManager) GetProfile(p *string) (*AWSProfile, error) {
 	return profile, nil
 }
 
-// Build an AWS SDK compliant, ini-formatted, configuration file based on the location
-// configured during the NewAwsConfigManager() call.  The generated config file will
-// have a default section, with all configured roles to use the default section as
+// BuildCOnfig creates an AWS SDK compliant, ini-formatted, configuration file based on the
+// location configured during the NewAwsConfigManager() call.  The generated config file
+// will have a default section, with all configured roles to use the default section as
 // the source_profile, and MFA configured, if the mfa parameter is not nil or empty.
 func (c *awsConfigManager) BuildConfig(r Roles, mfa *string) error {
 	// TODO build config based on provided Roles using file name in c.config

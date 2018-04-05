@@ -9,7 +9,7 @@ import (
 	"os"
 )
 
-// A ConfigHandler which will get configuration from the AWS SDK configuration
+// SharedCfgConfigHandler will get configuration from the AWS SDK configuration
 // files.  The AWS SDK buries many of the details of the SDK configuration in
 // the guts of the session object, and only exposes things like region and
 // profile name.  This will externalize the rest of the configuration for use.
@@ -21,8 +21,8 @@ type SharedCfgConfigHandler struct {
 	log        *logo.Logger
 }
 
-// Create a new ConfigHandler which will lookup configuration using SDK default
-// values for the config file locations and profile name.  To affect the settings
+// NewSharedCfgConfigHandler creates a new ConfigHandler which will lookup configuration using
+// SDK default values for the config file locations and profile name.  To affect the settings
 // of those values at creation, provide the common SDK environment variables.
 //
 // AWS_CONFIG_FILE will set the shared configuration file location to read the config
@@ -42,7 +42,7 @@ func NewSharedCfgConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 	return &h
 }
 
-// Gather the configuration from the config file locations.  First, configuration
+// Config will gather the configuration from the config file locations.  First, configuration
 // from the default profile is loaded, then (if configured) settings for the profile
 // are loaded.  If the profile also specifies a source_profile and role_arn, the
 // data from the source_profile is also obtained.
@@ -67,8 +67,8 @@ func (h *SharedCfgConfigHandler) Config(c *AwsConfig) error {
 	return nil
 }
 
-// Explicitly set the value of the profile to get configuration.  This will override any
-// value set in the constructor or environment variables.
+// Profile allows explicitly setting the value of the profile to get configuration.
+// This will override any value set in the constructor or environment variables.
 func (h *SharedCfgConfigHandler) Profile(p string) {
 	h.profile = p
 }

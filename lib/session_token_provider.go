@@ -11,15 +11,16 @@ import (
 )
 
 const (
-	// AWS SDK minimum session token duration
+	// SESSION_TOKEN_MIN_DURATION is the AWS SDK minimum session token duration
 	SESSION_TOKEN_MIN_DURATION = time.Duration(15 * time.Minute)
-	// AWS SDK maximum session token duration
+	// SESSION_TOKEN_MAX_DURATION is the AWS SDK maximum session token duration
 	SESSION_TOKEN_MAX_DURATION = time.Duration(36 * time.Hour)
-	// AWS SDK default session token duration
+	// SESSION_TOKEN_DEFAULT_DURATION is the AWS SDK default session token duration
 	SESSION_TOKEN_DEFAULT_DURATION = time.Duration(12 * time.Hour)
 )
 
-// Interface defining the methods needed to manage AWS session token credentials
+// SessionTokenProvider is the interface defining the methods needed to
+// manage AWS session token credentials
 type SessionTokenProvider interface {
 	credentials.Provider
 	CachedCredentialProvider
@@ -29,9 +30,9 @@ type sessionTokenProvider struct {
 	cachedCredentialsProvider
 }
 
-// Create a new SessionTokenProvider for the given profile. Unspecified
-// credential durations will be set to their default value. Values outside
-// of the min and max range will be set to the respective min/max values.
+// NewSessionTokenProvider creates a new SessionTokenProvider for the given profile.
+// Unspecified credential durations will be set to their default value. Values
+// outside of the min and max range will be set to the respective min/max values.
 //
 // If the MfaSerial option is provided, its value will be provided to the
 // call to create the session token credentials.  This value will override

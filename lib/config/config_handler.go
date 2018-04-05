@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-// The struct holding the configuration information for a profile.
+// AwsConfig holds the configuration information for a profile.
 // Values are mapped from the SDK config file locations, if using the
 // SharedCfgConfigHandler
 type AwsConfig struct {
@@ -22,7 +22,7 @@ type AwsConfig struct {
 	defaultProfile  *AwsConfig
 }
 
-// Lookup the region value, checking source_profile
+// GetRegion will lookup the region value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetRegion() string {
 	r := c.Region
@@ -37,7 +37,7 @@ func (c *AwsConfig) GetRegion() string {
 	return r
 }
 
-// Lookup the mfa_serial value, checking source_profile
+// GetMfaSerial will lookup the mfa_serial value, checking source_profile
 // if not found by usual means.
 func (c *AwsConfig) GetMfaSerial() string {
 	m := c.MfaSerial
@@ -52,8 +52,8 @@ func (c *AwsConfig) GetMfaSerial() string {
 	return m
 }
 
-// Lookup the session_token_duration value, checking source_profile
-// if not found by usual means.
+// GetSessionDuration will lookup the session_token_duration value, checking
+// source_profile if not found by usual means.
 func (c *AwsConfig) GetSessionDuration() time.Duration {
 	d := c.SessionDuration
 	if d < 1 {
@@ -68,8 +68,8 @@ func (c *AwsConfig) GetSessionDuration() time.Duration {
 	return d
 }
 
-// Lookup the credentials_duration value, checking source_profile
-// if not found by usual means.
+// GetCredDuration will lookup the credentials_duration value, checking
+// source_profile if not found by usual means.
 func (c *AwsConfig) GetCredDuration() time.Duration {
 	d := c.CredDuration
 	if d < 1 {
@@ -83,19 +83,20 @@ func (c *AwsConfig) GetCredDuration() time.Duration {
 	return d
 }
 
-// Options used to configure the ConfigHandlers
+// ConfigHandlerOpts provides settings used to configure the ConfigHandlers
 type ConfigHandlerOpts struct {
 	LogLevel logo.Level
 }
 
+// DefaultConfigHandlerOpts is a default/sane set of options for a ConfigHandler
 var DefaultConfigHandlerOpts = &ConfigHandlerOpts{LogLevel: logo.INFO}
 
-// The interface specifying the contract for all conforming ConfigHandlers
+// ConfigHandler is the interface specifying the contract for all conforming ConfigHandlers
 type ConfigHandler interface {
 	Config(c *AwsConfig) error
 }
 
-// The default ConfigHandler, which will lookup configuration in this order:
+// DefaultConfigHandler will lookup configuration in this order:
 // Shared configuration
 // Environment variables
 func DefaultConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
