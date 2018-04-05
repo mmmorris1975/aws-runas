@@ -1,6 +1,6 @@
 # aws-runas
 
-[![CircleCI](https://circleci.com/gh/mmmorris1975/aws-runas.svg?style=svg)](https://circleci.com/gh/mmmorris1975/aws-runas)
+[![CircleCI](https://circleci.com/gh/mmmorris1975/aws-runas.svg?style=shield&circle-token=3b49323c5e6109720c3cf1d581b26cd36eb598ca)](https://circleci.com/gh/mmmorris1975/aws-runas)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mmmorris1975/aws-runas)](https://goreportcard.com/report/github.com/mmmorris1975/aws-runas)
 
 A Go rewrite of the original [aws-runas](https://github.com/mmmorris1975/py-aws-runas "aws-runas").  Unscientific testing
