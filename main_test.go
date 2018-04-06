@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib"
 	"os"
 	"runtime"
@@ -131,4 +132,32 @@ func ExamplePrintCredentialsNoSession() {
 	// export AWS_REGION='us-east-1'
 	// export AWS_ACCESS_KEY_ID='MockKey'
 	// export AWS_SECRET_ACCESS_KEY='MockSecret'
+}
+
+func ExamplePrintExpire() {
+	p := lib.NewSessionTokenProvider(new(lib.AWSProfile), new(lib.CachedCredentialsProviderOptions))
+
+	// Prints to stderr, so output will be empty
+	printExpire(p)
+	// Output:
+	//
+}
+
+func TestCredProvider(t *testing.T) {
+	log = logo.NewSimpleLogger(os.Stderr, logo.DEBUG, "TestCredProvider", true)
+	t.Run("SessionToken", func(t *testing.T) {
+		p := credProvider(new(lib.AWSProfile))
+		o := fmt.Sprintf("%T", p)
+		if o != "*lib.sessionTokenProvider" {
+			t.Errorf("Unexpected type, got %s", o)
+		}
+	})
+	t.Run("AssumeRole", func(t *testing.T) {
+		a, _ := arn.Parse("arn:aws:iam::666:role/mock")
+		p := credProvider(&lib.AWSProfile{RoleArn: a})
+		o := fmt.Sprintf("%T", p)
+		if o != "*lib.assumeRoleProvider" {
+			t.Errorf("Unexpected type, got %s", o)
+		}
+	})
 }

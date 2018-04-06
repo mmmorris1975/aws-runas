@@ -111,14 +111,7 @@ func main() {
 	switch {
 	case *listMfa:
 		log.Debug("List MFA")
-		mfa, err := lib.LookupMfa(sess)
-		if err != nil {
-			log.Fatalf("Error retrieving MFA info: %v", err)
-		}
-
-		for _, d := range mfa {
-			fmt.Printf("%s\n", *d.SerialNumber)
-		}
+		printMfa(sess)
 	case *listRoles, *makeConf:
 		u := iamUser(sess)
 		userName := *u.UserName
@@ -136,21 +129,7 @@ func main() {
 
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
-			var mfa *string
-			if mfaArn != nil && len(*mfaArn) > 0 {
-				// MFA arn provided by cmdline option
-				mfa = mfaArn
-			} else {
-				m, err := lib.LookupMfa(sess)
-				if err != nil {
-					log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
-				}
-
-				if len(m) > 0 {
-					// use 1st MFA device found
-					mfa = m[0].SerialNumber
-				}
-			}
+			mfa := lookupMfa(sess)
 
 			if err := cm.BuildConfig(roles, mfa); err != nil {
 				log.Fatalf("Error building config file: %v", err)
@@ -181,36 +160,14 @@ func main() {
 		}
 		log.Debugf("RESOLVED PROFILE: %+v", p)
 
-		opts := lib.CachedCredentialsProviderOptions{
-			LogLevel:  logLevel,
-			MfaSerial: p.MfaSerial,
-		}
-
-		var credProvider lib.SessionTokenProvider
-		if *sesCreds || len(p.RoleArn.Resource) < 1 {
-			log.Debugf("Getting SESSION TOKEN credentials")
-			opts.CredentialDuration = p.SessionDuration
-			credProvider = lib.NewSessionTokenProvider(p, &opts)
-		} else {
-			log.Debugf("Getting ASSUME ROLE credentials")
-			opts.CredentialDuration = p.CredDuration
-			credProvider = lib.NewAssumeRoleProvider(p, &opts)
-		}
+		credProvider := credProvider(p)
 
 		if *refresh {
 			os.Remove(credProvider.CacheFile())
 		}
 
 		if *showExpire {
-			exp := credProvider.ExpirationTime()
-			format := exp.Format("2006-01-02 15:04:05")
-			hmn := humanize.Time(exp)
-
-			tense := "will expire"
-			if exp.Before(time.Now()) {
-				tense = "expired"
-			}
-			fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
+			printExpire(credProvider)
 		}
 
 		c := credentials.NewCredentials(credProvider)
@@ -362,4 +319,69 @@ func printCredentials() {
 			fmt.Printf(format, exportToken, v, val)
 		}
 	}
+}
+
+func printMfa(s *session.Session) {
+	mfa, err := lib.LookupMfa(s)
+	if err != nil {
+		log.Fatalf("Error retrieving MFA info: %v", err)
+	}
+
+	for _, d := range mfa {
+		fmt.Printf("%s\n", *d.SerialNumber)
+	}
+}
+
+func lookupMfa(s *session.Session) *string {
+	var mfa *string
+	if mfaArn != nil && len(*mfaArn) > 0 {
+		// MFA arn provided by cmdline option
+		mfa = mfaArn
+	} else {
+		m, err := lib.LookupMfa(s)
+		if err != nil {
+			log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
+		}
+
+		if len(m) > 0 {
+			// use 1st MFA device found
+			mfa = m[0].SerialNumber
+		}
+	}
+	return mfa
+}
+
+func credProvider(p *lib.AWSProfile) lib.SessionTokenProvider {
+	opts := lib.CachedCredentialsProviderOptions{
+		LogLevel:  logLevel,
+		MfaSerial: p.MfaSerial,
+	}
+
+	var credProvider lib.SessionTokenProvider
+	if *sesCreds || len(p.RoleArn.Resource) < 1 {
+		if log != nil {
+			log.Debugf("Getting SESSION TOKEN credentials")
+		}
+		opts.CredentialDuration = p.SessionDuration
+		credProvider = lib.NewSessionTokenProvider(p, &opts)
+	} else {
+		if log != nil {
+			log.Debugf("Getting ASSUME ROLE credentials")
+		}
+		opts.CredentialDuration = p.CredDuration
+		credProvider = lib.NewAssumeRoleProvider(p, &opts)
+	}
+	return credProvider
+}
+
+func printExpire(p lib.CachedCredentialProvider) {
+	exp := p.ExpirationTime()
+	format := exp.Format("2006-01-02 15:04:05")
+	hmn := humanize.Time(exp)
+
+	tense := "will expire"
+	if exp.Before(time.Now()) {
+		tense = "expired"
+	}
+	fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
 }
