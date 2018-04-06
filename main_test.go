@@ -20,6 +20,8 @@ func init() {
 
 func TestAwsProfile(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", "lib/config/test/aws.cfg")
+	defer os.Unsetenv("AWS_CONFIG_FILE")
+
 	cm, err := lib.NewAwsConfigManager(new(lib.ConfigManagerOptions))
 	if err != nil {
 		t.Errorf("Error from NewAwsConfigManager(): %v", err)
@@ -50,8 +52,17 @@ func TestAwsProfile(t *testing.T) {
 			t.Errorf("Did not get expected error from awsProfile() with bad ARN")
 		}
 	})
-
-	os.Unsetenv("AWS_CONFIG_FILE")
+	t.Run("NameEmpty", func(t *testing.T) {
+		os.Setenv("AWS_DEFAULT_PROFILE", "alt_default")
+		defer os.Unsetenv("AWS_DEFAULT_PROFILE")
+		p, err := awsProfile(cm, "")
+		if err != nil {
+			t.Errorf("Unexpected error from awsProfile() with empty profile: %v", err)
+		}
+		if p.Name != "alt_default" || p.Region != "us-west-1" || p.MfaSerial != "12345678" {
+			t.Errorf("Unexpected result from awsProfile() with empty profile: %+v", err)
+		}
+	})
 }
 
 func TestAssumeRoleInput(t *testing.T) {
