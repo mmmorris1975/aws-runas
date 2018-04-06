@@ -139,6 +139,7 @@ func (p *assumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 			// If we're using MFA, and the duration is less than the 1 hour limit AWS imposes on assume
 			// role credentials retrieved using session token credentials, use session token creds before
 			// doing assume role.  Preserves desired behavior from pre-1.0 versions to limit MFA re-entry
+			p.opts.CredentialDuration = p.profile.SessionDuration
 			sesProvider := NewSessionTokenProvider(profile, p.opts)
 			s = sts.New(p.sess, &aws.Config{Credentials: credentials.NewCredentials(sesProvider)})
 			input.SerialNumber = nil
