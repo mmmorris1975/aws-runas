@@ -8,7 +8,10 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sync"
 )
+
+var fileLock = new(sync.Mutex)
 
 // CachableCredentials is a credentials.Value compatible set of credentials with
 // the addition of expiration information, able to be serialized to a file
@@ -96,6 +99,8 @@ func (c *credentialsCacher) Store(creds *CachableCredentials) error {
 		c.log.Debugf("Marshaled credentials:\n%+s", data)
 	}
 
+	fileLock.Lock()
+	defer fileLock.Unlock()
 	if err := ioutil.WriteFile(c.file, data, 0600); err != nil {
 		return err
 	}
