@@ -34,7 +34,7 @@ func TestNewSharedCfgConfigHandlerAllEnvVars(t *testing.T) {
 		t.Errorf("Error getting config: %v", err)
 	}
 
-	if c.GetRegion() != "us-west-2" || c.GetMfaSerial() != "12345678" {
+	if c.GetRegion() != "us-west-2" || c.GetMfaSerial() == "12345678" {
 		t.Errorf("Unexpected result in Config object: %+v", c)
 	}
 }
@@ -65,7 +65,7 @@ func TestNewSharedCfgConfigHandlerCustomDefaultProfile(t *testing.T) {
 	if err := h.Config(c); err != nil {
 		t.Errorf("Error getting config: %v", err)
 	}
-
+	t.Logf("C: %+v", c)
 	if c.GetRegion() != "us-west-1" || c.GetMfaSerial() != "12345678" {
 		t.Errorf("Unexpected result in Config object: %+v", c)
 	}

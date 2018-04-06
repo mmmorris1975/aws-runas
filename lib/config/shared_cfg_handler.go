@@ -90,6 +90,10 @@ func (h *SharedCfgConfigHandler) loadProfile(c *AwsConfig) error {
 	}
 
 	// load profile section (bare profile name first)
+	// fallback to default profile name if unset
+	if len(h.profile) < 1 {
+		h.profile = h.defProfile
+	}
 	if err := h.mapConfig(h.profile, c, f); err != nil {
 		return err
 	}

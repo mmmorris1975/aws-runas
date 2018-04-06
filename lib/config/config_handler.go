@@ -42,9 +42,10 @@ func (c *AwsConfig) GetRegion() string {
 func (c *AwsConfig) GetMfaSerial() string {
 	m := c.MfaSerial
 	if len(m) < 1 {
-		if c.defaultProfile != nil {
-			m = c.defaultProfile.MfaSerial
-		}
+		// Don't check if mfa_serial is part of default profile, it will mess with
+		// stand-alone profiles (ones without source_profile) and prevent those
+		// from authenticating.  The only valid way mfa_serial should come in is
+		// via the profile directly or referenced in the source profile
 		if c.sourceProfile != nil {
 			m = c.sourceProfile.MfaSerial
 		}

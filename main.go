@@ -309,6 +309,9 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 	if ok {
 		defProfile = v
 	}
+	if len(name) < 1 {
+		name = defProfile
+	}
 
 	a, err := arn.Parse(name)
 	if err != nil {

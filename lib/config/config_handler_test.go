@@ -25,7 +25,7 @@ func ExampleAwsConfigOnlyDefaultProfile() {
 	// eu-mock-1
 	// 1m0s
 	// 5m0s
-	// 0
+	//
 }
 
 func ExampleAwsConfigOnlySourceProfile() {
