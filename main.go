@@ -223,9 +223,12 @@ func updateEnv(creds credentials.Value, region string) {
 	os.Unsetenv("AWS_PROFILE")
 
 	// Pass AWS_REGION through if it was set in our env, or found in config.
-	// Ensure that called program gets the expected region
+	// Ensure that called program gets the expected region.  Also set
+	// AWS_DEFAULT_REGION so awscli works as expected, otherwise it will use
+	// any region from the profile (or default, since we're not providing profile)
 	if len(region) > 0 {
 		os.Setenv("AWS_REGION", region)
+		os.Setenv("AWS_DEFAULT_REGION", region)
 	}
 
 	os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
@@ -308,7 +311,7 @@ func printCredentials() {
 	}
 
 	envVars := []string{
-		"AWS_REGION",
+		"AWS_REGION", "AWS_DEFAULT_REGION",
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
 		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
 	}
