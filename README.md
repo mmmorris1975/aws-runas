@@ -32,6 +32,16 @@ See the following for more information on AWS SDK configuration files:
 
 Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/go-aws-runas/releases/latest)
 
+### Bash Completion
+
+To get profile tab completion in bash, install the `extras/aws-runas-bash-completion`
+script in your `bash_completion.d` directory or add the following line to your
+bashrc:
+
+```
+source path/to/extras/aws-runas-bash-completion
+```
+
 ## Building
 
 ### Build Requirements

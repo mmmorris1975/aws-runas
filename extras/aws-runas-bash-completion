@@ -1,0 +1,24 @@
+#/usr/bin/env bash
+
+_awsrunas_completions()
+{
+  if [ "${#COMP_WORDS[@]}" != "2" ]; then
+    return
+  fi
+
+  # keep the suggestions in a local variable
+  local profiles=`grep '\[profile .*\]' ~/.aws/config | sed -E 's/\[profile (.*)\]/\1/'`
+  local suggestions=($(compgen -W "$profiles" -- "${COMP_WORDS[1]}"))
+
+  if [ "${#suggestions[@]}" == "1" ]; then
+    # if there's only one match, we remove the command literal
+    # to proceed with the automatic completion of the number
+    COMPREPLY=("${suggestions[0]}")
+  else
+    # more than one suggestions resolved,
+    # respond with the suggestions intact
+    COMPREPLY=("${suggestions[@]}")
+  fi
+}
+
+complete -F _awsrunas_completions aws-runas
