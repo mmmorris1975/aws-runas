@@ -47,8 +47,8 @@
     "service/iam",
     "service/sts"
   ]
-  revision = "74ca63959be8b9a9a24cd86eaaea8bf99de8022d"
-  version = "v1.13.25"
+  revision = "94cafaad88022c44cb85d4998350b127845245ed"
+  version = "v1.13.41"
 
 [[projects]]
   name = "github.com/dustin/go-humanize"
@@ -80,6 +80,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "25408bacc4f6299b4684ec283b39bb1173ceb92df896920e3b3aecc61389098e"
+  inputs-digest = "c91d3bc936b0d1fbb466768a0002f7f0a31ac9c926e6bda7f28414ee7268ee29"
   solver-name = "gps-cdcl"
   solver-version = 1

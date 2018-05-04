@@ -23,7 +23,7 @@
 
 [[constraint]]
   name = "github.com/aws/aws-sdk-go"
-  version = "1.13.25"
+  version = "1.13.41"
 
 [[constraint]]
   name = "gopkg.in/alecthomas/kingpin.v2"
