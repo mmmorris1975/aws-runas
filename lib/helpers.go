@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/go-ini/ini"
 	"net/http"
 	"os"
 	"strings"
@@ -42,6 +43,15 @@ func PromptForMfa() string {
 func AwsConfigFile() string {
 	c := defaults.SharedConfigFilename()
 	e, ok := os.LookupEnv("AWS_CONFIG_FILE")
+	if ok && len(e) > 0 {
+		c = e
+	}
+	return c
+}
+
+func AwsCredentialsFile() string {
+	c := defaults.SharedCredentialsFilename()
+	e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE")
 	if ok && len(e) > 0 {
 		c = e
 	}
@@ -108,5 +118,62 @@ func VersionCheck(version string) error {
 		return nil
 	}
 
-	return fmt.Errorf("Version check failed, bad HTTP Status: %d", res.StatusCode)
+	return fmt.Errorf("version check failed, bad HTTP Status: %d", res.StatusCode)
+}
+
+// RunDiagnostics will sanity check various configuration items
+func RunDiagnostics(p *AWSProfile) error {
+	envAk := os.Getenv("AWS_ACCESS_KEY_ID")
+	envSt := os.Getenv("AWS_SESSION_TOKEN")
+
+	if len(envAk) > 0 && len(envSt) > 0 {
+		if strings.HasPrefix(envAk, "AKIA") {
+			return fmt.Errorf("detected static access key env var along with session token env var, this is invalid")
+		}
+	}
+
+	fmt.Printf("PROFILE: %s\n", p.Name)
+	fmt.Printf("ROLE ARN: %s\n", p.RoleArn)
+	fmt.Printf("MFA SERIAL: %s\n", p.MfaSerial)
+	fmt.Printf("EXTERNAL ID: %s\n", p.ExternalId)
+	fmt.Printf("ROLE SESSION NAME: %s\n", p.RoleSessionName)
+	fmt.Printf("SESSION TOKEN DURATION: %s\n", p.SessionDuration)
+	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", p.CredDuration)
+	fmt.Printf("REGION: %s\n", p.Region)
+	fmt.Printf("SOURCE PROFILE: %s\n", p.SourceProfile)
+
+	c := AwsCredentialsFile()
+	f, err := ini.Load(c)
+	if err != nil {
+		return err
+	}
+	f.BlockMode = false
+
+	profile := p.SourceProfile
+	if len(profile) < 1 {
+		profile = p.Name
+	}
+
+	s, err := f.GetSection(profile)
+	if err != nil {
+		// if access key envvar exists, assume creds are configured as envvars and not in credentials file
+		// otherwise, flag as an error, since creds are totally missing
+		if len(envAk) < 1 {
+			return fmt.Errorf("missing [%s] section in credentials file %s", profile, c)
+		}
+
+	}
+
+	if s.HasKey("aws_access_key_id") && s.HasKey("aws_secret_access_key") {
+		if len(envAk) > 0 || len(envSt) > 0 {
+			return fmt.Errorf("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+		}
+	} else {
+		// section is in cred file, but one or both of the cred keys are missing
+		if len(envAk) < 1 {
+			return fmt.Errorf("profile found in credentials file, but missing credential configuration")
+		}
+	}
+
+	return nil
 }

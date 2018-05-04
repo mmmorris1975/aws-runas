@@ -33,6 +33,7 @@ var (
 	verbose      *bool
 	makeConf     *bool
 	updateFlag   *bool
+	diagFlag     *bool
 	profile      *string
 	mfaArn       *string
 	duration     *time.Duration
@@ -58,6 +59,7 @@ func init() {
 		mfaArnDesc          = "ARN of MFA device needed to perform Assume Role operation"
 		makeConfArgDesc     = "Build an AWS extended switch-role plugin configuration for all available roles"
 		updateArgDesc       = "Check for updates to aws-runas"
+		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
@@ -71,6 +73,7 @@ func init() {
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
 	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
+	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
 
 	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
 	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
@@ -139,6 +142,27 @@ func main() {
 		log.Debug("Update check")
 		if err := lib.VersionCheck(VERSION); err != nil {
 			log.Debugf("Error from VersionCheck(): %v", err)
+		}
+	case *diagFlag:
+		var p *lib.AWSProfile
+		var err error
+
+		log.Debugf("Diagnostics")
+		if profile == nil || len(*profile) == 0 {
+			log.Fatalf("Please provide a profile name to gather diagnostics for")
+		} else {
+			p, err = awsProfile(cm, *profile)
+			if err != nil {
+				log.Fatalf("Error building profile, possible issue with config file: %v", err)
+			}
+		}
+
+		if len(p.RoleArn.Resource) > 0 && len(p.SourceProfile) < 1 {
+			log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", p.Name)
+		}
+
+		if err := lib.RunDiagnostics(p); err != nil {
+			log.Fatalf("Issue found: %v", err)
 		}
 	default:
 		p, err := awsProfile(cm, *profile)
