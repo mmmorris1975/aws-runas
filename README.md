@@ -149,13 +149,13 @@ required, do not change that)
 
 ## Usage
     usage: aws-runas [<flags>] [<profile>] [<cmd>...]
-
+    
     Create an environment for interacting with the AWS API using an assumed role
-
+    
     Flags:
       -h, --help               Show context-sensitive help (also try --help-long and --help-man).
       -d, --duration=DURATION  duration of the retrieved session token
-      -a, --role-duration=ROLE-DURATION
+      -a, --role-duration=ROLE-DURATION  
                                duration of the assume role credentials
       -l, --list-roles         list role ARNs you are able to assume
       -m, --list-mfa           list the ARN of the MFA device associated with your account
@@ -166,13 +166,34 @@ required, do not change that)
       -v, --verbose            print verbose/debug messages
       -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
       -u, --update             Check for updates to aws-runas
+      -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
       -V, --version            Show application version.
-
+    
     Args:
       [<profile>]  name of profile, or role ARN
       [<cmd>]      command to execute using configured profile
 
 
+### Diagnostics
+
+Use the `-D` option to perform some rudimentary sanity checking of the configuration for the
+given profile, and print the resolved profile data.  Some of the items checked are:
+
+  * `source_profile` attribute is set if the profile has `role_arn` configured.
+  * Mis-matched or conflicting AWS credential settings
+  * Missing static IAM user credentials
+  
+ It is also advisable to use the `-v` option when troubleshooting issues using this tool.
+ 
+ Please provide output for both options when contacting the developers for support.  Be aware
+ that the `-D` and `-v` options can not be used together, use the `-D` option to check the settings
+ for the profile configuration, and the `-v` option to provide verbose output when attempting to
+ run a command wrapped by aws-runas.
+ 
+ **WARNING** The `-v` output will contain sensitive data, including AWS credentials (temporary STS
+ credentials, not long-lived user IAM credentials), so be sure to redact sensitive data before
+ sending the output via unsecured channels.
+ 
 ### Listing available roles
 
 Use the `-l` option to see the list of role ARNs your IAM account is authorized to assume.
