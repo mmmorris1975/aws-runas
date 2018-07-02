@@ -111,20 +111,21 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
+	iamUser := iamUser()
+
 	switch {
 	case *listMfa:
 		log.Debug("List MFA")
 		printMfa(sess)
 	case *listRoles, *makeConf:
-		u := iamUser(sess)
-		userName := *u.UserName
+		userName := *iamUser.UserName
 
 		rg := lib.NewAwsRoleGetter(sess, userName, &lib.RoleGetterOptions{LogLevel: logLevel})
 		roles := rg.Roles()
 
 		if *listRoles {
 			log.Debug("List Roles")
-			fmt.Printf("Available role ARNs for %s (%s)\n", userName, *u.Arn)
+			fmt.Printf("Available role ARNs for %s (%s)\n", userName, *iamUser.Arn)
 			for _, v := range roles {
 				fmt.Printf("  %s\n", v)
 			}
@@ -149,9 +150,9 @@ func main() {
 
 		log.Debugf("Diagnostics")
 		if profile == nil || len(*profile) == 0 {
-			log.Fatalf("Please provide a profile name to gather diagnostics for")
+			log.Fatalf("Please provide a profile name for gathering diagnostics data")
 		} else {
-			p, err = awsProfile(cm, *profile)
+			p, err = awsProfile(cm, *profile, iamUser)
 			if err != nil {
 				log.Fatalf("Error building profile, possible issue with config file: %v", err)
 			}
@@ -165,7 +166,7 @@ func main() {
 			log.Fatalf("Issue found: %v", err)
 		}
 	default:
-		p, err := awsProfile(cm, *profile)
+		p, err := awsProfile(cm, *profile, iamUser)
 		if err != nil {
 			log.Fatalf("Error building profile: %v", err)
 		}
@@ -271,8 +272,8 @@ func updateEnv(creds credentials.Value, region string) {
 	}
 }
 
-func iamUser(s *session.Session) *iam.User {
-	i := iam.New(s)
+func iamUser() *iam.User {
+	i := iam.New(lib.AwsSession(""))
 
 	u, err := i.GetUser(new(iam.GetUserInput))
 	if err != nil {
@@ -283,7 +284,7 @@ func iamUser(s *session.Session) *iam.User {
 	return u.User
 }
 
-func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
+func awsProfile(cm lib.ConfigManager, name string, user *iam.User) (*lib.AWSProfile, error) {
 	var p *lib.AWSProfile
 
 	// Lookup default profile name, in case we were not passed a profile,
@@ -323,6 +324,11 @@ func awsProfile(cm lib.ConfigManager, name string) (*lib.AWSProfile, error) {
 		}
 	}
 
+	if len(p.RoleSessionName) < 1 {
+		p.RoleSessionName = aws.StringValue(user.UserName)
+	}
+
+	log.Debugf("PROFILE: %+v", p)
 	return p, nil
 }
 
