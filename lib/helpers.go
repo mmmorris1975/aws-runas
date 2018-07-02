@@ -62,18 +62,6 @@ func AwsCredentialsFile() string {
 // will be set to get configuration from the shared configuration files, and enable verbose credential
 // chain logging. If the profile argument is provided, the session will be set to use it for configuration.
 func AwsSession(profile string) *session.Session {
-	// Doing this kills the ability to use env vars, which may mess
-	// with the -M option, requiring the ~/.aws/credentials file
-	// Unset AWS credential env vars
-	//env := []string{
-	//	"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY",
-	//	"AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY",
-	//	"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
-	//}
-	//for _, e := range env {
-	//	os.Unsetenv(e)
-	//}
-
 	opts := session.Options{
 		SharedConfigState:       session.SharedConfigEnable,
 		AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
