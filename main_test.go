@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib"
 	"os"
@@ -27,27 +29,29 @@ func TestAwsProfile(t *testing.T) {
 		t.Errorf("Error from NewAwsConfigManager(): %v", err)
 	}
 
+	u := &iam.User{UserName: aws.String("mock-user"), UserId: aws.String("mock-user")}
+
 	t.Run("basic", func(t *testing.T) {
-		_, err = awsProfile(cm, "basic")
+		_, err = awsProfile(cm, "basic", u)
 		if err != nil {
 			t.Errorf("Unexpected error from awsProfile(): %v", err)
 		}
 	})
 	t.Run("arnValid", func(t *testing.T) {
-		_, err = awsProfile(cm, "arn:aws:iam::1234:role/mock")
+		_, err = awsProfile(cm, "arn:aws:iam::1234:role/mock", u)
 		if err != nil {
 			t.Errorf("Unexpected error from awsProfile() with ARN: %v", err)
 		}
 	})
 	t.Run("arnBad", func(t *testing.T) {
 		// Anything that fails arn.Parse() gets treated like a profile name
-		p, err := awsProfile(cm, "x")
+		p, err := awsProfile(cm, "x", u)
 		if err == nil {
 			t.Errorf("Did not get expected error from awsProfile() with bad profile, got %+v", p)
 		}
 	})
 	t.Run("ArnNotIam", func(t *testing.T) {
-		_, err = awsProfile(cm, "arn:aws:s3:::a")
+		_, err = awsProfile(cm, "arn:aws:s3:::a", u)
 		if err == nil {
 			t.Errorf("Did not get expected error from awsProfile() with bad ARN")
 		}
@@ -55,7 +59,7 @@ func TestAwsProfile(t *testing.T) {
 	t.Run("NameEmpty", func(t *testing.T) {
 		os.Setenv("AWS_DEFAULT_PROFILE", "alt_default")
 		defer os.Unsetenv("AWS_DEFAULT_PROFILE")
-		p, err := awsProfile(cm, "")
+		p, err := awsProfile(cm, "", u)
 		if err != nil {
 			t.Errorf("Unexpected error from awsProfile() with empty profile: %v", err)
 		}

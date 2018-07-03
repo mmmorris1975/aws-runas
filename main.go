@@ -328,7 +328,6 @@ func awsProfile(cm lib.ConfigManager, name string, user *iam.User) (*lib.AWSProf
 		p.RoleSessionName = aws.StringValue(user.UserName)
 	}
 
-	log.Debugf("PROFILE: %+v", p)
 	return p, nil
 }
 
