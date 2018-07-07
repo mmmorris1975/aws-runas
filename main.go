@@ -118,6 +118,10 @@ func main() {
 		log.Debug("List MFA")
 		printMfa(sess)
 	case *listRoles, *makeConf:
+		if iamUser == nil {
+			log.Fatalf("Unable to determine IAM user")
+		}
+
 		userName := *iamUser.UserName
 
 		rg := lib.NewAwsRoleGetter(sess, userName, &lib.RoleGetterOptions{LogLevel: logLevel})
@@ -277,7 +281,8 @@ func iamUser() *iam.User {
 
 	u, err := i.GetUser(new(iam.GetUserInput))
 	if err != nil {
-		log.Fatalf("Error getting IAM user info: %v", err)
+		log.Warnf("Error getting IAM user info: %v", err)
+		return nil
 	}
 
 	log.Debugf("USER: %+v", u)
