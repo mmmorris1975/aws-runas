@@ -208,6 +208,7 @@ func main() {
 		updateEnv(creds, p.Region)
 
 		if len(*cmd) > 0 {
+			cmd = wrapCmd(cmd)
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin
 			c.Stdout = os.Stdout
@@ -222,6 +223,30 @@ func main() {
 			printCredentials()
 		}
 	}
+}
+
+func wrapCmd(cmd *[]string) *[]string {
+	// If on a non-windows platform, with the SHELL environment variable set,
+	// and a call to exec.LookPath() for the command fails, run the command in
+	// a sub-shell so we can support shell aliases.
+	newCmd := make([]string, 0)
+
+	if runtime.GOOS != "windows" {
+		c, err := exec.LookPath((*cmd)[0])
+		if len(c) < 1 || err != nil {
+			sh := os.Getenv("SHELL")
+			if strings.HasSuffix(sh, "/bash") || strings.HasSuffix(sh, "/fish") ||
+				strings.HasSuffix(sh, "/zsh") || strings.HasSuffix(sh, "/ksh") {
+				newCmd = append(newCmd, sh, "-i", "-c")
+			}
+			// Add other shells here as need arises
+		}
+	}
+
+	newCmd = append(newCmd, (*cmd)...)
+	log.Debugf("WRAPPED CMD: %v", newCmd)
+
+	return &newCmd
 }
 
 func assumeRoleInput(p *lib.AWSProfile) *sts.AssumeRoleInput {
