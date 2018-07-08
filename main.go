@@ -244,7 +244,9 @@ func wrapCmd(cmd *[]string) *[]string {
 	}
 
 	newCmd = append(newCmd, (*cmd)...)
-	log.Debugf("WRAPPED CMD: %v", newCmd)
+	if log != nil {
+		log.Debugf("WRAPPED CMD: %v", newCmd)
+	}
 
 	return &newCmd
 }
@@ -310,7 +312,9 @@ func iamUser() *iam.User {
 		return nil
 	}
 
-	log.Debugf("USER: %+v", u)
+	if log != nil {
+		log.Debugf("USER: %+v", u)
+	}
 	return u.User
 }
 
