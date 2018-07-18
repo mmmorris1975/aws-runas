@@ -280,6 +280,10 @@ If necessary, the ARN for an MFA token can be provided via the `-M` command line
 
 ### Running in EC2 metadata service mode
 
+*NOTE* in order to use this feature, aws-runas will need administrative access to configure a network interface on the
+system.  This means that you will need to execute the aws-runas using `sudo` on Linux or MacOS, or with Administrator
+privileges on Windows
+
 As of version 1.1.0 aws-runas now supports the ability to mimic the EC2 instance profile credential provider, which
 should allow properly configured SDK clients to obtain role credentials from a local HTTP endpoint.  This will enable
 use cases where a developer wishes to execute their code via an IDE, but it's cumbersome to setup the execution
@@ -289,13 +293,28 @@ To use the functionality, simply start aws-runas with the `--ec2` option, and th
 role) to obtain credentials for.  If any command is supplied (aws-runas in "wrapper" mode), it will be ignored.
 Successful requests made to the HTTP endpoint will be output as INFO level logs in a quasi-http access log format
  
-    $ aws-runas --ec2 profile_name 
+    $ sudo aws-runas --ec2 profile_name
+    
+When executing programs which will get their credentials via this local metadata service, it may be necessary to set the
+`AWS_SHARED_CREDENTIALS_FILE` environment variable to an invalid value so the AWS SDK does not attempt to use the
+credentials in that file to make the AWS service calls.  This is because the default AWS credential lookup chain uses
+that file before attempting to get credentials via the metadata service.
+
+Example:
+
+    $ aws s3 ls
+
+May not connect to the metadata service for credentials, and you'll end up seeing a bucket list for the account where
+the credentials in the shared credential file are valid.  One way to get around this will be to run the command like
+this instead:
+
+    $ AWS_SHARED_CREDENTIALS_FILE=/dev/null aws s3 ls
 
 ## Building
 
 ### Build Requirements
 
-Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6
+Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6  
 *NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 
 ### Build Steps
