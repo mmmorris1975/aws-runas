@@ -155,6 +155,7 @@ required, do not change that)
       -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
       -u, --update             Check for updates to aws-runas
       -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
+          --ec2                Run as mock EC2 metadata service to provide role credentials
       -V, --version            Show application version.
     
     Args:
@@ -276,6 +277,19 @@ be useful for cases where it's not desirable/feasible to keep a local copy of th
 If necessary, the ARN for an MFA token can be provided via the `-M` command line option.
 
     $ aws-runas [-M mfa serial] arn:aws:iam::1234567890:role/my-role terraform plan
+
+### Running in EC2 metadata service mode
+
+As of version 1.1.0 aws-runas now supports the ability to mimic the EC2 instance profile credential provider, which
+should allow properly configured SDK clients to obtain role credentials from a local HTTP endpoint.  This will enable
+use cases where a developer wishes to execute their code via an IDE, but it's cumbersome to setup the execution
+environment to use aws-runas in the traditional "wrapper" mode.
+
+To use the functionality, simply start aws-runas with the `--ec2` option, and the name of the profile (or ARN of the
+role) to obtain credentials for.  If any command is supplied (aws-runas in "wrapper" mode), it will be ignored.
+Successful requests made to the HTTP endpoint will be output as INFO level logs in a quasi-http access log format
+ 
+    $ aws-runas --ec2 profile_name 
 
 ## Building
 
