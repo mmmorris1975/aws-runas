@@ -11,6 +11,7 @@ import (
 	"github.com/dustin/go-humanize"
 	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib"
+	"github.com/mmmorris1975/aws-runas/lib/metadata-services"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"os/exec"
@@ -41,6 +42,7 @@ var (
 	cmd          *[]string
 	log          *logo.Logger
 	logLevel     = logo.WARN
+	ec2MdFlag    *bool
 )
 
 func init() {
@@ -60,6 +62,7 @@ func init() {
 		makeConfArgDesc     = "Build an AWS extended switch-role plugin configuration for all available roles"
 		updateArgDesc       = "Check for updates to aws-runas"
 		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
+		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
@@ -74,6 +77,7 @@ func init() {
 	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
+	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
 
 	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
 	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
@@ -169,6 +173,36 @@ func main() {
 		if err := lib.RunDiagnostics(p); err != nil {
 			log.Fatalf("Issue found: %v", err)
 		}
+	case *ec2MdFlag:
+		if !*verbose {
+			logLevel = logo.INFO
+		}
+
+		p, err := awsProfile(cm, *profile, iamUser)
+		if err != nil {
+			log.Fatalf("Error building profile: %v", err)
+		}
+
+		// Add command-line option overrides
+		if duration != nil && (*duration).Nanoseconds() > 0 {
+			p.SessionDuration = *duration
+		}
+
+		if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
+			p.CredDuration = *roleDuration
+		}
+
+		if mfaArn != nil && len(*mfaArn) > 0 {
+			p.MfaSerial = *mfaArn
+		}
+		log.Debugf("RESOLVED PROFILE: %+v", p)
+
+		opts := lib.CachedCredentialsProviderOptions{
+			LogLevel:  logLevel,
+			MfaSerial: p.MfaSerial,
+		}
+
+		log.Fatal(metadata_services.NewEC2MetadataService(p, &opts))
 	default:
 		p, err := awsProfile(cm, *profile, iamUser)
 		if err != nil {
