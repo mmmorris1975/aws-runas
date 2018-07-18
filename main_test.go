@@ -178,3 +178,31 @@ func TestCredProvider(t *testing.T) {
 		}
 	})
 }
+
+func TestLookupMfa(t *testing.T) {
+	t.Run("StaticSerial", func(t *testing.T) {
+		serial := "arn:aws:iam::012345678910:mfa/DEADBEEF"
+		mfaArn = aws.String(serial)
+		m := lookupMfa(nil)
+		if *m != serial {
+			t.Errorf("Mismatched static MFA serial: expected %s, got %s", serial, *m)
+		}
+	})
+}
+
+func TestWrapCmd(t *testing.T) {
+	t.Run("ExistingBinary", func(t *testing.T) {
+		cmd := []string{"true"}
+		wrap := wrapCmd(&cmd)
+		if (*wrap)[0] != cmd[0] {
+			t.Errorf("Unexpected result when wrapping existing binary command")
+		}
+	})
+	t.Run("BogusBinary", func(t *testing.T) {
+		cmd := []string{"not_a_command.123"}
+		wrap := wrapCmd(&cmd)
+		if (*wrap)[0] == cmd[0] {
+			t.Errorf("Expected invalid command to be wrapped, but it wasn't")
+		}
+	})
+}
