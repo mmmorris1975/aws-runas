@@ -36,7 +36,7 @@ func NewSharedCfgConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 		defProfile: session.DefaultSharedConfigProfile,
 	}
 	if opts != nil {
-		h.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "SharedCfgConfigHandler", true)
+		h.log = NewLogger("SharedCfgConfigHandler", opts.LogLevel)
 	}
 
 	return &h

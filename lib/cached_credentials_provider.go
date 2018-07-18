@@ -65,7 +65,7 @@ func NewCachedCredentialsProvider(profile *AWSProfile, opts *CachedCredentialsPr
 	cacheOpts.LogLevel = opts.LogLevel
 
 	p.cacher = NewCredentialsCacher(cacheFile, cacheOpts)
-	p.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.CachedCredentialsProvider", true)
+	p.log = NewLogger("aws-runas.CachedCredentialsProvider", opts.LogLevel)
 
 	return *p
 }

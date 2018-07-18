@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/mbndr/logo"
 	"testing"
 	"time"
 )
@@ -68,4 +69,8 @@ func TestAwsConfig(t *testing.T) {
 			t.Errorf("Unexpected value for SessionDuration, Wanted: %s, Got: %s", "12h", c.GetSessionDuration())
 		}
 	})
+}
+
+func TestNewLogger(t *testing.T) {
+	NewLogger("mock", logo.FATAL)
 }

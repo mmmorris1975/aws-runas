@@ -5,7 +5,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib/config"
-	"os"
 	"strings"
 	"time"
 )
@@ -45,7 +44,7 @@ func NewAwsConfigManager(opts *ConfigManagerOptions) (ConfigManager, error) {
 	cm := new(awsConfigManager)
 
 	if opts != nil {
-		cm.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.ConfigManager", true)
+		cm.log = NewLogger("aws-runas.ConfigManager", opts.LogLevel)
 		cm.opts = opts
 	}
 

@@ -3,11 +3,9 @@ package metadata_services
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/mbndr/logo"
 	"github.com/mmmorris1975/aws-runas/lib"
 	"net"
 	"net/http"
-	"os"
 	"time"
 )
 
@@ -29,7 +27,7 @@ type ec2MetadataOutput struct {
 // returns the name of the instance profile in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
 func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentialsProviderOptions) error {
-	log := logo.NewSimpleLogger(os.Stderr, options.LogLevel, "aws-runas.EC2MetadataService", true)
+	log := lib.NewLogger("aws-runas.EC2MetadataService", options.LogLevel)
 	addr := EC2MetadataAddress
 
 	lo, err := discoverLoopback()

@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/mbndr/logo"
-	"os"
 	"time"
 )
 
@@ -27,7 +26,7 @@ type CmdlineConfigHandler struct {
 func NewCmdlineConfigHandler(handlerOpts *ConfigHandlerOpts, cmdlineOpts *CmdlineOptions) ConfigHandler {
 	h := &CmdlineConfigHandler{opts: cmdlineOpts}
 	if handlerOpts != nil {
-		h.log = logo.NewSimpleLogger(os.Stderr, handlerOpts.LogLevel, "CmdlineConfigHandler", true)
+		h.log = NewLogger("CmdlineConfigHandler", handlerOpts.LogLevel)
 	}
 	return h
 }

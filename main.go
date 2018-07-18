@@ -105,7 +105,7 @@ func main() {
 	if *verbose {
 		logLevel = logo.DEBUG
 	}
-	log = logo.NewSimpleLogger(os.Stderr, logLevel, "aws-runas.main", true)
+	log = lib.NewLogger("aws-runas.main", logLevel)
 
 	log.Debugf("PROFILE: %s", *profile)
 	sess := lib.AwsSession(*profile)

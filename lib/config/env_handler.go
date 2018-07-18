@@ -30,7 +30,7 @@ func NewEnvConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 	}
 
 	if opts != nil {
-		h.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "EnvConfigHandler", true)
+		h.log = NewLogger("EnvConfigHandler", opts.LogLevel)
 	}
 	return h
 }

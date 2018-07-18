@@ -50,7 +50,7 @@ func NewCredentialsCacher(file string, opts *CredentialsCacherOptions) Credentia
 
 	c := new(credentialsCacher)
 	c.file = file
-	c.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.CredentialsCacher", true)
+	c.log = NewLogger("aws-runas.CredentialsCacher", opts.LogLevel)
 	return c
 }
 

@@ -2,7 +2,6 @@ package config
 
 import (
 	"github.com/mbndr/logo"
-	"os"
 )
 
 // ChainConfigHandler is a handler which will delegate the configuration lookup to a list of
@@ -18,7 +17,7 @@ type ChainConfigHandler struct {
 func NewChainConfigHandler(opts *ConfigHandlerOpts, h ...ConfigHandler) ConfigHandler {
 	ch := &ChainConfigHandler{handlers: h}
 	if opts != nil {
-		ch.log = logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "ChainConfigHandler", true)
+		ch.log = NewLogger("ChainConfigHandler", opts.LogLevel)
 	}
 	return ch
 }

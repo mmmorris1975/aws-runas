@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mbndr/logo"
 	"net/url"
-	"os"
 	"sort"
 	"strings"
 	"sync"
@@ -48,7 +47,7 @@ type RoleGetterOptions struct {
 
 // NewAwsRoleGetter creates a RoleGetter to retrieve AWS IAM roles for the specified user
 func NewAwsRoleGetter(sess *session.Session, user string, opts *RoleGetterOptions) RoleGetter {
-	l := logo.NewSimpleLogger(os.Stderr, opts.LogLevel, "aws-runas.RoleGetter", true)
+	l := NewLogger("aws-runas.RoleGetter", opts.LogLevel)
 	return &awsRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
 }
 

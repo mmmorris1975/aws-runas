@@ -8,6 +8,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/go-ini/ini"
+	"github.com/mattn/go-isatty"
+	"github.com/mbndr/logo"
 	"net/http"
 	"os"
 	"strings"
@@ -164,4 +166,10 @@ func RunDiagnostics(p *AWSProfile) error {
 	}
 
 	return nil
+}
+
+func NewLogger(name string, level logo.Level) *logo.Logger {
+	w := os.Stderr
+	isTerm := isatty.IsTerminal(w.Fd()) || isatty.IsCygwinTerminal(w.Fd())
+	return logo.NewSimpleLogger(w, level, name, isTerm)
 }

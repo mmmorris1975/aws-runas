@@ -161,7 +161,7 @@ func ExamplePrintExpire() {
 }
 
 func TestCredProvider(t *testing.T) {
-	log = logo.NewSimpleLogger(os.Stderr, logo.DEBUG, "TestCredProvider", true)
+	log = lib.NewLogger("TestCredProvider", logo.DEBUG)
 	t.Run("SessionToken", func(t *testing.T) {
 		p := credProvider(new(lib.AWSProfile))
 		o := fmt.Sprintf("%T", p)

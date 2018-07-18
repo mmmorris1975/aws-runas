@@ -1,7 +1,9 @@
 package config
 
 import (
+	"github.com/mattn/go-isatty"
 	"github.com/mbndr/logo"
+	"os"
 	"time"
 )
 
@@ -106,4 +108,10 @@ func DefaultConfigHandler(opts *ConfigHandlerOpts) ConfigHandler {
 		NewSharedCfgConfigHandler(opts),
 		NewEnvConfigHandler(opts),
 	)
+}
+
+func NewLogger(name string, level logo.Level) *logo.Logger {
+	w := os.Stderr
+	isTerm := isatty.IsTerminal(w.Fd()) || isatty.IsCygwinTerminal(w.Fd())
+	return logo.NewSimpleLogger(w, level, name, isTerm)
 }
