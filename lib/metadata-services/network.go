@@ -8,6 +8,7 @@ import (
 	"runtime"
 )
 
+// WINDOWS_MOCK_INTERFACE_NAME - The descriptive name of the Windows network interface for the metadata service
 const WINDOWS_MOCK_INTERFACE_NAME = "AWS Metadata Mock Interface"
 
 var (
