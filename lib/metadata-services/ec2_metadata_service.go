@@ -11,9 +11,10 @@ import (
 	"time"
 )
 
+// EC2_METADATA_CREDENTIAL_PATH - the base path for instance profile credentials in the metadata service
 const EC2_METADATA_CREDENTIAL_PATH = "/latest/meta-data/iam/security-credentials/"
 
-type EC2MetadataOutput struct {
+type ec2MetadataOutput struct {
 	Code            string
 	LastUpdated     string
 	Type            string
@@ -23,6 +24,10 @@ type EC2MetadataOutput struct {
 	Expiration      string
 }
 
+// Start an HTTP server which will listen on the EC2 metadata service path for handling requests for
+// instance profile credentials.  SDKs will first look up the path in EC2_METADATA_CREDENTIAL_PATH, which
+// returns the name of the instance profile in use, it then appends that value to the previous request url
+// and expects the response body to contain the credential data in json format.
 func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentialsProviderOptions) error {
 	log := logo.NewSimpleLogger(os.Stderr, options.LogLevel, "aws-runas.EC2MetadataService", true)
 	addr := EC2MetadataAddress
@@ -53,7 +58,7 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 
 		// 901 seconds is the absolute minimum Expiration time so that the default awscli logic won't think
 		// our credentials are expired, and send a duplicate request.
-		output := EC2MetadataOutput{
+		output := ec2MetadataOutput{
 			Code:            "Success",
 			LastUpdated:     time.Now().UTC().Format(time.RFC3339),
 			Type:            "AWS-HMAC",
