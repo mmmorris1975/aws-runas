@@ -57,18 +57,6 @@ bashrc:
 source path/to/extras/aws-runas-bash-completion
 ```
 
-## Building
-
-### Build Requirements
-
-Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6
-*NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
-
-### Build Steps
-
-A Makefile is now included with the source code, and executing the default target via the `make` command should install all dependent
-libraries and make the executable for your platform (or platform of choice if the GOOS and GOARCH env vars are set)
-
 ## Configuration
 
 To configure a profile in the .aws/config file for using AssumeRole, make sure the `source_profile` and `role_arn` attributes are
@@ -288,6 +276,18 @@ be useful for cases where it's not desirable/feasible to keep a local copy of th
 If necessary, the ARN for an MFA token can be provided via the `-M` command line option.
 
     $ aws-runas [-M mfa serial] arn:aws:iam::1234567890:role/my-role terraform plan
+
+## Building
+
+### Build Requirements
+
+Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6
+*NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
+
+### Build Steps
+
+A Makefile is now included with the source code, and executing the default target via the `make` command should install all dependent
+libraries and make the executable for your platform (or platform of choice if the GOOS and GOARCH env vars are set)
 
 ## Contributing
 
