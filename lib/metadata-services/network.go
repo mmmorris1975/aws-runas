@@ -47,7 +47,7 @@ func addAddress(iface string, addr *net.IPAddr) error {
 	case "darwin":
 		cmd = []string{"ifconfig", iface, "alias", addr.String() + "/22"}
 	case "windows":
-		cmd = []string{"netsh", "interface", "ipv4", "add", "address", WINDOWS_MOCK_INTERFACE_NAME, addr.String(), "255.255.252.0"}
+		cmd = []string{"netsh", "interface", "ipv4", "add", "address", iface, addr.String(), "255.255.252.0"}
 	default:
 		return fmt.Errorf("unsupported platform (%s) for metadata service configuration", runtime.GOOS)
 	}
@@ -64,7 +64,7 @@ func removeAddress(iface string, addr *net.IPAddr) error {
 	case "darwin":
 		cmd = []string{"ifconfig", iface, "-alias", addr.String()}
 	case "windows":
-		cmd = []string{"netsh", "interface", "ipv4", "delete", "address", WINDOWS_MOCK_INTERFACE_NAME, addr.String()}
+		cmd = []string{"netsh", "interface", "ipv4", "delete", "address", iface, addr.String()}
 	default:
 		return fmt.Errorf("unsupported platform (%s) for metadata service configuration", runtime.GOOS)
 	}

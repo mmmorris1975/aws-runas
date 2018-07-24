@@ -37,7 +37,13 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 	log.Debugf("LOOPBACK INTERFACE: %s", lo)
 
 	if err := addAddress(lo, addr); err != nil {
-		return err
+		if err := removeAddress(lo, addr); err != nil {
+			return err
+		} else {
+			if err := addAddress(lo, addr); err != nil {
+				return err
+			}
+		}
 	}
 	defer removeAddress(lo, addr)
 
