@@ -11,6 +11,7 @@ import (
 var (
 	// EC2MetadataAddress is the IP address of the EC2 metadata service
 	EC2MetadataAddress *net.IPAddr
+	// ECSMetadataAddress is the IP address of the ECS task metadata service
 	ECSMetadataAddress *net.IPAddr
 )
 
