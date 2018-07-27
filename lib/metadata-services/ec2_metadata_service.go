@@ -22,9 +22,9 @@ type ec2MetadataOutput struct {
 	Expiration      string
 }
 
-// Start an HTTP server which will listen on the EC2 metadata service path for handling requests for
-// instance profile credentials.  SDKs will first look up the path in EC2_METADATA_CREDENTIAL_PATH, which
-// returns the name of the instance profile in use, it then appends that value to the previous request url
+// NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
+// requests for instance profile credentials.  SDKs will first look up the path in EC2_METADATA_CREDENTIAL_PATH,
+// which returns the name of the instance profile in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
 func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentialsProviderOptions) error {
 	log := lib.NewLogger("aws-runas.EC2MetadataService", options.LogLevel)
@@ -39,10 +39,10 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 	if err := addAddress(lo, addr); err != nil {
 		if err := removeAddress(lo, addr); err != nil {
 			return err
-		} else {
-			if err := addAddress(lo, addr); err != nil {
-				return err
-			}
+		}
+
+		if err := addAddress(lo, addr); err != nil {
+			return err
 		}
 	}
 	defer removeAddress(lo, addr)

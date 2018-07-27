@@ -9,6 +9,7 @@ import (
 )
 
 var (
+	// EC2MetadataAddress is the IP address of the EC2 metadata service
 	EC2MetadataAddress *net.IPAddr
 	ECSMetadataAddress *net.IPAddr
 )

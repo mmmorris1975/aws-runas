@@ -171,6 +171,7 @@ func RunDiagnostics(p *AWSProfile) error {
 	return nil
 }
 
+// NewLogger provides a consistent way to create a "terminal aware" logger
 func NewLogger(name string, level logo.Level) *logo.Logger {
 	w := os.Stderr
 	isTerm := isatty.IsTerminal(w.Fd()) || isatty.IsCygwinTerminal(w.Fd())
