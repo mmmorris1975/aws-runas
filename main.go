@@ -271,13 +271,17 @@ func wrapCmd(cmd *[]string) *[]string {
 			sh := os.Getenv("SHELL")
 			if strings.HasSuffix(sh, "/bash") || strings.HasSuffix(sh, "/fish") ||
 				strings.HasSuffix(sh, "/zsh") || strings.HasSuffix(sh, "/ksh") {
-				newCmd = append(newCmd, sh, "-i", "-c")
+				newCmd = append(newCmd, sh, "-i", "-c", strings.Join(*cmd, " "))
 			}
 			// Add other shells here as need arises
 		}
 	}
 
-	newCmd = append(newCmd, (*cmd)...)
+	if len(newCmd) == 0 {
+		// We haven't wrapped provided command
+		newCmd = append(newCmd, (*cmd)...)
+	}
+
 	if log != nil {
 		log.Debugf("WRAPPED CMD: %v", newCmd)
 	}
