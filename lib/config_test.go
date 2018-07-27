@@ -195,8 +195,8 @@ func ExampleGetProfileRoleInheritMfa() {
 func TestNewConfigManagerBadConf(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", "nope")
 	defer os.Unsetenv("AWS_CONFIG_FILE")
-	m, err := NewAwsConfigManager(new(ConfigManagerOptions))
-	_, err = m.GetProfile(aws.String("basic"))
+	m, _ := NewAwsConfigManager(new(ConfigManagerOptions))
+	_, err := m.GetProfile(aws.String("basic"))
 	if err == nil {
 		t.Errorf("Expected error for invalid config file, but NewAwsConfigManager() succeeded")
 	}

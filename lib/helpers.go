@@ -51,6 +51,9 @@ func AwsConfigFile() string {
 	return c
 }
 
+// AwsCredentialsFile returns the location of the AWS SDK credentials file.  Use the
+// value of the AWS_SHARED_CREDENTIALS_FILE environment variable, if available,
+// otherwise use the SDK default location.
 func AwsCredentialsFile() string {
 	c := defaults.SharedCredentialsFilename()
 	e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE")
