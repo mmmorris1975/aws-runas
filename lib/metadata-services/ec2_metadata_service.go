@@ -93,5 +93,7 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 
 	http.Handle("/", http.NotFoundHandler())
 
-	return http.ListenAndServe(net.JoinHostPort(addr.String(), "80"), nil)
+	hp := net.JoinHostPort(addr.String(), "80")
+	log.Infof("EC2 Metadata Service ready on %s", hp)
+	return http.ListenAndServe(hp, nil)
 }
