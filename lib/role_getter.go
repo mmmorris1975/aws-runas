@@ -59,9 +59,10 @@ type awsRoleGetter struct {
 }
 
 // Get the explicitly configured IAM roles from the user's IAM account
-// and groups.  Roles from inline and attached IAM polices are discovered.
-// Access to roles which are implicitly granted (via policies like the AWS-managed
-// administrator or IAM full access) are not discovered by this method.
+// and groups, filtering out any roles which contain any wildcard characters.
+// Roles from inline and attached IAM polices are discovered.  Access to roles
+// which are implicitly granted (via policies like the AWS-managed administrator
+// or IAM full access) are not discovered by this method.
 func (r *awsRoleGetter) Roles() Roles {
 	res := make([]string, 0)
 	ch := make(chan string, 8)
@@ -69,8 +70,10 @@ func (r *awsRoleGetter) Roles() Roles {
 	go r.roles(ch)
 
 	for i := range ch {
-		res = append(res, i)
-		r.log.Debugf("Found role ARN: %s", i)
+		if !strings.Contains(i, "*") {
+			res = append(res, i)
+			r.log.Debugf("Found role ARN: %s", i)
+		}
 	}
 
 	return Roles(res).Dedup()
