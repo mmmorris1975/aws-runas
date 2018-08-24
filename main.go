@@ -183,20 +183,6 @@ func main() {
 			log.Fatalf("Error building profile: %v", err)
 		}
 
-		// Add command-line option overrides
-		if duration != nil && (*duration).Nanoseconds() > 0 {
-			p.SessionDuration = *duration
-		}
-
-		if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
-			p.CredDuration = *roleDuration
-		}
-
-		if mfaArn != nil && len(*mfaArn) > 0 {
-			p.MfaSerial = *mfaArn
-		}
-		log.Debugf("RESOLVED PROFILE: %+v", p)
-
 		opts := lib.CachedCredentialsProviderOptions{
 			LogLevel:  logLevel,
 			MfaSerial: p.MfaSerial,
@@ -208,20 +194,6 @@ func main() {
 		if err != nil {
 			log.Fatalf("Error building profile: %v", err)
 		}
-
-		// Add command-line option overrides
-		if duration != nil && (*duration).Nanoseconds() > 0 {
-			p.SessionDuration = *duration
-		}
-
-		if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
-			p.CredDuration = *roleDuration
-		}
-
-		if mfaArn != nil && len(*mfaArn) > 0 {
-			p.MfaSerial = *mfaArn
-		}
-		log.Debugf("RESOLVED PROFILE: %+v", p)
 
 		credProvider := credProvider(p)
 
@@ -410,6 +382,23 @@ func awsProfile(cm lib.ConfigManager, name string, user *iam.User) (*lib.AWSProf
 
 	if len(p.RoleSessionName) < 1 {
 		p.RoleSessionName = aws.StringValue(user.UserName)
+	}
+
+	// Add command-line option overrides
+	if duration != nil && (*duration).Nanoseconds() > 0 {
+		p.SessionDuration = *duration
+	}
+
+	if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
+		p.CredDuration = *roleDuration
+	}
+
+	if mfaArn != nil && len(*mfaArn) > 0 {
+		p.MfaSerial = *mfaArn
+	}
+
+	if log != nil {
+		log.Debugf("RESOLVED PROFILE: %+v", p)
 	}
 
 	return p, nil
