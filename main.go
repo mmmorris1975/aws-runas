@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.0"
+	VERSION = "1.1.1"
 )
 
 var (
@@ -115,7 +115,7 @@ func main() {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	iamUser := iamUser()
+	iamUser := iamUser(false)
 
 	switch {
 	case *listMfa:
@@ -341,13 +341,25 @@ func updateEnv(creds credentials.Value, region string) {
 	}
 }
 
-func iamUser() *iam.User {
+func iamUser(resetEnv bool) *iam.User {
+	if resetEnv {
+		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_SECURITY_TOKEN")
+		os.Unsetenv("AWS_SESSION_TOKEN")
+	}
+
 	i := iam.New(lib.AwsSession(""))
 
 	u, err := i.GetUser(new(iam.GetUserInput))
 	if err != nil {
-		log.Warnf("Error getting IAM user info: %v", err)
-		return nil
+		if resetEnv {
+			log.Warnf("Error getting IAM user info: %v", err)
+			return nil
+		} else {
+			log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
+			return iamUser(true)
+		}
 	}
 
 	if log != nil {
