@@ -316,7 +316,9 @@ func updateEnv(creds credentials.Value, region string) {
 func iamUser(resetEnv bool) *iam.User {
 	if resetEnv {
 		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_ACCESS_KEY")
 		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_SECRET_KEY")
 		os.Unsetenv("AWS_SECURITY_TOKEN")
 		os.Unsetenv("AWS_SESSION_TOKEN")
 	}
