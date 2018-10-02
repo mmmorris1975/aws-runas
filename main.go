@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.1"
+	VERSION = "1.1.2-beta1"
 )
 
 var (
@@ -411,7 +411,12 @@ func printCredentials() {
 	exportToken := "export"
 	switch runtime.GOOS {
 	case "windows":
-		exportToken = "set"
+		// SHELL env var is not set by default in "normal" Windows cmd.exe and PowerShell sessions.
+		// If we detect it, assume we're running under something like git-bash (or maybe Cygwin?)
+		// and fall through to using linux-style env var setting syntax
+		if len(os.Getenv("SHELL")) < 1 {
+			exportToken = "set"
+		}
 	}
 
 	envVars := []string{
