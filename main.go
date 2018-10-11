@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.2-beta1"
+	VERSION = "1.1.2-beta2"
 )
 
 var (
@@ -43,6 +43,7 @@ var (
 	log          *logo.Logger
 	logLevel     = logo.WARN
 	ec2MdFlag    *bool
+	awsdir = (os.Getenv("HOME") + "/.aws")
 )
 
 func init() {
@@ -178,9 +179,22 @@ func main() {
 			logLevel = logo.INFO
 		}
 
+		var remove_session_file = os.Remove(awsdir + "/.aws_session_token_default")
+		if remove_session_file != nil {
+		 log.Info(remove_session_file)
+		}else{
+			log.Infof("default session file was removed")
+		}
+
 		p, err := awsProfile(cm, *profile, iamUser)
 		if err != nil {
 			log.Fatalf("Error building profile: %v", err)
+		}
+
+		credProvider := credProvider(p)
+		var remove_file = os.Remove(credProvider.CacheFile())
+		if remove_file != nil {
+			log.Info(remove_file)
 		}
 
 		opts := lib.CachedCredentialsProviderOptions{
