@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"os/user"
 	"regexp"
+	"strings"
 	"time"
 )
 
@@ -51,7 +52,14 @@ func NewAssumeRoleProvider(profile *AWSProfile, opts *CachedCredentialsProviderO
 	if opts == nil {
 		opts = new(CachedCredentialsProviderOptions)
 	}
-	opts.cacheFileName = fmt.Sprintf(".aws_assume_role_%s", profile.Name)
+
+	suffix := profile.Name
+	if len(suffix) < 1 || suffix == "default" {
+		acctNum := profile.RoleArn.AccountID
+		roleParts := strings.Split(profile.RoleArn.Resource, "/")
+		suffix = fmt.Sprintf("%s-%s", acctNum, roleParts[len(roleParts)-1])
+	}
+	opts.cacheFileName = fmt.Sprintf(".aws_assume_role_%s", suffix)
 
 	p.cachedCredentialsProvider = NewCachedCredentialsProvider(profile, opts)
 	p.log = NewLogger("aws-runas.AssumeRoleProvider", opts.LogLevel)
