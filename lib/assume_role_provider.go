@@ -57,7 +57,9 @@ func NewAssumeRoleProvider(profile *AWSProfile, opts *CachedCredentialsProviderO
 	if len(suffix) < 1 || suffix == "default" {
 		acctNum := profile.RoleArn.AccountID
 		roleParts := strings.Split(profile.RoleArn.Resource, "/")
-		suffix = fmt.Sprintf("%s-%s", acctNum, roleParts[len(roleParts)-1])
+		if len(acctNum) > 0 {
+			suffix = fmt.Sprintf("%s-%s", acctNum, roleParts[len(roleParts)-1])
+		}
 	}
 	opts.cacheFileName = fmt.Sprintf(".aws_assume_role_%s", suffix)
 
