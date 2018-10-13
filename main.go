@@ -320,6 +320,7 @@ func iamUser(resetEnv bool) *iam.User {
 		os.Unsetenv("AWS_SECRET_KEY")
 		os.Unsetenv("AWS_SECURITY_TOKEN")
 		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv("AWS_PROFILE")
 	}
 
 	i := iam.New(lib.AwsSession(""))
