@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.2-beta1"
+	VERSION = "1.1.2-c8394d3"
 )
 
 var (
