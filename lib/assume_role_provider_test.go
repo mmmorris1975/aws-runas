@@ -20,8 +20,9 @@ func TestNewAssumeRoleProvider(t *testing.T) {
 
 	t.Run("OptionsNil", func(t *testing.T) {
 		p := NewAssumeRoleProvider(new(AWSProfile), nil)
-		if !strings.HasSuffix(p.(*assumeRoleProvider).cacher.CacheFile(), "_") {
-			t.Errorf("Unexpected value returned calling NewAssumeRoleParty with nil options")
+		cache := p.(*assumeRoleProvider).cacher.CacheFile()
+		if !strings.HasSuffix(cache, "_") {
+			t.Errorf("Unexpected value returned calling NewAssumeRoleProvider with nil options: %v", cache)
 		}
 	})
 }

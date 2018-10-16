@@ -173,22 +173,6 @@ func main() {
 		if err := lib.RunDiagnostics(p); err != nil {
 			log.Fatalf("Issue found: %v", err)
 		}
-	case *ec2MdFlag:
-		if !*verbose {
-			logLevel = logo.INFO
-		}
-
-		p, err := awsProfile(cm, *profile, iamUser)
-		if err != nil {
-			log.Fatalf("Error building profile: %v", err)
-		}
-
-		opts := lib.CachedCredentialsProviderOptions{
-			LogLevel:  logLevel,
-			MfaSerial: p.MfaSerial,
-		}
-
-		log.Fatal(metadata_services.NewEC2MetadataService(p, &opts))
 	default:
 		p, err := awsProfile(cm, *profile, iamUser)
 		if err != nil {
@@ -198,11 +182,26 @@ func main() {
 		credProvider := credProvider(p)
 
 		if *refresh {
-			os.Remove(credProvider.CacheFile())
+			f := credProvider.CacheFile()
+			log.Debugf("Deleting cached credential file %s", f)
+			os.Remove(f)
 		}
 
 		if *showExpire {
 			printExpire(credProvider)
+		}
+
+		if *ec2MdFlag {
+			if !*verbose {
+				logLevel = logo.INFO
+			}
+
+			opts := lib.CachedCredentialsProviderOptions{
+				LogLevel:  logLevel,
+				MfaSerial: p.MfaSerial,
+			}
+
+			log.Fatal(metadata_services.NewEC2MetadataService(p, &opts))
 		}
 
 		c := credentials.NewCredentials(credProvider)
