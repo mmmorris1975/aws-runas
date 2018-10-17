@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.2-beta1"
+	VERSION = "1.1.2-c8394d3"
 )
 
 var (
@@ -320,6 +320,7 @@ func iamUser(resetEnv bool) *iam.User {
 		os.Unsetenv("AWS_SECRET_KEY")
 		os.Unsetenv("AWS_SECURITY_TOKEN")
 		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv("AWS_PROFILE")
 	}
 
 	i := iam.New(lib.AwsSession(""))
