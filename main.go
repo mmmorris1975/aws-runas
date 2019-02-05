@@ -22,7 +22,7 @@ import (
 
 const (
 	// VERSION - The program version
-	VERSION = "1.1.2-beta2"
+	VERSION = "1.1.2"
 )
 
 var (
@@ -383,6 +383,9 @@ func awsProfile(cm lib.ConfigManager, name string, user *iam.User) (*lib.AWSProf
 	}
 
 	if len(p.RoleSessionName) < 1 {
+		if user == nil {
+			return nil, fmt.Errorf("missing IAM user info, earlier errors may be instructive")
+		}
 		p.RoleSessionName = aws.StringValue(user.UserName)
 	}
 

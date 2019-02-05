@@ -67,6 +67,12 @@ func TestAwsProfile(t *testing.T) {
 			t.Errorf("Unexpected result from awsProfile() with empty profile: %+v", err)
 		}
 	})
+	t.Run("NilUser", func(t *testing.T) {
+		_, err := awsProfile(cm, "", nil)
+		if err == nil {
+			t.Errorf("Did not get expected error from awsProfile() with nil IAM User")
+		}
+	})
 }
 
 func TestAssumeRoleInput(t *testing.T) {
