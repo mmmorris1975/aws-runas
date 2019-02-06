@@ -6,7 +6,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: "circleci/golang:1.10"
+      - image: "circleci/golang:1.11"
 
     working_directory: /go/src/github.com/mmmorris1975/aws-runas
     steps:
@@ -18,7 +18,7 @@ jobs:
       - run: go vet -tests=false ./...
       - run: go test -v ./...
       - run: mkdir -p build
-      - run: go build -v -o build/aws-runas
+      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
 
       - persist_to_workspace:
           root: build
@@ -26,7 +26,7 @@ jobs:
 
   test:
     docker:
-      - image: "circleci/ruby:2.5-stretch"
+      - image: "circleci/ruby:2.6-stretch"
 
     steps:
       - checkout
