@@ -21,6 +21,7 @@ import (
 )
 
 var (
+	// Version is the program version, set at build-time based on git tags/commit hash (see Makefile)
 	Version      string
 	listRoles    *bool
 	listMfa      *bool
@@ -31,6 +32,7 @@ var (
 	makeConf     *bool
 	updateFlag   *bool
 	diagFlag     *bool
+	ec2MdFlag    *bool
 	profile      *string
 	mfaArn       *string
 	duration     *time.Duration
@@ -38,7 +40,6 @@ var (
 	cmd          *[]string
 	log          *logo.Logger
 	logLevel     = logo.WARN
-	ec2MdFlag    *bool
 )
 
 func init() {
@@ -326,10 +327,10 @@ func iamUser(resetEnv bool) *iam.User {
 		if resetEnv {
 			log.Warnf("Error getting IAM user info: %v", err)
 			return nil
-		} else {
-			log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
-			return iamUser(true)
 		}
+
+		log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
+		return iamUser(true)
 	}
 
 	if log != nil {
