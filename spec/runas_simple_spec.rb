@@ -7,7 +7,7 @@ end
 
 describe command ('aws-runas --version') do
   its(:exit_status) { should eq 0 }
-  its(:stderr) { should match /^\d+\.\d+\.\d+/ }
+  its(:stderr) { should match /^\d+\.\d+\.\d+(-\d+-\w+)?/ }
 end
 
 describe command ('aws-runas -vu') do
