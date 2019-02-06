@@ -20,12 +20,8 @@ import (
 	"time"
 )
 
-const (
-	// VERSION - The program version
-	VERSION = "1.1.2"
-)
-
 var (
+	Version      string
 	listRoles    *bool
 	listMfa      *bool
 	showExpire   *bool
@@ -89,7 +85,7 @@ func init() {
 
 	cmd = CmdArg(kingpin.Arg("cmd", cmdArgDesc))
 
-	kingpin.Version(VERSION)
+	kingpin.Version(Version)
 	kingpin.CommandLine.VersionFlag.Short('V')
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.CommandLine.Help = cmdDesc
@@ -149,7 +145,7 @@ func main() {
 		}
 	case *updateFlag:
 		log.Debug("Update check")
-		if err := lib.VersionCheck(VERSION); err != nil {
+		if err := lib.VersionCheck(Version); err != nil {
 			log.Debugf("Error from VersionCheck(): %v", err)
 		}
 	case *diagFlag:

@@ -4,30 +4,29 @@ PATH := build:$(PATH)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
+.PHONY: darwin linux windows release clean dist-clean test
+
 $(EXE): Gopkg.lock *.go lib/*.go
-	go build -v -o $@
+	go build -v -ldflags '-X main.Version=$(VER)' -o $@
 
 Gopkg.lock: Gopkg.toml
 	dep ensure
 
-.PHONY: release
 release: $(EXE) darwin windows linux
 
-.PHONY: darwin linux windows
 darwin linux:
-	GOOS=$@ go build -o $(EXE)-$(VER)-$@-$(GOARCH)
-windows:
-	GOOS=$@ go build -o $(EXE)-$(VER)-$@-$(GOARCH).exe
+	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)
 
-.PHONY: clean
+# $(shell go env GOEXE) is evaluated in the context of the Makefile host (before GOOS is evaluated), so hard-code .exe
+windows:
+	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH).exe
+
 clean:
 	rm -f $(EXE) $(EXE)-*-*-*
 
-.PHONY: dist-clean
 dist-clean: clean
 	rm -f Gopkg.lock
 
-.PHONY: test
 test: $(EXE)
 	mv $(EXE) build
 	go test -v ./...
