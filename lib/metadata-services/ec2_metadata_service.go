@@ -3,14 +3,23 @@ package metadata_services
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/mmmorris1975/aws-runas/lib"
 	"net"
 	"net/http"
 	"time"
 )
 
-// EC2_METADATA_CREDENTIAL_PATH - the base path for instance profile credentials in the metadata service
-const EC2_METADATA_CREDENTIAL_PATH = "/latest/meta-data/iam/security-credentials/"
+// EC2MetadataCredentialPath - the base path for instance profile credentials in the metadata service
+const (
+	EC2MetadataIp             = "169.254.169.254"
+	EC2MetadataCredentialPath = "/latest/meta-data/iam/security-credentials/"
+)
+
+// EC2MetadataAddress is the net.IPAddr of the EC2 metadata service
+var EC2MetadataAddress *net.IPAddr
+
+func init() {
+	EC2MetadataAddress, _ = net.ResolveIPAddr("ip", EC2MetadataIp)
+}
 
 type ec2MetadataOutput struct {
 	Code            string
@@ -23,18 +32,18 @@ type ec2MetadataOutput struct {
 }
 
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
-// requests for instance profile credentials.  SDKs will first look up the path in EC2_METADATA_CREDENTIAL_PATH,
+// requests for instance profile credentials.  SDKs will first look up the path in EC2MetadataCredentialPath,
 // which returns the name of the instance profile in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
-func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentialsProviderOptions) error {
-	log := lib.NewLogger("aws-runas.EC2MetadataService", options.LogLevel)
+func NewEC2MetadataService(c *credentials.Credentials, profile string) error {
+	//log := lib.NewLogger("aws-runas.EC2MetadataService", options.LogLevel)
 	addr := EC2MetadataAddress
 
 	lo, err := discoverLoopback()
 	if err != nil {
 		return err
 	}
-	log.Debugf("LOOPBACK INTERFACE: %s", lo)
+	//log.Debugf("LOOPBACK INTERFACE: %s", lo)
 
 	if err := addAddress(lo, addr); err != nil {
 		if err := removeAddress(lo, addr); err != nil {
@@ -47,15 +56,10 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 	}
 	defer removeAddress(lo, addr)
 
-	// Fetch credentials right away so if we need to refresh and do MFA it all
-	// happens at the start, and caches the results
-	c := credentials.NewCredentials(lib.NewAssumeRoleProvider(profile, options))
-	c.Get()
-
-	http.HandleFunc(EC2_METADATA_CREDENTIAL_PATH+profile.Name, func(writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc(EC2MetadataCredentialPath+profile, func(writer http.ResponseWriter, request *http.Request) {
 		v, err := c.Get()
 		if err != nil {
-			log.Errorf("AssumeRole(): %v", err)
+			//log.Errorf("AssumeRole(): %v", err)
 			http.Error(writer, "Error fetching role credentials", http.StatusInternalServerError)
 			return
 		}
@@ -71,29 +75,29 @@ func NewEC2MetadataService(profile *lib.AWSProfile, options *lib.CachedCredentia
 			Token:           v.SessionToken,
 			Expiration:      time.Now().Add(901 * time.Second).UTC().Format(time.RFC3339),
 		}
-		log.Debugf("%+v", output)
+		//log.Debugf("%+v", output)
 
 		j, err := json.Marshal(output)
 		if err != nil {
-			log.Errorf("json.Marshal(): %v", err)
+			//log.Errorf("json.Marshal(): %v", err)
 			http.Error(writer, "Error marshalling credentials to json", http.StatusInternalServerError)
 			return
 		}
 
 		writer.Header().Set("Content-Type", "text/plain")
 		writer.Write(j)
-		log.Infof("%s %d %d", request.URL.Path, http.StatusOK, len(j))
+		//log.Infof("%s %d %d", request.URL.Path, http.StatusOK, len(j))
 	})
 
-	http.HandleFunc(EC2_METADATA_CREDENTIAL_PATH, func(writer http.ResponseWriter, request *http.Request) {
+	http.HandleFunc(EC2MetadataCredentialPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
-		writer.Write([]byte(profile.Name))
-		log.Debugf("Returning profile name %s", profile.Name)
+		writer.Write([]byte(profile))
+		//log.Debugf("Returning profile name %s", profile.Name)
 	})
 
 	http.Handle("/", http.NotFoundHandler())
 
 	hp := net.JoinHostPort(addr.String(), "80")
-	log.Infof("EC2 Metadata Service ready on %s", hp)
+	//log.Infof("EC2 Metadata Service ready on %s", hp)
 	return http.ListenAndServe(hp, nil)
 }

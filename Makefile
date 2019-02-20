@@ -6,11 +6,8 @@ GOARCH ?= $(shell go env GOARCH)
 
 .PHONY: darwin linux windows release clean dist-clean test
 
-$(EXE): Gopkg.lock *.go lib/*.go
+$(EXE): go.mod go.sum *.go lib/*/*.go
 	go build -v -ldflags '-X main.Version=$(VER)' -o $@
-
-Gopkg.lock: Gopkg.toml
-	dep ensure
 
 release: $(EXE) darwin windows linux
 
@@ -25,7 +22,7 @@ clean:
 	rm -f $(EXE) $(EXE)-*-*-*
 
 dist-clean: clean
-	rm -f Gopkg.lock
+	rm -f go.sum
 
 test: $(EXE)
 	mv $(EXE) build

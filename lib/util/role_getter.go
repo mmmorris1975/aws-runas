@@ -1,11 +1,10 @@
-package lib
+package util
 
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/mbndr/logo"
 	"net/url"
 	"sort"
 	"strings"
@@ -40,20 +39,13 @@ type RoleGetter interface {
 	Roles() Roles
 }
 
-// RoleGetterOptions provides settings to customize the setup of the RoleGetter
-type RoleGetterOptions struct {
-	LogLevel logo.Level
-}
-
 // NewAwsRoleGetter creates a RoleGetter to retrieve AWS IAM roles for the specified user
-func NewAwsRoleGetter(sess *session.Session, user string, opts *RoleGetterOptions) RoleGetter {
-	l := NewLogger("aws-runas.RoleGetter", opts.LogLevel)
-	return &awsRoleGetter{client: sess, user: user, log: l, wg: new(sync.WaitGroup)}
+func NewAwsRoleGetter(c client.ConfigProvider, user string) RoleGetter {
+	return &awsRoleGetter{client: c, user: user, wg: new(sync.WaitGroup)}
 }
 
 type awsRoleGetter struct {
-	client *session.Session
-	log    *logo.Logger
+	client client.ConfigProvider
 	wg     *sync.WaitGroup
 	user   string
 }
@@ -72,7 +64,7 @@ func (r *awsRoleGetter) Roles() Roles {
 	for i := range ch {
 		if !strings.Contains(i, "*") {
 			res = append(res, i)
-			r.log.Debugf("Found role ARN: %s", i)
+			//r.log.Debugf("Found role ARN: %s", i)
 		}
 	}
 
@@ -92,11 +84,11 @@ func (r *awsRoleGetter) roles(ch chan<- string) {
 	for truncated {
 		g, err := c.ListGroupsForUser(&i)
 		if err != nil {
-			r.log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
+			//r.log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
 		}
 
 		for _, grp := range g.Groups {
-			r.log.Debugf("GROUP: %s", *grp.GroupName)
+			//r.log.Debugf("GROUP: %s", *grp.GroupName)
 			r.wg.Add(2)
 			go r.inlineGroupRoles(c, grp.GroupName, ch)
 			go r.attachedGroupRoles(c, grp.GroupName, ch)
@@ -120,7 +112,7 @@ func (r *awsRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 	for truncated {
 		polList, err := c.ListUserPolicies(&listPolInput)
 		if err != nil {
-			r.log.Errorf("Error calling ListUserPolicies(): %v", err)
+			//r.log.Errorf("Error calling ListUserPolicies(): %v", err)
 			break
 		}
 
@@ -128,13 +120,13 @@ func (r *awsRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 			getPolInput.PolicyName = p
 			res, err := c.GetUserPolicy(&getPolInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetUserPolicy(): %v", err)
+				//r.log.Errorf("Error calling GetUserPolicy(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(res.PolicyDocument)
 			if err != nil {
-				r.log.Errorf("Error parsing policy document: %v", err)
+				//r.log.Errorf("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -158,7 +150,7 @@ func (r *awsRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 	for truncated {
 		polList, err := c.ListAttachedUserPolicies(&listPolInput)
 		if err != nil {
-			r.log.Errorf("Error calling ListAttachedUserPolicies(): %v", err)
+			//r.log.Errorf("Error calling ListAttachedUserPolicies(): %v", err)
 			break
 		}
 
@@ -166,20 +158,20 @@ func (r *awsRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := c.GetPolicy(&getPolInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetPolicy(): %v", err)
+				//r.log.Errorf("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getVerRes, err := c.GetPolicyVersion(&getVerInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
+				//r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(getVerRes.PolicyVersion.Document)
 			if err != nil {
-				r.log.Errorf("Error parsing policy document: %v", err)
+				//r.log.Errorf("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -204,7 +196,7 @@ func (r *awsRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string
 	for truncated {
 		polList, err := c.ListGroupPolicies(&listPolInput)
 		if err != nil {
-			r.log.Errorf("Error calling ListGroupPolicies(): %v", err)
+			//r.log.Errorf("Error calling ListGroupPolicies(): %v", err)
 			break
 		}
 
@@ -212,13 +204,13 @@ func (r *awsRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string
 			getPolInput.PolicyName = p
 			res, err := c.GetGroupPolicy(&getPolInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetGroupPolicy(): %v", err)
+				//r.log.Errorf("Error calling GetGroupPolicy(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(res.PolicyDocument)
 			if err != nil {
-				r.log.Errorf("Error parsing policy document: %v", err)
+				//r.log.Errorf("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -242,7 +234,7 @@ func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- stri
 	for truncated {
 		polList, err := c.ListAttachedGroupPolicies(&listPolInput)
 		if err != nil {
-			r.log.Errorf("Error calling ListAttachedGroupPolicies(): %v", err)
+			//r.log.Errorf("Error calling ListAttachedGroupPolicies(): %v", err)
 			break
 		}
 
@@ -250,20 +242,20 @@ func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- stri
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := c.GetPolicy(&getPolInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetPolicy(): %v", err)
+				//r.log.Errorf("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getVerRes, err := c.GetPolicyVersion(&getVerInput)
 			if err != nil {
-				r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
+				//r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(getVerRes.PolicyVersion.Document)
 			if err != nil {
-				r.log.Errorf("Error parsing policy document: %v", err)
+				//r.log.Errorf("Error parsing policy document: %v", err)
 				continue
 			}
 

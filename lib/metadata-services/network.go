@@ -8,18 +8,6 @@ import (
 	"runtime"
 )
 
-var (
-	// EC2MetadataAddress is the IP address of the EC2 metadata service
-	EC2MetadataAddress *net.IPAddr
-	// ECSMetadataAddress is the IP address of the ECS task metadata service
-	ECSMetadataAddress *net.IPAddr
-)
-
-func init() {
-	EC2MetadataAddress, _ = net.ResolveIPAddr("ip", "169.254.169.254")
-	ECSMetadataAddress, _ = net.ResolveIPAddr("ip", "169.254.170.2")
-}
-
 // Loop through the system's available network interfaces and return the name of the 1st one which is up and a loopback
 // interface.  Return an error if the call to net.Interfaces() fails, or no suitable network interface is found.
 func discoverLoopback() (string, error) {

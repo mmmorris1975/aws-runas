@@ -1,4 +1,4 @@
-package lib
+package util
 
 import (
 	"fmt"
@@ -63,20 +63,5 @@ func TestNewAwsRoleGetterDefault(t *testing.T) {
 	if err != nil {
 		t.Errorf("Error creating AWS session: %v", err)
 	}
-	NewAwsRoleGetter(s, "u", new(RoleGetterOptions))
-}
-
-func TestNewAwsRoleGetterNilOpts(t *testing.T) {
-	defer func() {
-		if x := recover(); x != nil {
-			t.Logf("Got expected panic() from default NewAwsRoleGetter()")
-		} else {
-			t.Errorf("Did not see expected panic() with nil options")
-		}
-	}()
-	s, err := session.NewSessionWithOptions(session.Options{})
-	if err != nil {
-		t.Errorf("Error creating AWS session: %v", err)
-	}
-	NewAwsRoleGetter(s, "u", nil)
+	NewAwsRoleGetter(s, "u")
 }

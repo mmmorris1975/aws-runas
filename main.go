@@ -2,22 +2,32 @@ package main
 
 import (
 	"fmt"
+	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/dustin/go-humanize"
-	"github.com/mbndr/logo"
-	"github.com/mmmorris1975/aws-runas/lib"
+	"github.com/mmmorris1975/aws-runas/lib/cache"
+	"github.com/mmmorris1975/aws-runas/lib/config"
+	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/aws-runas/lib/metadata-services"
-	"gopkg.in/alecthomas/kingpin.v2"
+	"github.com/mmmorris1975/aws-runas/lib/util"
+	"github.com/mmmorris1975/simple-logger"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
+)
+
+const (
+	assumeRoleCachePrefix   = ".Taws_assume_role"   // fixme make name compatible
+	sessionTokenCachePrefix = ".Taws_session_token" // fixme make name compatible
 )
 
 var (
@@ -38,8 +48,10 @@ var (
 	duration     *time.Duration
 	roleDuration *time.Duration
 	cmd          *[]string
-	log          *logo.Logger
-	logLevel     = logo.WARN
+	log          *simple_logger.Logger
+	ses          *session.Session
+	cfg          *config.AwsConfig
+	usr          *awsIdentity
 )
 
 func init() {
@@ -78,7 +90,7 @@ func init() {
 
 	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
 	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
-	if v, ok := os.LookupEnv("AWS_PROFILE"); !ok {
+	if v, ok := os.LookupEnv(config.ProfileEnvVar); !ok {
 		profile = kingpin.Arg("profile", profileArgDesc).String()
 	} else {
 		profile = aws.String(v)
@@ -93,121 +105,49 @@ func init() {
 }
 
 func main() {
-	// Tell kingpin to stop parsing flags once we start processing 'cmd', allows something like:
-	// `aws-runas --verbose profile command -a --long_arg`
-	// without needing an explicit `--` between 'profile' and 'cmd'
 	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
+	log = simple_logger.StdLogger
 	if *verbose {
-		logLevel = logo.DEBUG
-	}
-	log = lib.NewLogger("aws-runas.main", logLevel)
-
-	log.Debugf("PROFILE: %s", *profile)
-	sess := lib.AwsSession(*profile)
-
-	cm, err := lib.NewAwsConfigManager(&lib.ConfigManagerOptions{LogLevel: logLevel})
-	if err != nil {
-		log.Fatalf("Error loading configuration: %v", err)
+		log.SetLevel(simple_logger.DEBUG)
 	}
 
-	iamUser := iamUser(false)
+	resolveConfig()
+	log.Debugf("CONFIG: %+v", cfg)
+
+	awsSession(*profile, cfg)
+
+	awsUser(false)
+	log.Debugf("USER: %+v", usr)
 
 	switch {
 	case *listMfa:
-		log.Debug("List MFA")
-		printMfa(sess)
+		printMfa()
 	case *listRoles, *makeConf:
-		if iamUser == nil {
-			log.Fatalf("Unable to determine IAM user")
-		}
-
-		userName := *iamUser.UserName
-
-		rg := lib.NewAwsRoleGetter(sess, userName, &lib.RoleGetterOptions{LogLevel: logLevel})
-		roles := rg.Roles()
-
-		if *listRoles {
-			log.Debug("List Roles")
-			fmt.Printf("Available role ARNs for %s (%s)\n", userName, *iamUser.Arn)
-			for _, v := range roles {
-				fmt.Printf("  %s\n", v)
-			}
-		}
-
-		if *makeConf {
-			log.Debug("Make Configuration Files.")
-			mfa := lookupMfa(sess)
-
-			if err := cm.BuildConfig(roles, mfa); err != nil {
-				log.Fatalf("Error building config file: %v", err)
-			}
-		}
+		roleHandler()
 	case *updateFlag:
-		log.Debug("Update check")
-		if err := lib.VersionCheck(Version); err != nil {
-			log.Debugf("Error from VersionCheck(): %v", err)
-		}
+		versionCheck()
 	case *diagFlag:
-		var p *lib.AWSProfile
-		var err error
-
-		log.Debugf("Diagnostics")
-		if profile == nil || len(*profile) == 0 {
-			log.Fatalf("Please provide a profile name for gathering diagnostics data")
-		} else {
-			p, err = awsProfile(cm, *profile, iamUser)
-			if err != nil {
-				log.Fatalf("Error building profile, possible issue with config file: %v", err)
-			}
-		}
-
-		if len(p.RoleArn.Resource) > 0 && len(p.SourceProfile) < 1 {
-			log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", p.Name)
-		}
-
-		if err := lib.RunDiagnostics(p); err != nil {
-			log.Fatalf("Issue found: %v", err)
-		}
+		runDiagnostics()
+	case *ec2MdFlag:
+		metadataServer()
 	default:
-		p, err := awsProfile(cm, *profile, iamUser)
-		if err != nil {
-			log.Fatalf("Error building profile: %v", err)
+		var c *credentials.Credentials
+
+		if usr.IdentityType == "user" {
+			c = handleUserCreds()
+		} else {
+			// non-IAM user (instance profile, other?)
+			c = assumeRoleCredentials(ses)
 		}
 
-		credProvider := credProvider(p)
-
-		if *refresh {
-			f := credProvider.CacheFile()
-			log.Debugf("Deleting cached credential file %s", f)
-			os.Remove(f)
-		}
-
-		if *showExpire {
-			printExpire(credProvider)
-		}
-
-		if *ec2MdFlag {
-			if !*verbose {
-				logLevel = logo.INFO
-			}
-
-			opts := lib.CachedCredentialsProviderOptions{
-				LogLevel:  logLevel,
-				MfaSerial: p.MfaSerial,
-			}
-
-			log.Fatal(metadata_services.NewEC2MetadataService(p, &opts))
-		}
-
-		c := credentials.NewCredentials(credProvider)
 		creds, err := c.Get()
 		if err != nil {
 			log.Fatalf("Error getting credentials: %v", err)
 		}
 
-		updateEnv(creds, p.Region)
+		updateEnv(creds)
 
 		if len(*cmd) > 0 {
 			cmd = wrapCmd(cmd)
@@ -228,9 +168,8 @@ func main() {
 }
 
 func wrapCmd(cmd *[]string) *[]string {
-	// If on a non-windows platform, with the SHELL environment variable set,
-	// and a call to exec.LookPath() for the command fails, run the command in
-	// a sub-shell so we can support shell aliases.
+	// If on a non-windows platform, with the SHELL environment variable set, and a call to
+	// exec.LookPath() for the command fails, run the command in a sub-shell so we can support shell aliases.
 	newCmd := make([]string, 0)
 
 	if runtime.GOOS != "windows" {
@@ -257,155 +196,6 @@ func wrapCmd(cmd *[]string) *[]string {
 	return &newCmd
 }
 
-func assumeRoleInput(p *lib.AWSProfile) *sts.AssumeRoleInput {
-	i := new(sts.AssumeRoleInput)
-	if p.CredDuration.Seconds() == 0 {
-		i.DurationSeconds = aws.Int64(int64(lib.ASSUME_ROLE_DEFAULT_DURATION.Seconds()))
-	} else {
-		i.DurationSeconds = aws.Int64(int64(p.CredDuration.Seconds()))
-	}
-
-	if len(p.RoleArn.String()) > 0 {
-		i.RoleArn = aws.String(p.RoleArn.String())
-	}
-
-	if len(p.RoleSessionName) > 0 {
-		i.RoleSessionName = aws.String(p.RoleSessionName)
-	}
-
-	if len(p.ExternalId) > 0 {
-		i.ExternalId = aws.String(p.ExternalId)
-	}
-
-	return i
-}
-
-func updateEnv(creds credentials.Value, region string) {
-	// Explicitly unset AWS_PROFILE to avoid unintended consequences
-	os.Unsetenv("AWS_PROFILE")
-
-	// Pass AWS_REGION through if it was set in our env, or found in config.
-	// Ensure that called program gets the expected region.  Also set
-	// AWS_DEFAULT_REGION so awscli works as expected, otherwise it will use
-	// any region from the profile (or default, since we're not providing profile)
-	if len(region) > 0 {
-		os.Setenv("AWS_REGION", region)
-		os.Setenv("AWS_DEFAULT_REGION", region)
-	}
-
-	os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
-	os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
-
-	// If session token creds were returned, set them. Otherwise explicitly
-	// unset them to keep the sdk from getting confused.  AFAIK, we should
-	// always have SessionTokens, since our entire process revolves around them.
-	// But always code defensively
-	if len(creds.SessionToken) > 0 {
-		os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
-		os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
-	} else {
-		os.Unsetenv("AWS_SESSION_TOKEN")
-		os.Unsetenv("AWS_SECURITY_TOKEN")
-	}
-}
-
-func iamUser(resetEnv bool) *iam.User {
-	if resetEnv {
-		os.Unsetenv("AWS_ACCESS_KEY_ID")
-		os.Unsetenv("AWS_ACCESS_KEY")
-		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-		os.Unsetenv("AWS_SECRET_KEY")
-		os.Unsetenv("AWS_SECURITY_TOKEN")
-		os.Unsetenv("AWS_SESSION_TOKEN")
-		os.Unsetenv("AWS_PROFILE")
-	}
-
-	i := iam.New(lib.AwsSession(""))
-
-	u, err := i.GetUser(new(iam.GetUserInput))
-	if err != nil {
-		if resetEnv {
-			log.Warnf("Error getting IAM user info: %v", err)
-			return nil
-		}
-
-		log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
-		return iamUser(true)
-	}
-
-	if log != nil {
-		log.Debugf("USER: %+v", u)
-	}
-	return u.User
-}
-
-func awsProfile(cm lib.ConfigManager, name string, user *iam.User) (*lib.AWSProfile, error) {
-	var p *lib.AWSProfile
-
-	// Lookup default profile name, in case we were not passed a profile,
-	// or role_arn as part of the command
-	defProfile := session.DefaultSharedConfigProfile
-	v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE")
-	if ok {
-		defProfile = v
-	}
-	if len(name) < 1 {
-		name = defProfile
-	}
-
-	a, err := arn.Parse(name)
-	if err != nil {
-		p, err = cm.GetProfile(aws.String(name))
-		if err != nil {
-			return nil, fmt.Errorf("unable to get configuration for profile '%s': %v", name, err)
-		}
-
-		if len(p.Name) < 1 {
-			// helps keep cache file naming sane
-			p.Name = defProfile
-		}
-	} else {
-		if strings.HasPrefix(a.String(), lib.IAM_ARN) {
-			// Unset AWS_PROFILE here, in case the role ARN came in via environment
-			// variable, otherwise is messes up GetProfile
-			os.Unsetenv("AWS_PROFILE")
-			p, err = cm.GetProfile(aws.String(defProfile))
-			if err != nil {
-				return nil, err
-			}
-			p.RoleArn = a
-		} else {
-			return nil, fmt.Errorf("profile argument is not an IAM role ARN")
-		}
-	}
-
-	if len(p.RoleSessionName) < 1 {
-		if user == nil {
-			return nil, fmt.Errorf("missing IAM user info, earlier errors may be instructive")
-		}
-		p.RoleSessionName = aws.StringValue(user.UserName)
-	}
-
-	// Add command-line option overrides
-	if duration != nil && (*duration).Nanoseconds() > 0 {
-		p.SessionDuration = *duration
-	}
-
-	if roleDuration != nil && (*roleDuration).Nanoseconds() > 0 {
-		p.CredDuration = *roleDuration
-	}
-
-	if mfaArn != nil && len(*mfaArn) > 0 {
-		p.MfaSerial = *mfaArn
-	}
-
-	if log != nil {
-		log.Debugf("RESOLVED PROFILE: %+v", p)
-	}
-
-	return p, nil
-}
-
 func printCredentials() {
 	format := "%s %s='%s'\n"
 	exportToken := "export"
@@ -420,7 +210,7 @@ func printCredentials() {
 	}
 
 	envVars := []string{
-		"AWS_REGION", "AWS_DEFAULT_REGION",
+		config.RegionEnvVar, config.DefaultRegionEnvVar,
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
 		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
 	}
@@ -433,24 +223,243 @@ func printCredentials() {
 	}
 }
 
-func printMfa(s *session.Session) {
-	mfa, err := lib.LookupMfa(s)
-	if err != nil {
-		log.Fatalf("Error retrieving MFA info: %v", err)
+func updateEnv(creds credentials.Value) {
+	// Explicitly unset AWS_PROFILE to avoid unintended consequences
+	os.Unsetenv(config.ProfileEnvVar)
+
+	// Pass AWS_REGION through if it was set in our env, or found in config.
+	// Ensure that called program gets the expected region.  Also set AWS_DEFAULT_REGION
+	// so awscli works as expected, otherwise it will use any region from the profile
+	if len(cfg.Region) > 0 {
+		os.Setenv(config.RegionEnvVar, cfg.Region)
+		os.Setenv(config.DefaultRegionEnvVar, cfg.Region)
 	}
 
-	for _, d := range mfa {
-		fmt.Printf("%s\n", *d.SerialNumber)
+	os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+
+	// If session token creds were returned, set them. Otherwise explicitly unset them
+	// to keep the sdk from getting confused.  AFAIK, we should always have SessionTokens,
+	// since our entire process revolves around them. But always code defensively
+	if len(creds.SessionToken) > 0 {
+		os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
+		os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
+	} else {
+		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv("AWS_SECURITY_TOKEN")
 	}
 }
 
-func lookupMfa(s *session.Session) *string {
+func handleUserCreds() *credentials.Credentials {
+	var c *credentials.Credentials
+	var sc *credentials.Credentials
+
+	if *refresh {
+		if !*sesCreds {
+			os.Remove(assumeRoleCacheFile())
+		}
+		os.Remove(sessionTokenCacheFile())
+	}
+
+	if cfg.RoleDuration > 1*time.Hour {
+		// Not allowed to use session tokens to fetch assume role credentials > 1h
+		c = assumeRoleCredentials(ses)
+	} else {
+		sc = sessionTokenCredentials()
+		s := ses.Copy(new(aws.Config).WithCredentials(sc))
+
+		if !*sesCreds && len(cfg.RoleArn) > 0 {
+			cfg.MfaSerial = "" // unset MfaSerial since MFA is handled in the session token
+			c = assumeRoleCredentials(s)
+		} else {
+			// -s option found, or no role arn provided/found
+			c = sc
+		}
+	}
+
+	if *showExpire {
+		printCredExpire()
+	}
+
+	return c
+}
+
+func printCredExpire() {
+	var f *cache.FileCredentialCache
+	var err error
+
+	if !*sesCreds && len(cfg.RoleArn) > 0 {
+		f = &cache.FileCredentialCache{Path: assumeRoleCacheFile()}
+	} else {
+		f = &cache.FileCredentialCache{Path: sessionTokenCacheFile()}
+	}
+
+	creds, err := f.Fetch()
+	if err != nil {
+		creds = new(cache.CacheableCredentials)
+	}
+
+	exp := time.Unix(creds.Expiration, 0)
+	format := exp.Format("2006-01-02 15:04:05")
+	hmn := humanize.Time(exp)
+
+	tense := "will expire"
+	if exp.Before(time.Now()) {
+		tense = "expired"
+	}
+	fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
+}
+
+func cacheFile(f string) string {
+	d := filepath.Dir(defaults.SharedCredentialsFilename())
+	return filepath.Join(d, f)
+}
+
+func assumeRoleCacheFile() string {
+	p := *profile
+	if *profile == cfg.RoleArn {
+		a, _ := arn.Parse(*profile) // if we get this far, it's assumed the ARN will parse
+		r := strings.Split("/", a.Resource)
+		p = fmt.Sprintf("%s-%s", a.AccountID, r[len(r)-1])
+	}
+
+	cf := fmt.Sprintf("%s_%s", assumeRoleCachePrefix, p)
+	log.Debugf("AssumeRole CACHE PATH: %s", cf)
+	return cacheFile(cf)
+}
+
+func sessionTokenCacheFile() string {
+	p := cfg.SourceProfile
+	if len(p) < 1 {
+		p = *profile
+	}
+
+	cf := fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p)
+	log.Debugf("SessionToken CACHE PATH: %s", cf)
+	return cacheFile(cf)
+}
+
+func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
+	var ew time.Duration
+
+	if c == nil {
+		c = ses
+	}
+
+	if cfg.RoleDuration < credlib.AssumeRoleMinDuration {
+		ew = credlib.AssumeRoleMinDuration / 10
+	} else {
+		ew = cfg.RoleDuration / 10
+	}
+
+	return credlib.NewAssumeRoleCredentials(c, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+		p.RoleSessionName = usr.UserName
+		p.ExternalID = cfg.ExternalID
+		p.SerialNumber = cfg.MfaSerial
+		p.TokenProvider = credlib.StdinTokenProvider
+		p.Duration = cfg.RoleDuration
+		p.ExpiryWindow = ew
+		p.Cache = &cache.FileCredentialCache{Path: assumeRoleCacheFile()}
+	})
+}
+
+func sessionTokenCredentials() *credentials.Credentials {
+	var ew time.Duration
+
+	if cfg.RoleDuration < credlib.SessionTokenMinDuration {
+		ew = credlib.SessionTokenMinDuration / 10
+	} else {
+		ew = cfg.SessionDuration / 10
+	}
+
+	return credlib.NewSessionCredentials(ses, func(p *credlib.SessionTokenProvider) {
+		p.Cache = &cache.FileCredentialCache{Path: sessionTokenCacheFile()}
+		p.SerialNumber = cfg.MfaSerial
+		p.TokenProvider = credlib.StdinTokenProvider
+		p.Duration = cfg.SessionDuration
+		p.ExpiryWindow = ew
+	})
+}
+
+func runDiagnostics() {
+	log.Debugf("Diagnostics")
+	// fixme - this really isn't valid, since role could be provided via cmdline arg or env var, so there is no source profile
+	//if len(cfg.RoleArn) > 0 && len(cfg.SourceProfile) < 1 {
+	//	log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", *profile)
+	//}
+
+	if err := util.RunDiagnostics(cfg); err != nil {
+		log.Fatalf("Issue found: %v", err)
+	}
+}
+
+func roleHandler() {
+	if usr.IdentityType == "user" {
+		rg := util.NewAwsRoleGetter(ses, usr.UserName)
+		roles := rg.Roles()
+
+		if *listRoles {
+			log.Debug("List Roles")
+			fmt.Printf("Available role ARNs for %s (%s)\n", usr.UserName, *usr.Identity.Arn)
+			for _, v := range roles {
+				fmt.Printf("  %s\n", v)
+			}
+		}
+
+		if *makeConf {
+			log.Debug("Make Configuration Files.")
+			// todo
+			//mfa := lookupMfa()
+		}
+	}
+}
+
+func metadataServer() {
+	log.Debug("Metadata Server")
+	if usr.IdentityType == "user" {
+		s := session.Must(session.NewSession(new(aws.Config).WithCredentials(sessionTokenCredentials())))
+
+		// don't obey cfg.CredsDuration on purpose. Use longer-lived session tokens to call AssumeRole
+		ar := credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+			p.ExternalID = cfg.ExternalID
+			p.RoleSessionName = usr.UserName
+		})
+
+		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
+		ar.Get()
+
+		log.Fatal(metadata_services.NewEC2MetadataService(ar, *profile))
+	}
+}
+
+func versionCheck() {
+	log.Debug("Update check")
+	if err := util.VersionCheck(Version); err != nil {
+		log.Debugf("Error from VersionCheck(): %v", err)
+	}
+}
+
+func printMfa() {
+	log.Debug("List MFA")
+	if usr.IdentityType == "user" {
+		mfa, err := util.LookupMfa(ses)
+		if err != nil {
+			log.Fatalf("Error retrieving MFA info: %v", err)
+		}
+
+		for _, d := range mfa {
+			fmt.Printf("%s\n", *d.SerialNumber)
+		}
+	}
+}
+
+func lookupMfa() *string {
 	var mfa *string
 	if mfaArn != nil && len(*mfaArn) > 0 {
 		// MFA arn provided by cmdline option
 		mfa = mfaArn
 	} else {
-		m, err := lib.LookupMfa(s)
+		m, err := util.LookupMfa(ses)
 		if err != nil {
 			log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
 		}
@@ -463,37 +472,84 @@ func lookupMfa(s *session.Session) *string {
 	return mfa
 }
 
-func credProvider(p *lib.AWSProfile) lib.SessionTokenProvider {
-	opts := lib.CachedCredentialsProviderOptions{
-		LogLevel:  logLevel,
-		MfaSerial: p.MfaSerial,
+func resolveConfig() {
+	usrCfg := config.AwsConfig{MfaSerial: *mfaArn, SessionDuration: *duration, RoleDuration: *roleDuration}
+	r, err := config.NewConfigResolver(&usrCfg)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	var credProvider lib.SessionTokenProvider
-	if *sesCreds || len(p.RoleArn.Resource) < 1 {
-		if log != nil {
-			log.Debugf("Getting SESSION TOKEN credentials")
-		}
-		opts.CredentialDuration = p.SessionDuration
-		credProvider = lib.NewSessionTokenProvider(p, &opts)
-	} else {
-		if log != nil {
-			log.Debugf("Getting ASSUME ROLE credentials")
-		}
-		opts.CredentialDuration = p.CredDuration
-		credProvider = lib.NewAssumeRoleProvider(p, &opts)
+	cfg, err = r.ResolveConfig(*profile)
+	if err != nil {
+		log.Fatal(err)
 	}
-	return credProvider
 }
 
-func printExpire(p lib.CachedCredentialProvider) {
-	exp := p.ExpirationTime()
-	format := exp.Format("2006-01-02 15:04:05")
-	hmn := humanize.Time(exp)
+func awsSession(profile string, cfg *config.AwsConfig) {
+	var p string
 
-	tense := "will expire"
-	if exp.Before(time.Now()) {
-		tense = "expired"
+	sc := new(aws.Config).WithLogger(log).WithCredentialsChainVerboseErrors(true).WithRegion(cfg.Region)
+	if *verbose {
+		sc.LogLevel = aws.LogLevel(aws.LogDebug)
 	}
-	fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
+	opts := session.Options{Config: *sc}
+
+	// profile was not a role ARN (implies that it's a profile in the config file)
+	if profile != cfg.RoleArn {
+		p = profile
+		if len(cfg.SourceProfile) > 0 {
+			p = cfg.SourceProfile
+		}
+	} else {
+		// profile appears to be an ARN, and may have been set as the AWS_PROFILE env var.  Unset that to allow
+		// the SDK session to properly resolve credentials
+		os.Unsetenv(config.ProfileEnvVar)
+	}
+	opts.Profile = p
+
+	// Do not set opts.SharedConfigState as enabled so we only get credentials for the profile.  We don't want the config
+	// file values getting in the way (like prompting for MFA and assuming roles) at this point.
+	ses = session.Must(session.NewSessionWithOptions(opts))
+}
+
+func awsUser(resetEnv bool) {
+	if resetEnv {
+		os.Unsetenv("AWS_ACCESS_KEY_ID")
+		os.Unsetenv("AWS_ACCESS_KEY")
+		os.Unsetenv("AWS_SECRET_ACCESS_KEY")
+		os.Unsetenv("AWS_SECRET_KEY")
+		os.Unsetenv("AWS_SECURITY_TOKEN")
+		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv(config.ProfileEnvVar)
+	}
+
+	c := sts.New(ses)
+	o, err := c.GetCallerIdentity(new(sts.GetCallerIdentityInput))
+	if err != nil {
+		if resetEnv {
+			log.Fatalf("Error getting IAM user info: %v", err)
+		}
+
+		log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
+		awsUser(true)
+	}
+
+	a, err := arn.Parse(*o.Arn)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	id := awsIdentity{Identity: o}
+
+	r := strings.Split(a.Resource, "/")
+	id.IdentityType = r[0]
+	id.UserName = r[len(r)-1]
+
+	usr = &id
+}
+
+type awsIdentity struct {
+	Identity     *sts.GetCallerIdentityOutput
+	IdentityType string
+	UserName     string
 }
