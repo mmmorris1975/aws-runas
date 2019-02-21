@@ -41,7 +41,7 @@ type RoleGetter interface {
 }
 
 // NewAwsRoleGetter creates a RoleGetter to retrieve AWS IAM roles for the specified user
-func NewAwsRoleGetter(c client.ConfigProvider, user string) RoleGetter {
+func NewAwsRoleGetter(c client.ConfigProvider, user string) *awsRoleGetter {
 	return &awsRoleGetter{client: c, user: user, wg: new(sync.WaitGroup)}
 }
 
@@ -49,6 +49,12 @@ type awsRoleGetter struct {
 	client client.ConfigProvider
 	wg     *sync.WaitGroup
 	user   string
+	log    aws.Logger
+}
+
+func (r *awsRoleGetter) WithLogger(l aws.Logger) *awsRoleGetter {
+	r.log = l
+	return r
 }
 
 // Get the explicitly configured IAM roles from the user's IAM account
@@ -65,11 +71,17 @@ func (r *awsRoleGetter) Roles() Roles {
 	for i := range ch {
 		if !strings.Contains(i, "*") {
 			res = append(res, i)
-			//r.log.Debugf("Found role ARN: %s", i)
+			r.debug("Found role ARN: %s", i)
 		}
 	}
 
 	return Roles(res).Dedup()
+}
+
+func (r *awsRoleGetter) debug(f string, v ...interface{}) {
+	if r.client != nil && r.client.ClientConfig("iam").Config.LogLevel.AtLeast(aws.LogDebug) {
+		r.log.Log(fmt.Sprintf(f, v...))
+	}
 }
 
 func (r *awsRoleGetter) roles(ch chan<- string) {
@@ -85,11 +97,12 @@ func (r *awsRoleGetter) roles(ch chan<- string) {
 	for truncated {
 		g, err := c.ListGroupsForUser(&i)
 		if err != nil {
+			// fixme do error logging right
 			//r.log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
 		}
 
 		for _, grp := range g.Groups {
-			//r.log.Debugf("GROUP: %s", *grp.GroupName)
+			r.debug("GROUP: %s", *grp.GroupName)
 			r.wg.Add(2)
 			go r.inlineGroupRoles(c, grp.GroupName, ch)
 			go r.attachedGroupRoles(c, grp.GroupName, ch)

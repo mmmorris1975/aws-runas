@@ -27,8 +27,8 @@ import (
 )
 
 const (
-	assumeRoleCachePrefix   = ".Taws_assume_role"   // fixme make name compatible
-	sessionTokenCachePrefix = ".Taws_session_token" // fixme make name compatible
+	assumeRoleCachePrefix   = ".aws_assume_role"
+	sessionTokenCachePrefix = ".aws_session_token"
 )
 
 var (
@@ -384,7 +384,7 @@ func sessionTokenCredentials() *credentials.Credentials {
 
 func roleHandler() {
 	if usr.IdentityType == "user" {
-		rg := util.NewAwsRoleGetter(ses, usr.UserName)
+		rg := util.NewAwsRoleGetter(ses, usr.UserName).WithLogger(log)
 		roles := rg.Roles()
 
 		if *listRoles {

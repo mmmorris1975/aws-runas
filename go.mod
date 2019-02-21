@@ -6,7 +6,6 @@ require (
 	github.com/alecthomas/units v0.0.0-20151022065526-2efee857e7cf // indirect
 	github.com/aws/aws-sdk-go v1.16.31
 	github.com/dustin/go-humanize v1.0.0
-	github.com/mbndr/logo v0.0.0-20171019193322-06195deb9d53
 	github.com/mmmorris1975/aws-config v0.2.5
-	github.com/mmmorris1975/simple-logger v0.3.0
+	github.com/mmmorris1975/simple-logger v0.3.2-0.20190221181718-ee0fb8d39ed1
 )

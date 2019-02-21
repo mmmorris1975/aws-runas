@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/mmmorris1975/simple-logger"
+	"os"
 	"reflect"
 	"testing"
 )
@@ -140,4 +142,32 @@ func TestParsePolicy(t *testing.T) {
 			t.Error("roles size was > 0")
 		}
 	})
+}
+
+func ExampleDebugNilClient() {
+	r := NewAwsRoleGetter(nil, "u")
+	r.debug("test")
+	// Output:
+	//
+}
+
+func ExampleDebugAwsLogger() {
+	l := aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
+	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
+	s := session.Must(session.NewSession(c))
+	r := NewAwsRoleGetter(s, "u").WithLogger(l)
+	r.debug("test")
+	// Output:
+	// test
+}
+
+func ExampleDebugSimpleLogger() {
+	l := simple_logger.NewLogger(os.Stdout, "", 0)
+	l.SetLevel(simple_logger.DEBUG)
+	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
+	s := session.Must(session.NewSession(c))
+	r := NewAwsRoleGetter(s, "u").WithLogger(l)
+	r.debug("test")
+	// Output:
+	// DEBUG test
 }
