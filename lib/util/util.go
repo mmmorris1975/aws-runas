@@ -2,59 +2,10 @@ package util
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/mmmorris1975/aws-runas/lib/config"
-	"net/http"
 	"os"
 	"strings"
 )
-
-// LookupMfa retrieves the MFA devices configured for the calling user's IAM account
-func LookupMfa(c client.ConfigProvider) ([]*iam.MFADevice, error) {
-	s := iam.New(c)
-
-	res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
-	if err != nil {
-		return nil, err
-	}
-
-	return res.MFADevices, nil
-}
-
-// VersionCheck will check the program version against the latest release according to github
-func VersionCheck(version string) error {
-	u := "https://github.com/mmmorris1975/aws-runas/releases/latest"
-	r, err := http.NewRequest(http.MethodHead, u, http.NoBody)
-	if err != nil {
-		return err
-	}
-
-	// Get in the weeds so we don't follow redirects
-	res, err := http.DefaultTransport.RoundTrip(r)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode == http.StatusFound {
-		url, err := res.Location()
-		if err != nil {
-			return err
-		}
-
-		p := strings.Trim(url.Path, `/`)
-		f := strings.Split(p, `/`)
-		v := f[len(f)-1]
-
-		if v != version {
-			fmt.Printf("New version of aws-runas available: %s\nDownload available at: %s\n", v, u)
-		}
-		return nil
-	}
-
-	return fmt.Errorf("version check failed, bad HTTP Status: %d", res.StatusCode)
-}
 
 // RunDiagnostics will sanity check various configuration items
 func RunDiagnostics(c *config.AwsConfig) error {
