@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -272,6 +273,9 @@ func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- stri
 }
 
 func parsePolicy(doc *string) (Roles, error) {
+	if doc == nil {
+		return nil, fmt.Errorf("nil policy doc")
+	}
 	polJson := make(map[string]interface{})
 
 	parsedDoc, err := url.QueryUnescape(*doc)

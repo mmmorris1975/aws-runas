@@ -2,7 +2,9 @@ package util
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"reflect"
 	"testing"
 )
 
@@ -64,4 +66,78 @@ func TestNewAwsRoleGetterDefault(t *testing.T) {
 		t.Errorf("Error creating AWS session: %v", err)
 	}
 	NewAwsRoleGetter(s, "u")
+}
+
+func TestParsePolicy(t *testing.T) {
+	t.Run("good", func(t *testing.T) {
+		j := `{"Statement": [{"Effect": "None"}, {"Effect": "Deny", "Action": "sts:AssumeRole"}, 
+                             {"Effect": "Allow", "Action": ["sts:AssumeRole", "s3:*"], "Resource": "a"},
+                             {"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": "x"},
+                             {"Effect": "Allow", "Action": "sts:AssumeRole", "Resource": ["y", "z"]}
+                            ]}`
+		r, err := parsePolicy(&j)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if !reflect.DeepEqual(r, Roles([]string{"x", "y", "z"})) {
+			t.Errorf("unexpected Roles value")
+		}
+	})
+
+	t.Run("string", func(t *testing.T) {
+		r, err := parsePolicy(aws.String("string-only"))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(r) > 0 {
+			t.Error("roles size was > 0")
+		}
+	})
+
+	t.Run("string array", func(t *testing.T) {
+		r, err := parsePolicy(aws.String(`{"Statement": ["a", "b", "c"]}`))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(r) > 0 {
+			t.Error("roles size was > 0")
+		}
+	})
+
+	t.Run("bad map", func(t *testing.T) {
+		r, err := parsePolicy(aws.String(`{"Statement": [{}, {"b": 1}]}`))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(r) > 0 {
+			t.Error("roles size was > 0")
+		}
+	})
+
+	t.Run("nil doc", func(t *testing.T) {
+		if _, err := parsePolicy(nil); err == nil {
+			t.Error("did not see expected error")
+			return
+		}
+	})
+
+	t.Run("empty doc", func(t *testing.T) {
+		r, err := parsePolicy(aws.String(""))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(r) > 0 {
+			t.Error("roles size was > 0")
+		}
+	})
 }
