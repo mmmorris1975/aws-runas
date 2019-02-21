@@ -12,7 +12,10 @@ const url = "https://github.com/mmmorris1975/aws-runas/releases/latest"
 var Version string
 
 func versionCheck(ver string) error {
-	log.Debug("Update check")
+	if log != nil {
+		log.Debug("Update check")
+	}
+
 	r, err := http.NewRequest(http.MethodHead, url, http.NoBody)
 	if err != nil {
 		return err

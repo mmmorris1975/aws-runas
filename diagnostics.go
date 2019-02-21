@@ -1,4 +1,4 @@
-package util
+package main
 
 import (
 	"fmt"
@@ -8,7 +8,16 @@ import (
 )
 
 // RunDiagnostics will sanity check various configuration items
-func RunDiagnostics(c *config.AwsConfig) error {
+func runDiagnostics(c *config.AwsConfig) error {
+	if log != nil {
+		log.Debugf("Diagnostics")
+	}
+
+	// fixme - this really isn't valid, since role could be provided via cmdline arg or env var, so there is no source profile
+	//if len(cfg.RoleArn) > 0 && len(cfg.SourceProfile) < 1 {
+	//	log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", *profile)
+	//}
+
 	envAk := os.Getenv("AWS_ACCESS_KEY_ID")
 	envSt := os.Getenv("AWS_SESSION_TOKEN")
 
