@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/dustin/go-humanize"
 	"github.com/mmmorris1975/aws-runas/lib/cache"
@@ -31,8 +32,6 @@ const (
 )
 
 var (
-	// Version is the program version, set at build-time based on git tags/commit hash (see Makefile)
-	Version      string
 	listRoles    *bool
 	listMfa      *bool
 	showExpire   *bool
@@ -127,9 +126,11 @@ func main() {
 	case *listRoles, *makeConf:
 		roleHandler()
 	case *updateFlag:
-		versionCheck()
+		if err := versionCheck(Version); err != nil {
+			log.Debugf("Error checking version: %v", err)
+		}
 	case *diagFlag:
-		runDiagnostics()
+		runDiagnostics(cfg)
 	case *ec2MdFlag:
 		metadataServer()
 	default:
@@ -381,18 +382,6 @@ func sessionTokenCredentials() *credentials.Credentials {
 	})
 }
 
-func runDiagnostics() {
-	log.Debugf("Diagnostics")
-	// fixme - this really isn't valid, since role could be provided via cmdline arg or env var, so there is no source profile
-	//if len(cfg.RoleArn) > 0 && len(cfg.SourceProfile) < 1 {
-	//	log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", *profile)
-	//}
-
-	if err := util.RunDiagnostics(cfg); err != nil {
-		log.Fatalf("Issue found: %v", err)
-	}
-}
-
 func roleHandler() {
 	if usr.IdentityType == "user" {
 		rg := util.NewAwsRoleGetter(ses, usr.UserName)
@@ -409,7 +398,21 @@ func roleHandler() {
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
 			// todo
-			//mfa := lookupMfa()
+			//var mfa *string
+			//if mfaArn != nil && len(*mfaArn) > 0 {
+			//	// MFA arn provided by cmdline option
+			//	mfa = mfaArn
+			//} else {
+			//	m, err := util.LookupMfa(ses)
+			//	if err != nil {
+			//		log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
+			//	}
+			//
+			//	if len(m) > 0 {
+			//		// use 1st MFA device found
+			//		mfa = m[0].SerialNumber
+			//	}
+			//}
 		}
 	}
 }
@@ -432,17 +435,10 @@ func metadataServer() {
 	}
 }
 
-func versionCheck() {
-	log.Debug("Update check")
-	if err := util.VersionCheck(Version); err != nil {
-		log.Debugf("Error from VersionCheck(): %v", err)
-	}
-}
-
 func printMfa() {
 	log.Debug("List MFA")
 	if usr.IdentityType == "user" {
-		mfa, err := util.LookupMfa(ses)
+		mfa, err := lookupMfa()
 		if err != nil {
 			log.Fatalf("Error retrieving MFA info: %v", err)
 		}
@@ -453,23 +449,15 @@ func printMfa() {
 	}
 }
 
-func lookupMfa() *string {
-	var mfa *string
-	if mfaArn != nil && len(*mfaArn) > 0 {
-		// MFA arn provided by cmdline option
-		mfa = mfaArn
-	} else {
-		m, err := util.LookupMfa(ses)
-		if err != nil {
-			log.Errorf("MFA lookup failed, will not configure MFA: %v", err)
-		}
+func lookupMfa() ([]*iam.MFADevice, error) {
+	s := iam.New(ses)
 
-		if len(m) > 0 {
-			// use 1st MFA device found
-			mfa = m[0].SerialNumber
-		}
+	res, err := s.ListMFADevices(&iam.ListMFADevicesInput{})
+	if err != nil {
+		return nil, err
 	}
-	return mfa
+
+	return res.MFADevices, nil
 }
 
 func resolveConfig() {
