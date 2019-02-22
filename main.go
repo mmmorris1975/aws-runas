@@ -422,8 +422,10 @@ func metadataServer() {
 	if usr.IdentityType == "user" {
 		s := session.Must(session.NewSession(new(aws.Config).WithCredentials(sessionTokenCredentials())))
 
-		// don't obey cfg.CredsDuration on purpose. Use longer-lived session tokens to call AssumeRole
+		// don't obey cfg.CredsDuration on purpose, use default duration. Use longer-lived session tokens to call AssumeRole
+		// do not cache assume role credentials from metadata service
 		ar := credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+			p.Duration = credlib.AssumeRoleDefaultDuration
 			p.ExternalID = cfg.ExternalID
 			p.RoleSessionName = usr.UserName
 		})

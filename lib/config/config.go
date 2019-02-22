@@ -84,17 +84,19 @@ func NewConfigResolver(c *AwsConfig) (*configResolver, error) {
 //   to provide a consolidated AwsConfig according to the following order of precedence (lowest to highest):
 //   - Default config section, source_profile configuration, profile configuration, environment variables, user-supplied config
 func (r *configResolver) ResolveConfig(profile string) (*AwsConfig, error) {
-	// config file may not exist, and config could be baked fully through env vars
+	// config file may not exist and config could be baked fully through env vars, so don't barf on errors
 	r.ResolveDefaultConfig()
 
 	a, err := arn.Parse(profile)
 	if err != nil {
 		// not a role arn, should be a profile name in the config file.  If profile not found, or other error,
 		// fall through and allow possibility for config to be baked fully through env vars
+		r.debug("profile is not a role ARN")
 		p, err := r.file.Profile(profile)
 		if err == nil {
 			src := p.Key(sourceProfileKey).String()
 			if len(src) > 0 {
+				r.debug("resolving source_profile %s", src)
 				// awscli allows a source_profile without a matching profile section in the config, in which case it will
 				// only reference that profile name for the section name in the credentials file.  Mimic that behavior
 				// by not error checking this call to ResolveProfileConfig()
@@ -128,6 +130,7 @@ func (r *configResolver) ResolveConfig(profile string) (*AwsConfig, error) {
 		c.RoleDuration = credentials.AssumeRoleDefaultDuration
 	}
 
+	r.debug("MERGED CONFIG: %+v", c)
 	return c, nil
 }
 
@@ -155,6 +158,7 @@ func (r *configResolver) ResolveDefaultConfig() (*AwsConfig, error) {
 	}
 	r.defaultConfig = &AwsConfig{Region: c.Region, SessionDuration: c.SessionDuration, RoleDuration: c.RoleDuration}
 
+	r.debug("DEFAULT CONFIG: %+v", r.defaultConfig)
 	return r.defaultConfig, nil
 }
 
@@ -175,6 +179,7 @@ func (r *configResolver) ResolveProfileConfig(profile string) (*AwsConfig, error
 	}
 	r.profileConfig = c
 
+	r.debug("PROFILE '%s' CONFIG: %+v", r.profileConfig)
 	return r.profileConfig, nil
 }
 
@@ -217,6 +222,7 @@ func (r *configResolver) ResolveEnvConfig() (*AwsConfig, error) {
 	}
 
 	r.envConfig = c
+	r.debug("ENV CONFIG: %+v", r.envConfig)
 	return r.envConfig, nil
 }
 
@@ -259,4 +265,11 @@ func MergeConfig(conf ...*AwsConfig) *AwsConfig {
 	}
 
 	return cfg
+}
+
+func (r *configResolver) debug(f string, v ...interface{}) {
+	// fixme since we don't have an AWS client, this method won't work.  Need another way to communicate log level
+	//if r.client != nil && r.client.ClientConfig("iam").Config.LogLevel.AtLeast(aws.LogDebug) {
+	//	r.log.Log(fmt.Sprintf(f, v...))
+	//}
 }
