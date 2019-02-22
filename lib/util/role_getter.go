@@ -6,6 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/mmmorris1975/simple-logger"
 	"net/url"
 	"sort"
 	"strings"
@@ -80,8 +81,19 @@ func (r *awsRoleGetter) Roles() Roles {
 }
 
 func (r *awsRoleGetter) debug(f string, v ...interface{}) {
-	if r.client != nil && r.client.ClientConfig("iam").Config.LogLevel.AtLeast(aws.LogDebug) {
+	if r.client != nil && r.client.ClientConfig("iam").Config.LogLevel.AtLeast(aws.LogDebug) && r.log != nil {
 		r.log.Log(fmt.Sprintf(f, v...))
+	}
+}
+
+func (r *awsRoleGetter) error(f string, v ...interface{}) {
+	switch t := r.log.(type) {
+	case *simple_logger.Logger:
+		t.Errorf(f, v...)
+	default:
+		if t != nil {
+			t.Log(fmt.Sprintf(f, v...))
+		}
 	}
 }
 
@@ -98,8 +110,7 @@ func (r *awsRoleGetter) roles(ch chan<- string) {
 	for truncated {
 		g, err := c.ListGroupsForUser(&i)
 		if err != nil {
-			// fixme do error logging right
-			//r.log.Errorf("Error getting IAM Group list for %s: %v", r.user, err)
+			r.error("Error getting IAM Group list for %s: %v", r.user, err)
 		}
 
 		for _, grp := range g.Groups {
@@ -127,7 +138,7 @@ func (r *awsRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 	for truncated {
 		polList, err := c.ListUserPolicies(&listPolInput)
 		if err != nil {
-			//r.log.Errorf("Error calling ListUserPolicies(): %v", err)
+			r.error("Error calling ListUserPolicies(): %v", err)
 			break
 		}
 
@@ -135,13 +146,13 @@ func (r *awsRoleGetter) inlineUserRoles(c *iam.IAM, ch chan<- string) {
 			getPolInput.PolicyName = p
 			res, err := c.GetUserPolicy(&getPolInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetUserPolicy(): %v", err)
+				r.error("Error calling GetUserPolicy(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(res.PolicyDocument)
 			if err != nil {
-				//r.log.Errorf("Error parsing policy document: %v", err)
+				r.error("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -165,7 +176,7 @@ func (r *awsRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 	for truncated {
 		polList, err := c.ListAttachedUserPolicies(&listPolInput)
 		if err != nil {
-			//r.log.Errorf("Error calling ListAttachedUserPolicies(): %v", err)
+			r.error("Error calling ListAttachedUserPolicies(): %v", err)
 			break
 		}
 
@@ -173,20 +184,20 @@ func (r *awsRoleGetter) attachedUserRoles(c *iam.IAM, ch chan<- string) {
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := c.GetPolicy(&getPolInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetPolicy(): %v", err)
+				r.error("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getVerRes, err := c.GetPolicyVersion(&getVerInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
+				r.error("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(getVerRes.PolicyVersion.Document)
 			if err != nil {
-				//r.log.Errorf("Error parsing policy document: %v", err)
+				r.error("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -211,7 +222,7 @@ func (r *awsRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string
 	for truncated {
 		polList, err := c.ListGroupPolicies(&listPolInput)
 		if err != nil {
-			//r.log.Errorf("Error calling ListGroupPolicies(): %v", err)
+			r.error("Error calling ListGroupPolicies(): %v", err)
 			break
 		}
 
@@ -219,13 +230,13 @@ func (r *awsRoleGetter) inlineGroupRoles(c *iam.IAM, g *string, ch chan<- string
 			getPolInput.PolicyName = p
 			res, err := c.GetGroupPolicy(&getPolInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetGroupPolicy(): %v", err)
+				r.error("Error calling GetGroupPolicy(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(res.PolicyDocument)
 			if err != nil {
-				//r.log.Errorf("Error parsing policy document: %v", err)
+				r.error("Error parsing policy document: %v", err)
 				continue
 			}
 
@@ -249,7 +260,7 @@ func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- stri
 	for truncated {
 		polList, err := c.ListAttachedGroupPolicies(&listPolInput)
 		if err != nil {
-			//r.log.Errorf("Error calling ListAttachedGroupPolicies(): %v", err)
+			r.error("Error calling ListAttachedGroupPolicies(): %v", err)
 			break
 		}
 
@@ -257,20 +268,20 @@ func (r *awsRoleGetter) attachedGroupRoles(c *iam.IAM, g *string, ch chan<- stri
 			getPolInput := iam.GetPolicyInput{PolicyArn: p.PolicyArn}
 			getPolRes, err := c.GetPolicy(&getPolInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetPolicy(): %v", err)
+				r.error("Error calling GetPolicy(): %v", err)
 				continue
 			}
 
 			getVerInput := iam.GetPolicyVersionInput{PolicyArn: getPolRes.Policy.Arn, VersionId: getPolRes.Policy.DefaultVersionId}
 			getVerRes, err := c.GetPolicyVersion(&getVerInput)
 			if err != nil {
-				//r.log.Errorf("Error calling GetPolicyVersion(): %v", err)
+				r.error("Error calling GetPolicyVersion(): %v", err)
 				continue
 			}
 
 			roles, err := parsePolicy(getVerRes.PolicyVersion.Document)
 			if err != nil {
-				//r.log.Errorf("Error parsing policy document: %v", err)
+				r.error("Error parsing policy document: %v", err)
 				continue
 			}
 
