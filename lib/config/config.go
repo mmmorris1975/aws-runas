@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/aws-runas/lib/credentials"
+	"github.com/mmmorris1975/simple-logger"
 	"os"
 	"strings"
 	"time"
@@ -53,6 +54,7 @@ type configResolver struct {
 	profileConfig *AwsConfig
 	envConfig     *AwsConfig
 	userConfig    *AwsConfig
+	log           *simple_logger.Logger
 }
 
 // NewConfigResolver provides a default ConfigResolver which will consult the SDK config file ($HOME/.aws/config or
@@ -73,6 +75,11 @@ func NewConfigResolver(c *AwsConfig) (*configResolver, error) {
 	}
 
 	return r, nil
+}
+
+func (r *configResolver) WithLogger(l *simple_logger.Logger) *configResolver {
+	r.log = l
+	return r
 }
 
 // ResolveConfig will generate an AwsConfig object using a variety of sources.
@@ -268,8 +275,7 @@ func MergeConfig(conf ...*AwsConfig) *AwsConfig {
 }
 
 func (r *configResolver) debug(f string, v ...interface{}) {
-	// fixme since we don't have an AWS client, this method won't work.  Need another way to communicate log level
-	//if r.client != nil && r.client.ClientConfig("iam").Config.LogLevel.AtLeast(aws.LogDebug) {
-	//	r.log.Log(fmt.Sprintf(f, v...))
-	//}
+	if r.log != nil {
+		r.log.Debugf(f, v)
+	}
 }
