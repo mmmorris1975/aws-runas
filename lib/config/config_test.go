@@ -3,6 +3,7 @@ package config
 import (
 	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/aws-runas/lib/credentials"
+	"github.com/mmmorris1975/simple-logger"
 	"os"
 	"testing"
 	"time"
@@ -400,7 +401,18 @@ func TestConfigResolver_ResolveEnvConfig(t *testing.T) {
 		}
 	})
 
-	t.Run("bad duration", func(t *testing.T) {
+	t.Run("bad session duration", func(t *testing.T) {
+		os.Setenv(SessionDurationEnvVar, "ab")
+		defer os.Unsetenv(SessionDurationEnvVar)
+
+		_, err := r.ResolveEnvConfig()
+		if err == nil {
+			t.Error("did not see expected error")
+			return
+		}
+	})
+
+	t.Run("bad role duration", func(t *testing.T) {
 		os.Setenv(RoleDurationEnvVar, "ab")
 		defer os.Unsetenv(RoleDurationEnvVar)
 
@@ -470,4 +482,27 @@ func TestMergeConfig(t *testing.T) {
 			t.Error("bad role")
 		}
 	})
+}
+
+func TestConfigResolver_WithLogger(t *testing.T) {
+	r := new(configResolver).WithLogger(simple_logger.StdLogger)
+	if r.log == nil {
+		t.Error("unexpected nil logger")
+	}
+}
+
+func ExampleDebugNilLogger() {
+	r := new(configResolver)
+	r.debug("test")
+	// Output:
+	//
+}
+
+func ExampleDebug() {
+	l := simple_logger.NewLogger(os.Stdout, "", 0)
+	l.SetLevel(simple_logger.DEBUG)
+	r := new(configResolver).WithLogger(l)
+	r.debug("test")
+	// Output:
+	// DEBUG test
 }
