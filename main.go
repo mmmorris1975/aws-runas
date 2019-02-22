@@ -320,7 +320,7 @@ func assumeRoleCacheFile() string {
 	p := *profile
 	if *profile == cfg.RoleArn {
 		a, _ := arn.Parse(*profile) // if we get this far, it's assumed the ARN will parse
-		r := strings.Split("/", a.Resource)
+		r := strings.Split(a.Resource, "/")
 		p = fmt.Sprintf("%s-%s", a.AccountID, r[len(r)-1])
 	}
 
@@ -332,7 +332,11 @@ func assumeRoleCacheFile() string {
 func sessionTokenCacheFile() string {
 	p := cfg.SourceProfile
 	if len(p) < 1 {
-		p = *profile
+		if len(*profile) > 1 {
+			p = *profile
+		} else {
+			p = "default"
+		}
 	}
 
 	cf := fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p)
@@ -361,6 +365,7 @@ func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
 		p.Duration = cfg.RoleDuration
 		p.ExpiryWindow = ew
 		p.Cache = &cache.FileCredentialCache{Path: assumeRoleCacheFile()}
+		p.WithLogger(log)
 	})
 }
 
@@ -379,6 +384,7 @@ func sessionTokenCredentials() *credentials.Credentials {
 		p.TokenProvider = credlib.StdinTokenProvider
 		p.Duration = cfg.SessionDuration
 		p.ExpiryWindow = ew
+		p.WithLogger(log)
 	})
 }
 
@@ -487,13 +493,14 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 	// profile was not a role ARN (implies that it's a profile in the config file)
 	if profile != cfg.RoleArn {
 		p = profile
-		if len(cfg.SourceProfile) > 0 {
-			p = cfg.SourceProfile
-		}
 	} else {
 		// profile appears to be an ARN, and may have been set as the AWS_PROFILE env var.  Unset that to allow
 		// the SDK session to properly resolve credentials
 		os.Unsetenv(config.ProfileEnvVar)
+	}
+
+	if len(cfg.SourceProfile) > 0 {
+		p = cfg.SourceProfile
 	}
 	opts.Profile = p
 

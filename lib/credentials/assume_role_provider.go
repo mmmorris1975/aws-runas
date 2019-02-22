@@ -28,6 +28,8 @@ const (
 type AssumeRoleProvider struct {
 	credentials.Expiry
 	client          stscreds.AssumeRoler
+	cfg             *aws.Config
+	log             aws.Logger
 	RoleARN         string
 	RoleSessionName string
 	ExternalID      string
@@ -48,6 +50,7 @@ type AssumeRoleProvider struct {
 func NewAssumeRoleCredentials(c client.ConfigProvider, roleArn string, options ...func(*AssumeRoleProvider)) *credentials.Credentials {
 	p := &AssumeRoleProvider{
 		client:       sts.New(c),
+		cfg:          c.ClientConfig("sts").Config,
 		RoleARN:      roleArn,
 		Duration:     AssumeRoleDefaultDuration,
 		ExpiryWindow: AssumeRoleDefaultDuration / 10,
@@ -58,6 +61,12 @@ func NewAssumeRoleCredentials(c client.ConfigProvider, roleArn string, options .
 	}
 
 	return credentials.NewCredentials(p)
+}
+
+// WithLogger configures a conforming Logger
+func (p *AssumeRoleProvider) WithLogger(l aws.Logger) *AssumeRoleProvider {
+	p.log = l
+	return p
 }
 
 // Retrieve implements the AWS credentials.Provider interface to return a set of Assume Role credentials.
@@ -74,11 +83,13 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 			// May want to log/notify that a failure happened, for troubleshooting
 			p.Expiry.SetExpiration(time.Now(), SessionTokenMaxDuration)
 		} else {
+			p.debug("Found cached assume role credentials")
 			p.Expiry.SetExpiration(time.Unix(cc.Expiration, 0), p.ExpiryWindow)
 		}
 	}
 
 	if p.IsExpired() {
+		p.debug("Detected expired or unset assume role credentials, refreshing")
 		c, err := p.assumeRole()
 		if err != nil {
 			return credentials.Value{}, err
@@ -96,11 +107,12 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 
 		if p.Cache != nil {
 			if err := p.Cache.Store(cc); err != nil {
-				// todo do we care?  Maybe just log?
+				p.debug("error caching credentials: %v", err)
 			}
 		}
 	}
 
+	p.debug("ASSUME ROLE CREDENTIALS: %+v", cc.Value)
 	return cc.Value, nil
 }
 
@@ -135,7 +147,6 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 		return nil, err
 	}
 	p.Expiry.SetExpiration(*o.Credentials.Expiration, p.ExpiryWindow)
-
 	return o.Credentials, nil
 }
 
@@ -143,6 +154,12 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 // using the provided AssumeRoleInput
 func (p *AssumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error) {
 	return p.client.AssumeRole(input)
+}
+
+func (p *AssumeRoleProvider) debug(f string, v ...interface{}) {
+	if p.cfg != nil && p.cfg.LogLevel.AtLeast(aws.LogDebug) {
+		p.log.Log(fmt.Sprintf(f, v...))
+	}
 }
 
 // StdinTokenProvider will print a prompt to Stdout for a user to enter the MFA code

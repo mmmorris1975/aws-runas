@@ -156,7 +156,7 @@ func (r *configResolver) ResolveDefaultConfig() (*AwsConfig, error) {
 	if err := s.MapTo(c); err != nil {
 		return nil, err
 	}
-	r.defaultConfig = &AwsConfig{Region: c.Region, SessionDuration: c.SessionDuration, RoleDuration: c.RoleDuration}
+	r.defaultConfig = &AwsConfig{Region: c.Region, SessionDuration: c.SessionDuration, RoleDuration: c.RoleDuration, SourceProfile: p}
 
 	r.debug("DEFAULT CONFIG: %+v", r.defaultConfig)
 	return r.defaultConfig, nil

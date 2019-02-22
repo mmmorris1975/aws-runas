@@ -52,6 +52,7 @@ type awsRoleGetter struct {
 	log    aws.Logger
 }
 
+// WithLogger configures a conforming Logger
 func (r *awsRoleGetter) WithLogger(l aws.Logger) *awsRoleGetter {
 	r.log = l
 	return r

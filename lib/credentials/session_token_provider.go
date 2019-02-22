@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -28,6 +29,8 @@ type SessionTokenProvider struct {
 	credentials.Expiry
 	// Allow an sts.STS object, or conforming mock object as a client
 	client        stsiface.STSAPI
+	cfg           *aws.Config
+	log           aws.Logger
 	Duration      time.Duration
 	SerialNumber  string
 	TokenCode     string
@@ -44,6 +47,7 @@ type SessionTokenProvider struct {
 func NewSessionCredentials(c client.ConfigProvider, options ...func(*SessionTokenProvider)) *credentials.Credentials {
 	p := &SessionTokenProvider{
 		client:       sts.New(c),
+		cfg:          c.ClientConfig("sts").Config,
 		Duration:     SessionTokenDefaultDuration,
 		ExpiryWindow: SessionTokenDefaultDuration / 10,
 	}
@@ -53,6 +57,12 @@ func NewSessionCredentials(c client.ConfigProvider, options ...func(*SessionToke
 	}
 
 	return credentials.NewCredentials(p)
+}
+
+// WithLogger configures a conforming Logger
+func (s *SessionTokenProvider) WithLogger(l aws.Logger) *SessionTokenProvider {
+	s.log = l
+	return s
 }
 
 // Retrieve implements the AWS credentials.Provider interface to return a set of Session Token credentials.
@@ -69,11 +79,13 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 			// May want to log/notify that a failure happened, for troubleshooting
 			s.Expiry.SetExpiration(time.Now(), SessionTokenMaxDuration)
 		} else {
+			s.debug("Found cached session token credentials")
 			s.Expiry.SetExpiration(time.Unix(cc.Expiration, 0), s.ExpiryWindow)
 		}
 	}
 
 	if s.IsExpired() {
+		s.debug("Detected expired or unset session token credentials, refreshing")
 		c, err := s.getSessionToken()
 		if err != nil {
 			return credentials.Value{}, err
@@ -91,11 +103,12 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 
 		if s.Cache != nil {
 			if err := s.Cache.Store(cc); err != nil {
-				// todo do we care?  Maybe just log?
+				s.debug("error caching credentials: %v", err)
 			}
 		}
 	}
 
+	s.debug("SESSION TOKEN CREDENTIALS: %+v", cc.Value)
 	return cc.Value, nil
 }
 
@@ -126,6 +139,12 @@ func (s *SessionTokenProvider) getSessionToken() (*sts.Credentials, error) {
 	s.Expiry.SetExpiration(*o.Credentials.Expiration, s.ExpiryWindow)
 
 	return o.Credentials, nil
+}
+
+func (s *SessionTokenProvider) debug(f string, v ...interface{}) {
+	if s.cfg != nil && s.cfg.LogLevel.AtLeast(aws.LogDebug) {
+		s.log.Log(fmt.Sprintf(f, v...))
+	}
 }
 
 // Sanity check the requested duration, and fix if out of bounds
