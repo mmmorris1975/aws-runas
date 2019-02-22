@@ -2,74 +2,94 @@ package main
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	cfglib "github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	"os"
 	"strings"
 )
 
-// RunDiagnostics will sanity check various configuration items
+// RunDiagnostics will sanity check various configuration items, print errors as we find them
 func runDiagnostics(c *config.AwsConfig) error {
-	if log != nil {
-		log.Debugf("Diagnostics")
-	}
-
-	// fixme - this really isn't valid, since role could be provided via cmdline arg or env var, so there is no source profile
-	//if len(cfg.RoleArn) > 0 && len(cfg.SourceProfile) < 1 {
-	//	log.Fatalf("source_profile attribute is required when role_arn is set for profile %s", *profile)
-	//}
+	log.Debugf("Diagnostics")
 
 	envAk := os.Getenv("AWS_ACCESS_KEY_ID")
 	envSt := os.Getenv("AWS_SESSION_TOKEN")
 
 	if len(envAk) > 0 && len(envSt) > 0 {
 		if strings.HasPrefix(envAk, "AKIA") {
-			return fmt.Errorf("detected static access key env var along with session token env var, this is invalid")
+			log.Errorf("detected static access key env var along with session token env var, this is invalid")
 		}
 	}
 
-	//fmt.Printf("PROFILE: %s\n", p.Name)
-	fmt.Printf("ROLE ARN: %s\n", c.RoleArn)
-	fmt.Printf("MFA SERIAL: %s\n", c.MfaSerial)
-	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalID)
-	//fmt.Printf("ROLE SESSION NAME: %s\n", c.RoleSessionName)
-	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionDuration)
-	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.RoleDuration)
+	// Check that region is set
+	if len(c.Region) < 1 {
+		log.Errorf("region is not set, it must be specified in the config file or as an environment var")
+	}
+
+	if len(*profile) < 1 {
+		log.Warn("No profile specified, will only check default section. Provide a profile name for more validation")
+		profile = aws.String("default")
+	}
+
+	if *profile == c.RoleArn {
+		// profile was a Role ARN, config will be whatever was explicitly passed + env var config,
+		// and possibly a default config, if the config file exists and has the default section
+		log.Infof("Role ARN provided as the profile, configuration file will not be checked")
+	} else {
+		// profile is a config profile name
+		if len(*profile) > 0 {
+			var cfgCreds bool
+
+			if len(c.RoleArn) > 0 {
+				// provided profile uses a role, so it must have a valid source_profile attribute
+				if len(c.SourceProfile) < 1 {
+					log.Errorf("missing source_profile configuration for profile '%s'", *profile)
+				} else {
+					// source_profile name must exist in the credentials file
+					cfgCreds = checkCredentialProfile(c.SourceProfile)
+				}
+			} else {
+				// not a profile with a role, must have matching section in creds file
+				cfgCreds = checkCredentialProfile(*profile)
+			}
+
+			// check for profile creds and env var creds at the same time
+			if cfgCreds && len(envAk) > 0 {
+				log.Errorf("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+			}
+		}
+	}
+
+	fmt.Printf("PROFILE: %s\n", *profile)
 	fmt.Printf("REGION: %s\n", c.Region)
 	fmt.Printf("SOURCE PROFILE: %s\n", c.SourceProfile)
-
-	// fixme
-	//c := AwsCredentialsFile()
-	//f, err := ini.Load(c)
-	//if err != nil {
-	//	return err
-	//}
-	//f.BlockMode = false
-	//
-	//profile := c.SourceProfile
-	//if len(profile) < 1 {
-	//	profile = p.Name
-	//}
-	//
-	//s, err := f.GetSection(profile)
-	//if err != nil {
-	//	// if access key envvar exists, assume creds are configured as envvars and not in credentials file
-	//	// otherwise, flag as an error, since creds are totally missing
-	//	if len(envAk) < 1 {
-	//		return fmt.Errorf("missing [%s] section in credentials file %s", profile, c)
-	//	}
-	//
-	//}
-	//
-	//if s.HasKey("aws_access_key_id") && s.HasKey("aws_secret_access_key") {
-	//	if len(envAk) > 0 || len(envSt) > 0 {
-	//		return fmt.Errorf("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
-	//	}
-	//} else {
-	//	// section is in cred file, but one or both of the cred keys are missing
-	//	if len(envAk) < 1 {
-	//		return fmt.Errorf("profile found in credentials file, but missing credential configuration")
-	//	}
-	//}
+	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionDuration)
+	fmt.Printf("MFA SERIAL: %s\n", c.MfaSerial)
+	fmt.Printf("ROLE ARN: %s\n", c.RoleArn)
+	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalID)
+	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.RoleDuration)
 
 	return nil
+}
+
+func checkCredentialProfile(profile string) bool {
+	cfg, err := cfglib.NewAwsCredentialsFile(nil)
+	if err != nil {
+		log.Errorf("error loading credentials file: %v", err)
+		return false
+	}
+
+	p, err := cfg.Profile(profile)
+	if err != nil {
+		log.Errorf("error loading profile credentials: %v", err)
+		return false
+	}
+
+	if !p.HasKey("aws_access_key_id") || !p.HasKey("aws_secret_access_key") {
+		log.Errorf("incomplete or missing credentials for profile '%s'", profile)
+		return false
+	}
+
+	return true
 }
