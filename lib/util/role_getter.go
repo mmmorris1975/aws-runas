@@ -332,7 +332,7 @@ func findRoles(data interface{}) *[]string {
 				if v == assumeRoleAction {
 					isAssumeRole = true
 				}
-			case []string:
+			case []interface{}:
 				for _, val := range v {
 					if val == assumeRoleAction {
 						isAssumeRole = true

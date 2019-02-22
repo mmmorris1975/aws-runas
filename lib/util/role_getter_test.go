@@ -83,7 +83,7 @@ func TestParsePolicy(t *testing.T) {
 			return
 		}
 
-		if !reflect.DeepEqual(r, Roles([]string{"x", "y", "z"})) {
+		if !reflect.DeepEqual(r, Roles([]string{"a", "x", "y", "z"})) {
 			t.Errorf("unexpected Roles value")
 		}
 	})
@@ -170,4 +170,32 @@ func ExampleDebugSimpleLogger() {
 	r.debug("test")
 	// Output:
 	// DEBUG test
+}
+
+func ExampleErrorNilLogger() {
+	r := NewAwsRoleGetter(nil, "u")
+	r.error("test")
+	// Output:
+	//
+}
+
+func ExampleErrorAwsLogger() {
+	l := aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
+	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
+	s := session.Must(session.NewSession(c))
+	r := NewAwsRoleGetter(s, "u").WithLogger(l)
+	r.error("test")
+	// Output:
+	// test
+}
+
+func ExampleErrorSimpleLogger() {
+	l := simple_logger.NewLogger(os.Stdout, "", 0)
+	l.SetLevel(simple_logger.INFO)
+	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
+	s := session.Must(session.NewSession(c))
+	r := NewAwsRoleGetter(s, "u").WithLogger(l)
+	r.error("test")
+	// Output:
+	// ERROR test
 }
