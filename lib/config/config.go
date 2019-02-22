@@ -137,7 +137,7 @@ func (r *configResolver) ResolveConfig(profile string) (*AwsConfig, error) {
 		c.RoleDuration = credentials.AssumeRoleDefaultDuration
 	}
 
-	r.debug("MERGED CONFIG: %+v", c)
+	r.debug("MERGED CONFIG: %+v", *c)
 	return c, nil
 }
 
@@ -165,7 +165,7 @@ func (r *configResolver) ResolveDefaultConfig() (*AwsConfig, error) {
 	}
 	r.defaultConfig = &AwsConfig{Region: c.Region, SessionDuration: c.SessionDuration, RoleDuration: c.RoleDuration, SourceProfile: p}
 
-	r.debug("DEFAULT CONFIG: %+v", r.defaultConfig)
+	r.debug("DEFAULT CONFIG: %+v", *r.defaultConfig)
 	return r.defaultConfig, nil
 }
 
@@ -186,7 +186,7 @@ func (r *configResolver) ResolveProfileConfig(profile string) (*AwsConfig, error
 	}
 	r.profileConfig = c
 
-	r.debug("PROFILE '%s' CONFIG: %+v", r.profileConfig)
+	r.debug("PROFILE '%s' CONFIG: %+v", profile, *r.profileConfig)
 	return r.profileConfig, nil
 }
 
@@ -229,7 +229,7 @@ func (r *configResolver) ResolveEnvConfig() (*AwsConfig, error) {
 	}
 
 	r.envConfig = c
-	r.debug("ENV CONFIG: %+v", r.envConfig)
+	r.debug("ENV CONFIG: %+v", *r.envConfig)
 	return r.envConfig, nil
 }
 
@@ -276,6 +276,6 @@ func MergeConfig(conf ...*AwsConfig) *AwsConfig {
 
 func (r *configResolver) debug(f string, v ...interface{}) {
 	if r.log != nil {
-		r.log.Debugf(f, v)
+		r.log.Debugf(f, v...)
 	}
 }

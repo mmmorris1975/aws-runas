@@ -474,6 +474,7 @@ func resolveConfig() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	r.WithLogger(log)
 
 	cfg, err = r.ResolveConfig(*profile)
 	if err != nil {
