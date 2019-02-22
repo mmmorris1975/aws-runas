@@ -172,6 +172,9 @@ func wrapCmd(cmd *[]string) *[]string {
 	// If on a non-windows platform, with the SHELL environment variable set, and a call to
 	// exec.LookPath() for the command fails, run the command in a sub-shell so we can support shell aliases.
 	newCmd := make([]string, 0)
+	if cmd == nil || len(*cmd) < 1 {
+		return &newCmd
+	}
 
 	if runtime.GOOS != "windows" {
 		c, err := exec.LookPath((*cmd)[0])
@@ -231,7 +234,7 @@ func updateEnv(creds credentials.Value) {
 	// Pass AWS_REGION through if it was set in our env, or found in config.
 	// Ensure that called program gets the expected region.  Also set AWS_DEFAULT_REGION
 	// so awscli works as expected, otherwise it will use any region from the profile
-	if len(cfg.Region) > 0 {
+	if cfg != nil && len(cfg.Region) > 0 {
 		os.Setenv(config.RegionEnvVar, cfg.Region)
 		os.Setenv(config.DefaultRegionEnvVar, cfg.Region)
 	}
@@ -255,12 +258,7 @@ func handleUserCreds() *credentials.Credentials {
 	var c *credentials.Credentials
 	var sc *credentials.Credentials
 
-	if *refresh {
-		if !*sesCreds {
-			os.Remove(assumeRoleCacheFile())
-		}
-		os.Remove(sessionTokenCacheFile())
-	}
+	checkRefresh()
 
 	if cfg.RoleDuration > 1*time.Hour {
 		// Not allowed to use session tokens to fetch assume role credentials > 1h
@@ -283,6 +281,15 @@ func handleUserCreds() *credentials.Credentials {
 	}
 
 	return c
+}
+
+func checkRefresh() {
+	if *refresh {
+		if !*sesCreds {
+			os.Remove(assumeRoleCacheFile())
+		}
+		os.Remove(sessionTokenCacheFile())
+	}
 }
 
 func printCredExpire() {
@@ -325,14 +332,16 @@ func assumeRoleCacheFile() string {
 	}
 
 	cf := fmt.Sprintf("%s_%s", assumeRoleCachePrefix, p)
-	log.Debugf("AssumeRole CACHE PATH: %s", cf)
+	if log != nil {
+		log.Debugf("AssumeRole CACHE PATH: %s", cf)
+	}
 	return cacheFile(cf)
 }
 
 func sessionTokenCacheFile() string {
 	p := cfg.SourceProfile
 	if len(p) < 1 {
-		if len(*profile) > 1 {
+		if len(*profile) > 0 {
 			p = *profile
 		} else {
 			p = "default"
@@ -340,7 +349,9 @@ func sessionTokenCacheFile() string {
 	}
 
 	cf := fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p)
-	log.Debugf("SessionToken CACHE PATH: %s", cf)
+	if log != nil {
+		log.Debugf("SessionToken CACHE PATH: %s", cf)
+	}
 	return cacheFile(cf)
 }
 
