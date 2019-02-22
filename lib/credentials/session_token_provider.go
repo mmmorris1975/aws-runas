@@ -113,7 +113,7 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (s *SessionTokenProvider) getSessionToken() (*sts.Credentials, error) {
-	i := new(sts.GetSessionTokenInput).SetDurationSeconds(validateSessionDuration(s.Duration))
+	i := new(sts.GetSessionTokenInput).SetDurationSeconds(s.validateSessionDuration(s.Duration))
 	if len(s.SerialNumber) > 0 {
 		i.SerialNumber = &s.SerialNumber
 
@@ -148,16 +148,18 @@ func (s *SessionTokenProvider) debug(f string, v ...interface{}) {
 }
 
 // Sanity check the requested duration, and fix if out of bounds
-func validateSessionDuration(d time.Duration) int64 {
-	s := int64(d.Seconds())
+func (s *SessionTokenProvider) validateSessionDuration(d time.Duration) int64 {
+	i := int64(d.Seconds())
 
 	if d < SessionTokenMinDuration {
-		s = int64(SessionTokenMinDuration.Seconds())
+		s.debug("Session token duration too short")
+		i = int64(SessionTokenMinDuration.Seconds())
 	}
 
 	if d > SessionTokenMaxDuration {
-		s = int64(SessionTokenMaxDuration.Seconds())
+		s.debug("Session token duration too long")
+		i = int64(SessionTokenMaxDuration.Seconds())
 	}
 
-	return s
+	return i
 }

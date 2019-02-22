@@ -117,7 +117,7 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
-	i := new(sts.AssumeRoleInput).SetDurationSeconds(validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
+	i := new(sts.AssumeRoleInput).SetDurationSeconds(p.validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
 		SetRoleSessionName(p.RoleSessionName)
 
 	if len(p.ExternalID) > 0 {
@@ -170,14 +170,16 @@ func StdinTokenProvider() (string, error) {
 	return mfaCode, err
 }
 
-func validateDuration(d time.Duration) int64 {
+func (p *AssumeRoleProvider) validateDuration(d time.Duration) int64 {
 	s := int64(d.Seconds())
 
 	if d < AssumeRoleMinDuration {
+		p.debug("Assume role duration too short")
 		s = int64(AssumeRoleMinDuration.Seconds())
 	}
 
 	if d > AssumeRoleMaxDuration {
+		p.debug("Assume role duration too long")
 		s = int64(AssumeRoleMaxDuration.Seconds())
 	}
 
