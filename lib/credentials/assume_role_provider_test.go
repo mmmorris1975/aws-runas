@@ -2,9 +2,11 @@ package credentials
 
 import (
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/mmmorris1975/aws-runas/lib/cache"
+	"os"
 	"testing"
 	"time"
 )
@@ -235,4 +237,50 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestAssumeRoleProvider_WithLogger(t *testing.T) {
+	p := new(AssumeRoleProvider).WithLogger(aws.NewDefaultLogger())
+	if p.log == nil {
+		t.Error("unexpected nil logger")
+	}
+}
+
+func ExampleStdinTokenProvider() {
+	StdinTokenProvider()
+	// Output:
+	// Enter MFA Code:
+}
+
+func ExampleRoleDebugNilCfg() {
+	p := new(AssumeRoleProvider)
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleRoleDebugNoLog() {
+	p := new(AssumeRoleProvider)
+	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleRoleDebugLogLevelOff() {
+	p := new(AssumeRoleProvider)
+	p.cfg = new(aws.Config)
+	p.log = aws.NewDefaultLogger()
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleRoleDebugLogLevelDebug() {
+	p := new(AssumeRoleProvider)
+	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
+	p.log = aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
+	p.debug("test")
+	// Output:
+	// test
 }

@@ -8,6 +8,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	"github.com/mmmorris1975/aws-runas/lib/cache"
+	"os"
 	"testing"
 	"time"
 )
@@ -295,4 +296,44 @@ func TestSessionTokenProvider_Retrieve(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestSessionTokenProvider_WithLogger(t *testing.T) {
+	p := new(SessionTokenProvider).WithLogger(aws.NewDefaultLogger())
+	if p.log == nil {
+		t.Error("unexpected nil logger")
+	}
+}
+
+func ExampleSessionDebugNilCfg() {
+	p := new(SessionTokenProvider)
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleSessionDebugNoLog() {
+	p := new(SessionTokenProvider)
+	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleSessionDebugLogLevelOff() {
+	p := new(SessionTokenProvider)
+	p.cfg = new(aws.Config)
+	p.log = aws.NewDefaultLogger()
+	p.debug("test")
+	// Output:
+	//
+}
+
+func ExampleSessionDebugLogLevelDebug() {
+	p := new(SessionTokenProvider)
+	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
+	p.log = aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
+	p.debug("test")
+	// Output:
+	// test
 }

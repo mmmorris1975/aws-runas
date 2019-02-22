@@ -142,7 +142,7 @@ func (s *SessionTokenProvider) getSessionToken() (*sts.Credentials, error) {
 }
 
 func (s *SessionTokenProvider) debug(f string, v ...interface{}) {
-	if s.cfg != nil && s.cfg.LogLevel.AtLeast(aws.LogDebug) {
+	if s.cfg != nil && s.cfg.LogLevel.AtLeast(aws.LogDebug) && s.log != nil {
 		s.log.Log(fmt.Sprintf(f, v...))
 	}
 }

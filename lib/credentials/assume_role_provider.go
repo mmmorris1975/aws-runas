@@ -157,7 +157,7 @@ func (p *AssumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 }
 
 func (p *AssumeRoleProvider) debug(f string, v ...interface{}) {
-	if p.cfg != nil && p.cfg.LogLevel.AtLeast(aws.LogDebug) {
+	if p.cfg != nil && p.cfg.LogLevel.AtLeast(aws.LogDebug) && p.log != nil {
 		p.log.Log(fmt.Sprintf(f, v...))
 	}
 }
