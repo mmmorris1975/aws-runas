@@ -365,6 +365,7 @@ func TestConfigResolver_ResolveProfileConfig(t *testing.T) {
 }
 
 func TestConfigResolver_ResolveEnvConfig(t *testing.T) {
+	os.Setenv(config.ConfigFileEnvVar, "../../.aws/config")
 	env := make(map[string]string)
 	env[RegionEnvVar] = "us-east-2"
 	env[ProfileEnvVar] = "profile"
