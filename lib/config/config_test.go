@@ -10,6 +10,7 @@ import (
 )
 
 func TestNewConfigResolver(t *testing.T) {
+	os.Setenv(config.ConfigFileEnvVar, "../../.aws/config")
 	t.Run("nil config", func(t *testing.T) {
 		r, err := NewConfigResolver(nil)
 		if err != nil {
