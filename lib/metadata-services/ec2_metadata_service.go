@@ -3,6 +3,7 @@ package metadata_services
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/mmmorris1975/simple-logger"
 	"net"
 	"net/http"
 	"time"
@@ -35,15 +36,17 @@ type ec2MetadataOutput struct {
 // requests for instance profile credentials.  SDKs will first look up the path in EC2MetadataCredentialPath,
 // which returns the name of the instance profile in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
-func NewEC2MetadataService(c *credentials.Credentials, profile string) error {
-	//log := lib.NewLogger("aws-runas.EC2MetadataService", options.LogLevel)
+func NewEC2MetadataService(c *credentials.Credentials, profile string, logLevel uint) error {
+	log := simple_logger.StdLogger
+	log.SetLevel(logLevel)
+
 	addr := EC2MetadataAddress
 
 	lo, err := discoverLoopback()
 	if err != nil {
 		return err
 	}
-	//log.Debugf("LOOPBACK INTERFACE: %s", lo)
+	log.Debugf("LOOPBACK INTERFACE: %s", lo)
 
 	if err := addAddress(lo, addr); err != nil {
 		if err := removeAddress(lo, addr); err != nil {
@@ -59,7 +62,7 @@ func NewEC2MetadataService(c *credentials.Credentials, profile string) error {
 	http.HandleFunc(EC2MetadataCredentialPath+profile, func(writer http.ResponseWriter, request *http.Request) {
 		v, err := c.Get()
 		if err != nil {
-			//log.Errorf("AssumeRole(): %v", err)
+			log.Errorf("AssumeRole(): %v", err)
 			http.Error(writer, "Error fetching role credentials", http.StatusInternalServerError)
 			return
 		}
@@ -75,29 +78,29 @@ func NewEC2MetadataService(c *credentials.Credentials, profile string) error {
 			Token:           v.SessionToken,
 			Expiration:      time.Now().Add(901 * time.Second).UTC().Format(time.RFC3339),
 		}
-		//log.Debugf("%+v", output)
+		log.Debugf("%+v", output)
 
 		j, err := json.Marshal(output)
 		if err != nil {
-			//log.Errorf("json.Marshal(): %v", err)
+			log.Errorf("json.Marshal(): %v", err)
 			http.Error(writer, "Error marshalling credentials to json", http.StatusInternalServerError)
 			return
 		}
 
 		writer.Header().Set("Content-Type", "text/plain")
 		writer.Write(j)
-		//log.Infof("%s %d %d", request.URL.Path, http.StatusOK, len(j))
+		log.Infof("%s %d %d", request.URL.Path, http.StatusOK, len(j))
 	})
 
 	http.HandleFunc(EC2MetadataCredentialPath, func(writer http.ResponseWriter, request *http.Request) {
 		writer.Header().Set("Content-Type", "text/plain")
 		writer.Write([]byte(profile))
-		//log.Debugf("Returning profile name %s", profile.Name)
+		log.Debugf("Returning profile name %s", profile)
 	})
 
 	http.Handle("/", http.NotFoundHandler())
 
 	hp := net.JoinHostPort(addr.String(), "80")
-	//log.Infof("EC2 Metadata Service ready on %s", hp)
+	log.Infof("EC2 Metadata Service ready on %s", hp)
 	return http.ListenAndServe(hp, nil)
 }

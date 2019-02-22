@@ -431,7 +431,7 @@ func metadataServer() {
 		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
 		ar.Get()
 
-		log.Fatal(metadata_services.NewEC2MetadataService(ar, *profile))
+		log.Fatal(metadata_services.NewEC2MetadataService(ar, *profile, log.Level))
 	}
 }
 
