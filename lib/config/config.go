@@ -36,6 +36,7 @@ const (
 // ConfigResolver is the interface for retrieving AWS SDK configuration from a source
 type ConfigResolver interface {
 	ResolveConfig(string) (*AwsConfig, error)
+	ListProfiles(bool) []string
 }
 
 // AwsConfig is the type used to hold the configuration details retrieved from a given source.
