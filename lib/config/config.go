@@ -3,10 +3,12 @@ package config
 import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/go-ini/ini"
 	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/simple-logger"
 	"os"
+	"sort"
 	"strings"
 	"time"
 )
@@ -77,9 +79,31 @@ func NewConfigResolver(c *AwsConfig) (*configResolver, error) {
 	return r, nil
 }
 
+// WithLogger configures the provided logger in the config resolver
 func (r *configResolver) WithLogger(l *simple_logger.Logger) *configResolver {
 	r.log = l
 	return r
+}
+
+func (r *configResolver) ListProfiles(roles bool) []string {
+	profiles := make([]string, 0)
+	for _, s := range r.file.Sections() {
+		if s.Name() == ini.DEFAULT_SECTION {
+			continue
+		}
+
+		n := strings.TrimPrefix(s.Name(), "profile ")
+		if roles {
+			if s.HasKey("role_arn") {
+				profiles = append(profiles, n)
+			}
+		} else {
+			profiles = append(profiles, n)
+		}
+	}
+
+	sort.Strings(profiles)
+	return profiles
 }
 
 // ResolveConfig will generate an AwsConfig object using a variety of sources.

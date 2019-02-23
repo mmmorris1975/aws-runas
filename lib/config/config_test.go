@@ -5,6 +5,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/simple-logger"
 	"os"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -482,6 +483,33 @@ func TestMergeConfig(t *testing.T) {
 
 		if c.RoleArn != "my-role" {
 			t.Error("bad role")
+		}
+	})
+}
+
+func TestConfigResolver_ListProfiles(t *testing.T) {
+	os.Setenv(config.ConfigFileEnvVar, "test/config")
+	defer os.Unsetenv(config.ConfigFileEnvVar)
+
+	c, err := NewConfigResolver(nil)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Run("all", func(t *testing.T) {
+		p := c.ListProfiles(false)
+		e := []string{"default", "role1", "role2", "role3", "source"}
+		if !reflect.DeepEqual(e, p) {
+			t.Error("profile list mismatch")
+		}
+	})
+
+	t.Run("roles only", func(t *testing.T) {
+		r := c.ListProfiles(true)
+		e := []string{"role1", "role2", "role3"}
+		if !reflect.DeepEqual(e, r) {
+			t.Error("role list mismatch")
 		}
 	})
 }
