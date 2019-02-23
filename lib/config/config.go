@@ -85,6 +85,9 @@ func (r *configResolver) WithLogger(l *simple_logger.Logger) *configResolver {
 	return r
 }
 
+// ListProfiles will return an array of profile names found in the config file.  If the roles arg is false,
+// then all profile sections found in the config file will be returned; otherwise only profile sections which
+// have the role_arn property will be returned.
 func (r *configResolver) ListProfiles(roles bool) []string {
 	profiles := make([]string, 0)
 	for _, s := range r.file.Sections() {
