@@ -10,7 +10,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/dustin/go-humanize"
 	"github.com/mmmorris1975/aws-runas/lib/cache"
 	"github.com/mmmorris1975/aws-runas/lib/config"
@@ -50,7 +49,7 @@ var (
 	log          *simple_logger.Logger
 	ses          *session.Session
 	cfg          *config.AwsConfig
-	usr          *awsIdentity
+	usr          *credlib.AwsIdentity
 )
 
 func init() {
@@ -522,6 +521,8 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 }
 
 func awsUser(resetEnv bool) {
+	var err error
+
 	if resetEnv {
 		os.Unsetenv("AWS_ACCESS_KEY_ID")
 		os.Unsetenv("AWS_ACCESS_KEY")
@@ -532,8 +533,7 @@ func awsUser(resetEnv bool) {
 		os.Unsetenv(config.ProfileEnvVar)
 	}
 
-	c := sts.New(ses)
-	o, err := c.GetCallerIdentity(new(sts.GetCallerIdentityInput))
+	usr, err = credlib.NewAwsIdentityManager(ses).WithLogger(log).GetCallerIdentity()
 	if err != nil {
 		if resetEnv {
 			log.Fatalf("Error getting IAM user info: %v", err)
@@ -542,23 +542,4 @@ func awsUser(resetEnv bool) {
 		log.Warn("Error getting IAM user info, retrying with AWS credential env vars unset")
 		awsUser(true)
 	}
-
-	a, err := arn.Parse(*o.Arn)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	id := awsIdentity{Identity: o}
-
-	r := strings.Split(a.Resource, "/")
-	id.IdentityType = r[0]
-	id.UserName = r[len(r)-1]
-
-	usr = &id
-}
-
-type awsIdentity struct {
-	Identity     *sts.GetCallerIdentityOutput
-	IdentityType string
-	UserName     string
 }

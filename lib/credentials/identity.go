@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-type awsIdentity struct {
+type AwsIdentity struct {
 	Identity     *sts.GetCallerIdentityOutput
 	IdentityType string
 	UserName     string
@@ -36,7 +36,7 @@ func (m *AwsIdentityManager) WithLogger(l aws.Logger) *AwsIdentityManager {
 
 // GetCallerIdentity calls the STS GetCallerIdentity function to retrieve the AWS identity
 // information associated with the caller's credentials.
-func (m *AwsIdentityManager) GetCallerIdentity() (*awsIdentity, error) {
+func (m *AwsIdentityManager) GetCallerIdentity() (*AwsIdentity, error) {
 	o, err := m.client.GetCallerIdentity(new(sts.GetCallerIdentityInput))
 	if err != nil {
 		m.debug("error calling GetCallerIdentity(): %v", err)
@@ -49,7 +49,7 @@ func (m *AwsIdentityManager) GetCallerIdentity() (*awsIdentity, error) {
 		return nil, err
 	}
 
-	id := awsIdentity{Identity: o}
+	id := AwsIdentity{Identity: o}
 
 	r := strings.Split(a.Resource, "/")
 	id.IdentityType = r[0]

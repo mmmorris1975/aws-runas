@@ -16,7 +16,7 @@ func TestMain(m *testing.M) {
 	os.Setenv("AWS_CONFIG_FILE", ".aws/config")
 	profile = aws.String("x")
 	cfg = new(config.AwsConfig)
-	usr = new(awsIdentity)
+	usr = new(credlib.AwsIdentity)
 	awsSession(*profile, cfg)
 	os.Exit(m.Run())
 }
