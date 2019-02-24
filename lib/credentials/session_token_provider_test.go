@@ -31,6 +31,13 @@ func (c *mockStsClient) AssumeRole(in *sts.AssumeRoleInput) (*sts.AssumeRoleOutp
 	return &sts.AssumeRoleOutput{Credentials: buildCreds(*in.DurationSeconds)}, nil
 }
 
+func (c *mockStsClient) GetCallerIdentity(in *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	return new(sts.GetCallerIdentityOutput).
+		SetAccount("123456789012").
+		SetArn("arn:aws:iam::123456789012:user/bob").
+		SetUserId("AIDAB0B"), nil
+}
+
 func validateMfa(ser *string, code *string) error {
 	if ser != nil && len(*ser) > 0 {
 		if code != nil {
