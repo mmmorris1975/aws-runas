@@ -482,13 +482,14 @@ func resolveConfig() {
 	usrCfg := config.AwsConfig{MfaSerial: *mfaArn, SessionDuration: *duration, RoleDuration: *roleDuration}
 	r, err := config.NewConfigResolver(&usrCfg)
 	if err != nil {
-		log.Fatal(err)
+		log.Error(err)
+		log.Fatal("The error message above means the expected config file is missing or malformed")
 	}
 	r.WithLogger(log)
 
 	cfg, err = r.ResolveConfig(*profile)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatalf("ResolveConfig: %v", err)
 	}
 }
 
@@ -515,7 +516,7 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 	}
 	opts.Profile = p
 
-	// Do not set opts.SharedConfigState as enabled so we only get credentials for the profile.  We don't want the config
+	// Do not set opts.SharedConfigState to enabled so we only get credentials for the profile.  We don't want the config
 	// file values getting in the way (like prompting for MFA and assuming roles) at this point.
 	ses = session.Must(session.NewSessionWithOptions(opts))
 }
