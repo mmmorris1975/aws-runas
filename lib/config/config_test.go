@@ -464,7 +464,7 @@ func TestMergeConfig(t *testing.T) {
 		c := MergeConfig(
 			nil,
 			&AwsConfig{Region: "us-east-1"},
-			&AwsConfig{MfaSerial: "123456"},
+			&AwsConfig{MfaSerial: "123456", ExternalID: "abcdefg"},
 			nil,
 			&AwsConfig{Region: "us-east-2", RoleArn: "my-role"})
 
@@ -483,6 +483,10 @@ func TestMergeConfig(t *testing.T) {
 
 		if c.RoleArn != "my-role" {
 			t.Error("bad role")
+		}
+
+		if c.ExternalID != "abcdefg" {
+			t.Error("bad external ID")
 		}
 	})
 }

@@ -289,6 +289,10 @@ func MergeConfig(conf ...*AwsConfig) *AwsConfig {
 				cfg.SourceProfile = c.SourceProfile
 			}
 
+			if len(c.ExternalID) > 0 {
+				cfg.ExternalID = c.ExternalID
+			}
+
 			if c.SessionDuration > 0 {
 				cfg.SessionDuration = c.SessionDuration
 			}
