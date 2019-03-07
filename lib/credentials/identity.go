@@ -10,19 +10,21 @@ import (
 	"strings"
 )
 
+// AwsIdentity holds the identity information for a set of AWS credentials gathered via the sts.GetCallerIdentity API call
 type AwsIdentity struct {
 	Identity     *sts.GetCallerIdentityOutput
 	IdentityType string
 	UserName     string
 }
 
+// AwsIdentityManager provides the facility to fetch AwsIdentity information for the caller
 type AwsIdentityManager struct {
 	client stsiface.STSAPI
 	cfg    *aws.Config
 	log    aws.Logger
 }
 
-// Create a new AWS Identity Manager using the given ConfigProvider
+// NewAwsIdentityManager creates a new AWS Identity Manager using the given ConfigProvider/Session
 func NewAwsIdentityManager(c client.ConfigProvider) *AwsIdentityManager {
 	m := AwsIdentityManager{client: sts.New(c), cfg: c.ClientConfig("sts").Config}
 	return &m

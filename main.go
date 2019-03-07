@@ -14,7 +14,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/lib/cache"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
-	"github.com/mmmorris1975/aws-runas/lib/metadata-services"
+	"github.com/mmmorris1975/aws-runas/lib/metadata"
 	"github.com/mmmorris1975/aws-runas/lib/util"
 	"github.com/mmmorris1975/simple-logger"
 	"os"
@@ -449,7 +449,7 @@ func metadataServer() {
 		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
 		ar.Get()
 
-		log.Fatal(metadata_services.NewEC2MetadataService(ar, *profile, log.Level))
+		log.Fatal(metadata.NewEC2MetadataService(ar, *profile, log.Level))
 	}
 }
 

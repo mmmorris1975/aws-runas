@@ -1,4 +1,4 @@
-package metadata_services
+package metadata
 
 import (
 	"fmt"

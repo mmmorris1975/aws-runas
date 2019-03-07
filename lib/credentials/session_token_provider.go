@@ -16,7 +16,7 @@ const (
 	SessionTokenProviderName = "SessionTokenProvider"
 	// SessionTokenMinDuration is the minimum allowed Session Token credential duration by the AWS API
 	SessionTokenMinDuration = 15 * time.Minute
-	// SessionTokenMinDuration is the maximum allowed Session Token credential duration by the AWS API
+	// SessionTokenMaxDuration is the maximum allowed Session Token credential duration by the AWS API
 	SessionTokenMaxDuration = 36 * time.Hour
 	// SessionTokenDefaultDuration is a sensible default value for Session Token credential duration
 	SessionTokenDefaultDuration = 12 * time.Hour
