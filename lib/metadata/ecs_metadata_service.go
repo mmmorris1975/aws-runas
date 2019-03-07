@@ -12,7 +12,7 @@ func init() {
 	ECSMetadataAddress, _ = net.ResolveIPAddr("ip", ECSMetadataIp)
 }
 
-// NewECSMetadataService, once implemented, will provide an HTTP interface similar to the ECS task credential provider
+// NewECSMetadataService (once implemented) will provide an HTTP interface similar to the ECS task credential provider
 // endpoint in AWS
 func NewECSMetadataService() error {
 	// todo noop

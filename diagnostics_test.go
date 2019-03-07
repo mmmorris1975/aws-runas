@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-func ExampleCheckEnvFail() {
+func Example_CheckEnvFail() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAMOCK")
 	os.Setenv("AWS_SESSION_TOKEN", "token")
@@ -20,7 +20,7 @@ func ExampleCheckEnvFail() {
 	// ERROR detected static access key env var along with session token env var, this is invalid
 }
 
-func ExampleCheckEnvPass() {
+func Example_CheckEnvPass() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAMOCK")
 	defer func() { os.Unsetenv("AWS_ACCESS_KEY_ID"); os.Unsetenv("AWS_SESSION_TOKEN") }()
@@ -30,14 +30,14 @@ func ExampleCheckEnvPass() {
 	//
 }
 
-func ExampleCheckRegionFail() {
+func Example_CheckRegionFail() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
 	checkRegion(new(config.AwsConfig))
 	// Output:
 	// ERROR region is not set, it must be specified in the config file or as an environment variable
 }
 
-func ExampleCheckRegionPass() {
+func Example_CheckRegionPass() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
 	c := config.AwsConfig{Region: "us-east-3"}
 	checkRegion(&c)
@@ -45,7 +45,7 @@ func ExampleCheckRegionPass() {
 	//
 }
 
-func ExamplePrintConfig() {
+func Example_PrintConfig() {
 	c := new(config.AwsConfig)
 	c.Region = "us-east-3"
 	c.SourceProfile = "x"

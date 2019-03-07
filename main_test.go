@@ -44,7 +44,7 @@ func TestWrapCmd(t *testing.T) {
 	})
 }
 
-func ExamplePrintCredentials() {
+func Example_PrintCredentials() {
 	env := make(map[string]string)
 	env["AWS_ACCESS_KEY_ID"] = "AKIAMOCK"
 	env["AWS_SECRET_ACCESS_KEY"] = "SecretKey"
