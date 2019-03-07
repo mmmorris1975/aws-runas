@@ -144,14 +144,14 @@ func TestParsePolicy(t *testing.T) {
 	})
 }
 
-func Example_DebugNilClient() {
+func Example_debugNilClient() {
 	r := NewAwsRoleGetter(nil, "u")
 	r.debug("test")
 	// Output:
 	//
 }
 
-func Example_DebugAwsLogger() {
+func Example_debugAwsLogger() {
 	l := aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
 	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
 	s := session.Must(session.NewSession(c))
@@ -161,7 +161,7 @@ func Example_DebugAwsLogger() {
 	// test
 }
 
-func Example_DebugSimpleLogger() {
+func Example_debugSimpleLogger() {
 	l := simple_logger.NewLogger(os.Stdout, "", 0)
 	l.SetLevel(simple_logger.DEBUG)
 	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
@@ -172,14 +172,14 @@ func Example_DebugSimpleLogger() {
 	// DEBUG test
 }
 
-func Example_ErrorNilLogger() {
+func Example_errorNilLogger() {
 	r := NewAwsRoleGetter(nil, "u")
 	r.error("test")
 	// Output:
 	//
 }
 
-func Example_ErrorAwsLogger() {
+func Example_errorAwsLogger() {
 	l := aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
 	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)
 	s := session.Must(session.NewSession(c))
@@ -189,7 +189,7 @@ func Example_ErrorAwsLogger() {
 	// test
 }
 
-func Example_ErrorSimpleLogger() {
+func Example_errorSimpleLogger() {
 	l := simple_logger.NewLogger(os.Stdout, "", 0)
 	l.SetLevel(simple_logger.INFO)
 	c := new(aws.Config).WithLogger(l).WithLogLevel(aws.LogDebug)

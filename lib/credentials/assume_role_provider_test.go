@@ -246,20 +246,20 @@ func TestAssumeRoleProvider_WithLogger(t *testing.T) {
 	}
 }
 
-func Example_StdinTokenProvider() {
+func Example_stdinTokenProvider() {
 	StdinTokenProvider()
 	// Output:
 	// Enter MFA Code:
 }
 
-func Example_RoleDebugNilCfg() {
+func Example_roleDebugNilCfg() {
 	p := new(AssumeRoleProvider)
 	p.debug("test")
 	// Output:
 	//
 }
 
-func Example_RoleDebugNoLog() {
+func Example_roleDebugNoLog() {
 	p := new(AssumeRoleProvider)
 	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
 	p.debug("test")
@@ -267,7 +267,7 @@ func Example_RoleDebugNoLog() {
 	//
 }
 
-func Example_RoleDebugLogLevelOff() {
+func Example_roleDebugLogLevelOff() {
 	p := new(AssumeRoleProvider)
 	p.cfg = new(aws.Config)
 	p.log = aws.NewDefaultLogger()
@@ -276,7 +276,7 @@ func Example_RoleDebugLogLevelOff() {
 	//
 }
 
-func Example_RoleDebugLogLevelDebug() {
+func Example_roleDebugLogLevelDebug() {
 	p := new(AssumeRoleProvider)
 	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
 	p.log = aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })

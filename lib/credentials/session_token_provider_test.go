@@ -312,14 +312,14 @@ func TestSessionTokenProvider_WithLogger(t *testing.T) {
 	}
 }
 
-func Example_SessionDebugNilCfg() {
+func Example_sessionDebugNilCfg() {
 	p := new(SessionTokenProvider)
 	p.debug("test")
 	// Output:
 	//
 }
 
-func Example_SessionDebugNoLog() {
+func Example_sessionDebugNoLog() {
 	p := new(SessionTokenProvider)
 	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
 	p.debug("test")
@@ -327,7 +327,7 @@ func Example_SessionDebugNoLog() {
 	//
 }
 
-func Example_SessionDebugLogLevelOff() {
+func Example_sessionDebugLogLevelOff() {
 	p := new(SessionTokenProvider)
 	p.cfg = new(aws.Config)
 	p.log = aws.NewDefaultLogger()
@@ -336,7 +336,7 @@ func Example_SessionDebugLogLevelOff() {
 	//
 }
 
-func Example_SessionDebugLogLevelDebug() {
+func Example_sessionDebugLogLevelDebug() {
 	p := new(SessionTokenProvider)
 	p.cfg = new(aws.Config).WithLogLevel(aws.LogDebug)
 	p.log = aws.LoggerFunc(func(v ...interface{}) { fmt.Fprintln(os.Stdout, v...) })
