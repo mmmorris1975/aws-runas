@@ -521,14 +521,14 @@ func TestConfigResolver_WithLogger(t *testing.T) {
 	}
 }
 
-func Example_DebugNilLogger() {
+func Example_debugNilLogger() {
 	r := new(configResolver)
 	r.debug("test")
 	// Output:
 	//
 }
 
-func Example_Debug() {
+func Example_debug() {
 	l := simple_logger.NewLogger(os.Stdout, "", 0)
 	l.SetLevel(simple_logger.DEBUG)
 	r := new(configResolver).WithLogger(l)
