@@ -42,7 +42,7 @@ func Example_checkRegionPass() {
 	c := config.AwsConfig{Region: "us-east-3"}
 	checkRegion(&c)
 	// Output:
-	//
+	// INFO region is configured in profile or environment variable
 }
 
 func Example_printConfig() {
