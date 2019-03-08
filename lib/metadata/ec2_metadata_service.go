@@ -124,8 +124,17 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 			log.Errorf("ReadMessage: %v", err)
 			break
 		}
+		msg := string(d)
 
-		profile = string(d)
+		if msg == "RefreshToken" {
+			if cred != nil {
+				cred.Expire()
+			}
+			role = nil
+		} else {
+			profile = msg
+		}
+
 		p, err := cfg.ResolveConfig(profile)
 		if err != nil {
 			log.Errorf("ResolveConfig: %v", err)
@@ -135,7 +144,6 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 		if role == nil || p.SourceProfile != role.SourceProfile {
 			updateSession(p.SourceProfile)
 			cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
-				//p.Cache = FileCredentialCache
 				pv.Duration = p.SessionDuration
 				pv.SerialNumber = p.MfaSerial
 				pv.TokenProvider = func() (string, error) {
@@ -152,6 +160,8 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 		role = p
 
 		cred.Get()
+		t, _ := cred.ExpiresAt()
+		c.WriteMessage(mt, []byte(t.Local().String()))
 	}
 }
 
@@ -231,6 +241,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 <html>
 <head>
 <meta charset="utf-8">
+<title>aws-runas - AWS Metadata Credential Server</title>
 <script>
 window.addEventListener("load", function(evt) {
   var ws = new WebSocket("{{.url}}");
@@ -244,13 +255,13 @@ window.addEventListener("load", function(evt) {
       var mfa = prompt(evt.data, "");
       ws.send(mfa)
     } else {
-      print("RESPONSE: " + evt.data);
+      console.log("RESPONSE: " + evt.data);
+      document.getElementById("message").innerHTML = "Credentials will expire on <i>" + evt.data + "</i>"
     }
   };
 
   ws.onerror = function(evt) {
-    // todo
-    //print("ERROR: " + evt.data);
+    console.log("ERROR: " + evt.data);
   };
 
   document.getElementById("roles").onchange = function(evt) {
@@ -267,20 +278,50 @@ window.addEventListener("load", function(evt) {
       return false;
     }
 
+    ws.send("RefreshToken")
     return false;
   };
 });
 </script>
+<style>
+body {
+  background-color: purple;
+  font-family: Tahoma, Geneva, sans-serif;
+  font-size: large;
+  margin: 0;
+}
+
+#content {
+  background-color: white;
+  margin: auto;
+  width: 30em;
+  padding: 0.5em;
+  padding-top: 1.2em;
+}
+
+#message {
+  margin-top: 0.5em;
+}
+</style>
 </head>
 <body>
+<div id="content">
 <form>
+<div>
+<label for="roles">Roles</label>&nbsp;
 <select id="roles" name="roles">
+  <option value="">-- Select Role--</option>
 {{range $e := .roles}}
   <option>{{$e}}</option>
 {{end}}
 </select>
-<button id="refresh" name="refresh">Refresh MFA</button>
+</div>
+<div>
+<div id="message">&nbsp;</div>
+<button id="refresh" name="refresh">Refresh Now</button>
+</div>
 </form>
+</div>
 </body>
 </html>
 `))
