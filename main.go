@@ -131,10 +131,7 @@ func main() {
 	case *diagFlag:
 		runDiagnostics(cfg)
 	case *ec2MdFlag:
-		log.Debug("Metadata Server")
-		if usr.IdentityType == "user" {
-			log.Fatal(metadata.NewEC2MetadataService(log.Level))
-		}
+		metadataServer()
 	default:
 		var c *credentials.Credentials
 
@@ -436,25 +433,25 @@ func roleHandler() {
 	}
 }
 
-//func metadataServer() {
-//	log.Debug("Metadata Server")
-//	if usr.IdentityType == "user" {
-//		s := session.Must(session.NewSession(new(aws.Config).WithCredentials(sessionTokenCredentials())))
-//
-//		// don't obey cfg.CredsDuration on purpose, use default duration. Use longer-lived session tokens to call AssumeRole
-//		// do not cache assume role credentials from metadata service
-//		ar := credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
-//			p.Duration = credlib.AssumeRoleDefaultDuration
-//			p.ExternalID = cfg.ExternalID
-//			p.RoleSessionName = usr.UserName
-//		})
-//
-//		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
-//		ar.Get()
-//
-//		log.Fatal(metadata.NewEC2MetadataService(ar, *profile, log.Level))
-//	}
-//}
+func metadataServer() {
+	log.Debug("Metadata Server")
+	if usr.IdentityType == "user" {
+		s := session.Must(session.NewSession(new(aws.Config).WithCredentials(sessionTokenCredentials())))
+
+		// don't obey cfg.CredsDuration on purpose, use default duration. Use longer-lived session tokens to call AssumeRole
+		// do not cache assume role credentials from metadata service
+		ar := credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+			p.Duration = credlib.AssumeRoleDefaultDuration
+			p.ExternalID = cfg.ExternalID
+			p.RoleSessionName = usr.UserName
+		})
+
+		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
+		ar.Get()
+
+		log.Fatal(metadata.NewEC2MetadataService(ar, *profile, log.Level))
+	}
+}
 
 func printMfa() {
 	log.Debug("List MFA")
