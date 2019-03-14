@@ -26,6 +26,8 @@ const (
 	ListRolePath = "/list-roles"
 	// MfaPath is the websocket endpoint for using MFA
 	MfaPath = "/mfa"
+	// ProfilePath is the endpoint for getting/setting the profile to use
+	ProfilePath = "/profile"
 )
 
 var (
@@ -77,6 +79,7 @@ func NewEC2MetadataService(logLevel uint) error {
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc(MfaPath, mfaHandler)
+	http.HandleFunc(ProfilePath, profileHandler)
 	http.HandleFunc(EC2MetadataCredentialPath, credHandler)
 
 	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
@@ -108,6 +111,16 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	d["url"] = fmt.Sprintf("ws://%s%s", r.Host, MfaPath)
 	d["roles"] = cfg.ListProfiles(true)
 	homeTemplate.Execute(w, d)
+}
+
+func profileHandler(w http.ResponseWriter, r *http.Request) {
+	// todo create an endpoint to return (GET) or set (POST) the configured profile name
+	// tricky part may be handling MFA for the POST action, if we can't defer that back to the UI
+	if r.Method == http.MethodPost {
+
+	} else {
+		sendProfile(w, r)
+	}
 }
 
 func mfaHandler(w http.ResponseWriter, r *http.Request) {
@@ -183,10 +196,7 @@ func updateSession(p string) (err error) {
 func credHandler(w http.ResponseWriter, r *http.Request) {
 	p := strings.Split(r.URL.Path, "/")[1:]
 	if len(p[len(p)-1]) < 1 {
-		// return name of active role
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write([]byte(profile))
-		log.Infof("%s %d %d", r.URL.Path, http.StatusOK, len(profile))
+		sendProfile(w, r)
 	} else {
 		// get the creds for the role
 		b, err := assumeRole()
@@ -234,6 +244,13 @@ func assumeRole() ([]byte, error) {
 	}
 
 	return j, nil
+}
+
+func sendProfile(w http.ResponseWriter, r *http.Request) {
+	// return name of active role
+	w.Header().Set("Content-Type", "text/plain")
+	w.Write([]byte(profile))
+	log.Infof("%s %d %d", r.URL.Path, http.StatusOK, len(profile))
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
