@@ -19,9 +19,11 @@ import (
 	"github.com/mmmorris1975/simple-logger"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -50,6 +52,8 @@ var (
 	ses          *session.Session
 	cfg          *config.AwsConfig
 	usr          *credlib.AwsIdentity
+
+	sigCh = make(chan os.Signal, 3)
 )
 
 func init() {
@@ -103,6 +107,14 @@ func init() {
 }
 
 func main() {
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+	go func() {
+		for {
+			sig := <-sigCh
+			log.Debugf("Got signal: %s", sig.String())
+		}
+	}()
+
 	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
