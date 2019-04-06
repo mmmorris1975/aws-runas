@@ -135,7 +135,7 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 				}
 				i.TokenCode = &t
 			} else {
-				return nil, fmt.Errorf("MFA required, but no code sent")
+				return nil, new(ErrMfaRequired)
 			}
 		} else {
 			i.TokenCode = aws.String(p.TokenCode)
