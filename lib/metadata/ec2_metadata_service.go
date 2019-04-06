@@ -2,17 +2,18 @@ package metadata
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/gorilla/websocket"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/simple-logger"
 	"html/template"
+	"io"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -22,8 +23,6 @@ const (
 	EC2MetadataIp = "169.254.169.254"
 	// EC2MetadataCredentialPath is the base path for instance role credentials in the metadata service
 	EC2MetadataCredentialPath = "/latest/meta-data/iam/security-credentials/"
-	// ListRolePath is the http server path to list the configured roles
-	ListRolePath = "/list-roles"
 	// MfaPath is the websocket endpoint for using MFA
 	MfaPath = "/mfa"
 	// ProfilePath is the endpoint for getting/setting the profile to use
@@ -42,11 +41,24 @@ var (
 	usr     *credlib.AwsIdentity
 
 	log = simple_logger.StdLogger
-	u   = websocket.Upgrader{}
 )
 
 func init() {
 	EC2MetadataAddress, _ = net.ResolveIPAddr("ip", EC2MetadataIp)
+}
+
+type handlerError struct {
+	error
+	msg  string
+	code int
+}
+
+func newHandlerError(msg string, code int) *handlerError {
+	return &handlerError{msg: msg, code: code}
+}
+
+func (e *handlerError) Error() string {
+	return e.msg
 }
 
 type ec2MetadataOutput struct {
@@ -83,7 +95,7 @@ func NewEC2MetadataService(logLevel uint) error {
 	http.HandleFunc(EC2MetadataCredentialPath, credHandler)
 
 	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
-	log.Infof("EC2 Metadata Service ready on %s", hp)
+	log.Infof("EC2 Metadata Service ready on http://%s", hp)
 	return http.ListenAndServe(hp, nil)
 }
 
@@ -106,52 +118,48 @@ func setupInterface() (string, error) {
 	return lo, err
 }
 
+func writeResponse(w http.ResponseWriter, r *http.Request, body string, code int) {
+	if code < 100 {
+		code = http.StatusOK
+	}
+
+	if len(w.Header().Get("Content-Type")) < 1 {
+		w.Header().Set("Content-Type", "text/plain")
+	}
+
+	contentLength := strconv.Itoa(len(body))
+	w.Header().Set("Content-Length", contentLength)
+	w.WriteHeader(code)
+	if _, err := w.Write([]byte(body)); err != nil {
+		log.Error(err)
+	}
+
+	log.Infof("%s %s %s %d %s", r.Method, r.URL.Path, r.Proto, code, contentLength)
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	d := make(map[string]interface{})
-	d["url"] = fmt.Sprintf("ws://%s%s", r.Host, MfaPath)
 	d["roles"] = cfg.ListProfiles(true)
-	homeTemplate.Execute(w, d)
+	d["profile_ep"] = ProfilePath
+	d["mfa_ep"] = MfaPath
+
+	b := new(strings.Builder)
+	if err := homeTemplate.Execute(b, d); err != nil {
+		log.Error(err)
+		writeResponse(w, r, "Error building content", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
+	writeResponse(w, r, b.String(), http.StatusOK)
 }
 
 func profileHandler(w http.ResponseWriter, r *http.Request) {
-	// todo create an endpoint to return (GET) or set (POST) the configured profile name
-	// tricky part may be handling MFA for the POST action, if we can't defer that back to the UI
 	if r.Method == http.MethodPost {
-
-	} else {
-		sendProfile(w, r)
-	}
-}
-
-func mfaHandler(w http.ResponseWriter, r *http.Request) {
-	c, err := u.Upgrade(w, r, nil)
-	if err != nil {
-		log.Errorf("upgrade: %v", err)
-		return
-	}
-	defer c.Close()
-
-	for {
-		mt, d, err := c.ReadMessage()
-		if err != nil {
-			log.Errorf("ReadMessage: %v", err)
-			break
-		}
-		msg := string(d)
-
-		if msg == "RefreshToken" {
-			if cred != nil {
-				cred.Expire()
-			}
-			role = nil
-		} else {
-			profile = msg
-		}
-
-		p, err := cfg.ResolveConfig(profile)
-		if err != nil {
-			log.Errorf("ResolveConfig: %v", err)
-			break
+		p, hErr := getProfileConfig(r.Body)
+		if hErr != nil {
+			writeResponse(w, r, hErr.Error(), hErr.code)
+			return
 		}
 
 		if role == nil || p.SourceProfile != role.SourceProfile {
@@ -159,23 +167,107 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 			cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
 				pv.Duration = p.SessionDuration
 				pv.SerialNumber = p.MfaSerial
-				pv.TokenProvider = func() (string, error) {
-					c.WriteMessage(mt, []byte("Enter MFA Code"))
-					_, d, err := c.ReadMessage()
-					if err != nil {
-						return "", err
-					}
-					log.Infof("MFA: %s", d)
-					return string(d), nil
-				}
 			})
 		}
 		role = p
 
-		cred.Get()
+		_, err := cred.Get()
+		if err != nil {
+			switch t := err.(type) {
+			case *credlib.ErrMfaRequired:
+				writeResponse(w, r, "MFA code required", http.StatusUnauthorized)
+				return
+			case awserr.Error:
+				if t.Code() == "AccessDenied" { //&& t.Message() == "MultiFactorAuthentication failed with invalid MFA one time pass code." {
+					log.Errorf("AWS Error: %+v", t)
+					writeResponse(w, r, "MFA code required", http.StatusUnauthorized)
+					return
+				}
+			}
+
+			log.Error(err)
+			writeResponse(w, r, "Error getting session credentials", http.StatusInternalServerError)
+			return
+		}
+
 		t, _ := cred.ExpiresAt()
-		c.WriteMessage(mt, []byte(t.Local().String()))
+		writeResponse(w, r, t.Local().String(), http.StatusOK)
+	} else {
+		sendProfile(w, r)
 	}
+}
+
+func getProfileConfig(r io.Reader) (*config.AwsConfig, *handlerError) {
+	if r == nil {
+		return nil, newHandlerError("nil reader", http.StatusInternalServerError)
+	}
+
+	b := make([]byte, 4096)
+	n, err := r.Read(b)
+	if err != nil && err != io.EOF {
+		log.Error(err)
+		return nil, newHandlerError("Error reading request data", http.StatusInternalServerError)
+	}
+
+	profile = string(b[:n])
+	p, err := cfg.ResolveConfig(profile)
+	if err != nil {
+		log.Error(err)
+		return nil, newHandlerError("Error resolving profile config", http.StatusInternalServerError)
+	}
+
+	return p, nil
+}
+
+func sendProfile(w http.ResponseWriter, r *http.Request) {
+	// return name of active role
+	writeResponse(w, r, profile, http.StatusOK)
+}
+
+func mfaHandler(w http.ResponseWriter, r *http.Request) {
+	mfa, err := getMfa(r.Body)
+	if err != nil {
+		writeResponse(w, r, err.Error(), err.code)
+		return
+	}
+
+	cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
+		pv.Duration = role.SessionDuration
+		pv.SerialNumber = role.MfaSerial
+		pv.TokenCode = mfa
+	})
+
+	if _, err := cred.Get(); err != nil {
+		log.Error(err)
+		writeResponse(w, r, "Error getting session credentials", http.StatusInternalServerError)
+		return
+	}
+
+	t, _ := cred.ExpiresAt()
+	writeResponse(w, r, t.Local().String(), http.StatusOK)
+}
+
+func getMfa(r io.Reader) (string, *handlerError) {
+	if r == nil {
+		return "", newHandlerError("nil reader", http.StatusInternalServerError)
+	}
+
+	mfaLen := 6
+	b := make([]byte, 64)
+
+	n, err := r.Read(b)
+	if err != nil && err != io.EOF {
+		log.Error(err)
+		return "", newHandlerError("Error reading request data", http.StatusInternalServerError)
+	}
+
+	// AWS says MFA code must be exactly 6 bytes, check for < 6 condition here and truncate the
+	// supplied code string to 6 bytes down below. Return HTTP Unauthorized (401), so we re-prompt
+	if n < mfaLen {
+		return "", newHandlerError("Invalid MFA Code", http.StatusUnauthorized)
+	}
+
+	return string(b[:mfaLen]), nil
 }
 
 func updateSession(p string) (err error) {
@@ -202,13 +294,12 @@ func credHandler(w http.ResponseWriter, r *http.Request) {
 		b, err := assumeRole()
 		if err != nil {
 			log.Errorf("AssumeRole: %v", err)
-			http.Error(w, "Error fetching role credentials", http.StatusInternalServerError)
+			writeResponse(w, r, "Error getting role credentials", http.StatusInternalServerError)
 			return
 		}
 
-		w.Header().Set("Content-Type", "text/plain")
-		w.Write(b)
-		log.Infof("%s %d %d", r.URL.Path, http.StatusOK, len(b))
+		w.Header().Set("Content-Type", "application/json")
+		writeResponse(w, r, string(b), http.StatusOK)
 	}
 }
 
@@ -225,8 +316,8 @@ func assumeRole() ([]byte, error) {
 		return nil, err
 	}
 
-	// 901 seconds is the absolute minimum Expiration time so that the default awscli logic won't think
-	// our credentials are expired, and send a duplicate request.
+	// 1 second more than the minimum Assume Role credential duration is the absolute minimum Expiration time so that
+	// the default awscli logic won't think our credentials are expired, and send a duplicate request.
 	output := ec2MetadataOutput{
 		Code:            "Success",
 		LastUpdated:     time.Now().UTC().Format(time.RFC3339),
@@ -234,7 +325,7 @@ func assumeRole() ([]byte, error) {
 		AccessKeyId:     v.AccessKeyID,
 		SecretAccessKey: v.SecretAccessKey,
 		Token:           v.SessionToken,
-		Expiration:      time.Now().Add(901 * time.Second).UTC().Format(time.RFC3339),
+		Expiration:      time.Now().Add(credlib.AssumeRoleMinDuration).Add(1 * time.Second).UTC().Format(time.RFC3339),
 	}
 	log.Debugf("%+v", output)
 
@@ -246,13 +337,6 @@ func assumeRole() ([]byte, error) {
 	return j, nil
 }
 
-func sendProfile(w http.ResponseWriter, r *http.Request) {
-	// return name of active role
-	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(profile))
-	log.Infof("%s %d %d", r.URL.Path, http.StatusOK, len(profile))
-}
-
 var homeTemplate = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html>
@@ -261,41 +345,29 @@ var homeTemplate = template.Must(template.New("").Parse(`
 <title>aws-runas - AWS Metadata Credential Server</title>
 <script>
 window.addEventListener("load", function(evt) {
-  var ws = new WebSocket("{{.url}}");
-
-  ws.onclose = function(evt) {
-    ws = null;
-  };
-
-  ws.onmessage = function(evt) {
-    if (evt.data == "Enter MFA Code") {
-      var mfa = prompt(evt.data, "");
-      ws.send(mfa)
-    } else {
-      console.log("RESPONSE: " + evt.data);
-      document.getElementById("message").innerHTML = "Credentials will expire on <i>" + evt.data + "</i>"
-    }
-  };
-
-  ws.onerror = function(evt) {
-    console.log("ERROR: " + evt.data);
-  };
-
   document.getElementById("roles").onchange = function(evt) {
-    if (!ws) {
-      return false;
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (this.readyState == 4) { 
+        if (this.status == 200) {
+          var data = this.responseText;
+          console.log("RESPONSE: " + data);
+          document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
+        } else if (this.status == 401) {
+          var mfa = prompt("Enter MFA Code", "");
+          this.open("POST", "{{.mfa_ep}}", true)
+          this.send(mfa)
+        }
+      }
     }
 
-    ws.send(evt.target.value);
+    xhr.open("POST", "{{.profile_ep}}", true)
+    xhr.send(evt.target.value)
+
     return false;
   };
 
   document.getElementById("refresh").onclick = function(evt) {
-    if (!ws) {
-      return false;
-    }
-
-    ws.send("RefreshToken")
     return false;
   };
 });
