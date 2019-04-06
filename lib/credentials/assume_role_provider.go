@@ -163,6 +163,8 @@ func (p *AssumeRoleProvider) debug(f string, v ...interface{}) {
 }
 
 // StdinTokenProvider will print a prompt to Stdout for a user to enter the MFA code
+// fixme as of the 1.19.0 release of the aws go sdk, the prompt is printed on stderr instead of stdout
+// REF: https://github.com/aws/aws-sdk-go/pull/2481
 func StdinTokenProvider() (string, error) {
 	var mfaCode string
 	fmt.Print("Enter MFA Code: ")
