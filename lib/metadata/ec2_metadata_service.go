@@ -115,7 +115,14 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	http.HandleFunc(RefreshPath, refreshHandler)
 
 	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
-	log.Infof("EC2 Metadata Service ready on http://%s", hp)
+	msg := fmt.Sprintf("EC2 Metadata Service ready on http://%s", hp)
+	if len(profile) < 1 {
+		msg = msg + " without an initial profile, set one via the web interface"
+	} else {
+		msg = msg + fmt.Sprintf(" using initial profile '%s'", profile)
+	}
+
+	log.Infof(msg)
 	return http.ListenAndServe(hp, nil)
 }
 
@@ -217,18 +224,18 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			if err := updateSession(p.SourceProfile); err != nil {
 				log.Debugf("error updating session: %v", err)
 			}
-
-			cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
-				pv.Duration = p.SessionDuration
-				pv.SerialNumber = p.MfaSerial
-
-				cf := cacheFile(p.SourceProfile)
-				if len(cf) > 0 {
-					pv.Cache = &cache.FileCredentialCache{Path: cf}
-				}
-			})
 		}
+
 		role = p
+		cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
+			pv.Duration = role.SessionDuration
+			pv.SerialNumber = role.MfaSerial
+
+			cf := cacheFile(role.SourceProfile)
+			if len(cf) > 0 {
+				pv.Cache = &cache.FileCredentialCache{Path: cf}
+			}
+		})
 
 		_, err := cred.Get()
 		if err != nil {
@@ -478,9 +485,11 @@ function selectRole() {
       for (o in opts) {
         opt = opts[o]
         if (opt.text == role) {
-          console.log("got eem " + opt.text)
           opt.selected = true;
+          postProfile(role)
           break;
+        } else {
+          opts[0].selected = true;
         }
       }
     }
