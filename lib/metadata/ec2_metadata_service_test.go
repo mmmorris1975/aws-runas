@@ -3,6 +3,7 @@ package metadata
 import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/mmmorris1975/aws-runas/lib/config"
+	"github.com/mmmorris1975/simple-logger"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 func TestMain(m *testing.M) {
 	os.Setenv("AWS_CONFIG_FILE", "../../.aws/config")
 	profile = "circle-role"
+	log = simple_logger.StdLogger
 
 	var err error
 	cfg, err = config.NewConfigResolver(nil)
@@ -344,6 +346,65 @@ func TestListRolesHandler(t *testing.T) {
 		t.Errorf("bad content type")
 		return
 	}
+}
+
+func TestCacheFile(t *testing.T) {
+	cacheDir = os.TempDir()
+	t.Run("empty profile", func(t *testing.T) {
+		p := cacheFile("")
+		if len(p) > 0 {
+			t.Errorf("unexpected cache file name")
+			return
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		p := cacheFile("test")
+		if len(p) < 1 {
+			t.Errorf("bad cache file name")
+			return
+		}
+
+		if !strings.HasSuffix(p, "_test") {
+			t.Errorf("bad cache file name")
+			return
+		}
+	})
+
+	t.Run("empty cache dir", func(t *testing.T) {
+		cacheDir = ""
+		p := cacheFile("test")
+		if len(p) > 0 {
+			t.Errorf("unexpected cache file name")
+			return
+		}
+	})
+}
+
+func TestHandleOptions(t *testing.T) {
+	err := handleOptions(new(EC2MetadataInput))
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Run("nil logger", func(t *testing.T) {
+		if log == nil {
+			t.Error("configured a nil logger")
+		}
+	})
+
+	t.Run("empty cache", func(t *testing.T) {
+		if len(cacheDir) < 1 {
+			t.Error("empty cache dir")
+		}
+	})
+
+	t.Run("nil config resolver", func(t *testing.T) {
+		if cfg == nil {
+			t.Error("nil config resolver")
+		}
+	})
 }
 
 type mockProvider string

@@ -2,10 +2,12 @@ package metadata
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/mmmorris1975/aws-runas/lib/cache"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/simple-logger"
@@ -13,6 +15,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -37,14 +41,14 @@ var (
 	// EC2MetadataAddress is the net.IPAddr of the EC2 metadata service
 	EC2MetadataAddress *net.IPAddr
 
-	profile string
-	role    *config.AwsConfig
-	cfg     config.ConfigResolver
-	s       *session.Session
-	cred    *credentials.Credentials
-	usr     *credlib.AwsIdentity
-
-	log = simple_logger.StdLogger
+	profile  string
+	role     *config.AwsConfig
+	cfg      config.ConfigResolver
+	s        *session.Session
+	cred     *credentials.Credentials
+	usr      *credlib.AwsIdentity
+	log      *simple_logger.Logger
+	cacheDir string
 )
 
 func init() {
@@ -75,23 +79,33 @@ type ec2MetadataOutput struct {
 	Expiration      string
 }
 
+type EC2MetadataInput struct {
+	Config          *config.AwsConfig
+	InitialProfile  string
+	Logger          *simple_logger.Logger
+	Session         *session.Session
+	SessionCacheDir string
+	User            *credlib.AwsIdentity
+}
+
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
 // requests for instance role credentials.  SDKs will first look up the path in EC2MetadataCredentialPath,
 // which returns the name of the instance role in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
-func NewEC2MetadataService(logLevel uint) error {
-	log.SetLevel(logLevel)
-	cf, err := config.NewConfigResolver(nil)
-	if err != nil {
+func NewEC2MetadataService(opts *EC2MetadataInput) error {
+	if err := handleOptions(opts); err != nil {
 		return err
 	}
-	cfg = cf.WithLogger(log)
 
 	lo, err := setupInterface()
 	if err != nil {
 		return err
 	}
-	defer removeAddress(lo, EC2MetadataAddress)
+	defer func() {
+		if err := removeAddress(lo, EC2MetadataAddress); err != nil {
+			log.Debugf("Error removing network config: %v", err)
+		}
+	}()
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc(MfaPath, mfaHandler)
@@ -103,6 +117,35 @@ func NewEC2MetadataService(logLevel uint) error {
 	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
 	log.Infof("EC2 Metadata Service ready on http://%s", hp)
 	return http.ListenAndServe(hp, nil)
+}
+
+func handleOptions(opts *EC2MetadataInput) error {
+	log = opts.Logger
+	if log == nil {
+		log = simple_logger.StdLogger
+	}
+
+	s = opts.Session
+	usr = opts.User
+	role = opts.Config
+	profile = opts.InitialProfile
+
+	cacheDir = opts.SessionCacheDir
+	if len(cacheDir) < 1 {
+		d, err := os.UserCacheDir()
+		if err != nil {
+			log.Debugf("Error finding User Cache Dir: %v", err)
+		}
+		cacheDir = d
+	}
+
+	cf, err := config.NewConfigResolver(nil)
+	if err != nil {
+		return err
+	}
+	cfg = cf.WithLogger(log)
+
+	return nil
 }
 
 func setupInterface() (string, error) {
@@ -171,10 +214,18 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 		log.Debugf("retrieved profile %+v", p)
 
 		if role == nil || p.SourceProfile != role.SourceProfile {
-			updateSession(p.SourceProfile)
+			if err := updateSession(p.SourceProfile); err != nil {
+				log.Debugf("error updating session: %v", err)
+			}
+
 			cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
 				pv.Duration = p.SessionDuration
 				pv.SerialNumber = p.MfaSerial
+
+				cf := cacheFile(p.SourceProfile)
+				if len(cf) > 0 {
+					pv.Cache = &cache.FileCredentialCache{Path: cf}
+				}
 			})
 		}
 		role = p
@@ -242,6 +293,11 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 		pv.Duration = role.SessionDuration
 		pv.SerialNumber = role.MfaSerial
 		pv.TokenCode = mfa
+
+		cf := cacheFile(role.SourceProfile)
+		if len(cf) > 0 {
+			pv.Cache = &cache.FileCredentialCache{Path: cf}
+		}
 	})
 
 	if _, err := cred.Get(); err != nil {
@@ -278,17 +334,26 @@ func getMfa(r io.Reader) (string, *handlerError) {
 }
 
 func updateSession(p string) (err error) {
-	sc := new(aws.Config).WithCredentialsChainVerboseErrors(true).WithLogger(log)
-	if log.Level == simple_logger.DEBUG {
-		sc.LogLevel = aws.LogLevel(aws.LogDebug)
+	var sc *aws.Config
+	if s != nil {
+		sc = s.Config
+	} else {
+		sc = new(aws.Config).WithCredentialsChainVerboseErrors(true).WithLogger(log)
+		if log.Level == simple_logger.DEBUG {
+			sc.LogLevel = aws.LogLevel(aws.LogDebug)
+		}
 	}
+
 	o := session.Options{Config: *sc, Profile: p}
 	s = session.Must(session.NewSessionWithOptions(o))
 
-	usr, err = credlib.NewAwsIdentityManager(s).WithLogger(log).GetCallerIdentity()
-	if err != nil {
-		return err
+	if usr == nil {
+		usr, err = credlib.NewAwsIdentityManager(s).WithLogger(log).GetCallerIdentity()
+		if err != nil {
+			return err
+		}
 	}
+
 	return nil
 }
 
@@ -368,6 +433,13 @@ func refreshHandler(w http.ResponseWriter, r *http.Request) {
 		cred.Expire()
 	}
 	writeResponse(w, r, "success", http.StatusOK)
+}
+
+func cacheFile(p string) string {
+	if len(cacheDir) > 0 && len(p) > 0 {
+		return filepath.Join(cacheDir, fmt.Sprintf(".aws_session_token_%s", p))
+	}
+	return ""
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
