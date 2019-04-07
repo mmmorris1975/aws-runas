@@ -379,24 +379,49 @@ var homeTemplate = template.Must(template.New("").Parse(`
 <script>
 function postProfile(role) {
   var xhr = new XMLHttpRequest();
-    xhr.onreadystatechange = function() {
-      if (this.readyState == 4) { 
-        if (this.status == 200) {
-          var data = this.responseText;
-          document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
-        } else if (this.status == 401) {
-          var mfa = prompt("Enter MFA Code", "");
-          this.open("POST", {{.mfa_ep}}, true);
-          this.send(mfa);
+  xhr.onreadystatechange = function() {
+    if (this.readyState == 4) { 
+      if (this.status == 200) {
+        var data = this.responseText;
+        document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
+      } else if (this.status == 401) {
+        var mfa = prompt("Enter MFA Code", "");
+        this.open("POST", {{.mfa_ep}}, true);
+        this.send(mfa);
+      }
+    }
+  }
+
+  xhr.open("POST", {{.profile_ep}}, true);
+  xhr.send(role);
+}
+
+function selectRole() {
+  var xhr = new XMLHttpRequest();
+  xhr.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      var role = this.responseText;
+      var opts = document.getElementById("roles").options
+
+      for (o in opts) {
+        opt = opts[o]
+        if (opt.text == role) {
+          console.log("got eem " + opt.text)
+          opt.selected = true;
+          break;
         }
       }
     }
+  }
 
-    xhr.open("POST", {{.profile_ep}}, true);
-    xhr.send(role);
+  xhr.open("GET", {{.profile_ep}}, true);
+  xhr.send();
+  return false;
 }
 
 window.addEventListener("load", function(evt) {
+  selectRole()
+
   document.getElementById("roles").onchange = function(evt) {
     postProfile(evt.target.value);
     return false;
@@ -413,7 +438,6 @@ window.addEventListener("load", function(evt) {
 
     xhr.open("POST", {{.refresh_ep}}, true);
     xhr.send();
-
     return false;
   };
 });
