@@ -27,6 +27,10 @@ const (
 	MfaPath = "/mfa"
 	// ProfilePath is the endpoint for getting/setting the profile to use
 	ProfilePath = "/profile"
+	// ListProfilePath is the endpoint for listing all known roles
+	ListRolesPath = "/list-roles"
+	// RefreshPath is the endpoint for forcing a credential refresh
+	RefreshPath = "/refresh"
 )
 
 var (
@@ -93,6 +97,8 @@ func NewEC2MetadataService(logLevel uint) error {
 	http.HandleFunc(MfaPath, mfaHandler)
 	http.HandleFunc(ProfilePath, profileHandler)
 	http.HandleFunc(EC2MetadataCredentialPath, credHandler)
+	http.HandleFunc(ListRolesPath, listRoleHandler)
+	http.HandleFunc(RefreshPath, refreshHandler)
 
 	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
 	log.Infof("EC2 Metadata Service ready on http://%s", hp)
@@ -139,9 +145,10 @@ func writeResponse(w http.ResponseWriter, r *http.Request, body string, code int
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	d := make(map[string]interface{})
-	d["roles"] = cfg.ListProfiles(true)
+	d["roles"] = listRoles()
 	d["profile_ep"] = ProfilePath
 	d["mfa_ep"] = MfaPath
+	d["refresh_ep"] = RefreshPath
 
 	b := new(strings.Builder)
 	if err := homeTemplate.Execute(b, d); err != nil {
@@ -161,6 +168,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, r, hErr.Error(), hErr.code)
 			return
 		}
+		log.Debugf("retrieved profile %+v", p)
 
 		if role == nil || p.SourceProfile != role.SourceProfile {
 			updateSession(p.SourceProfile)
@@ -178,8 +186,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 				writeResponse(w, r, "MFA code required", http.StatusUnauthorized)
 				return
 			case awserr.Error:
-				if t.Code() == "AccessDenied" { //&& t.Message() == "MultiFactorAuthentication failed with invalid MFA one time pass code." {
-					log.Errorf("AWS Error: %+v", t)
+				if t.Code() == "AccessDenied" && strings.HasPrefix(t.Message(), "MultiFactorAuthentication failed") {
 					writeResponse(w, r, "MFA code required", http.StatusUnauthorized)
 					return
 				}
@@ -337,6 +344,32 @@ func assumeRole() ([]byte, error) {
 	return j, nil
 }
 
+func listRoleHandler(w http.ResponseWriter, r *http.Request) {
+	b, err := json.Marshal(listRoles())
+	if err != nil {
+		writeResponse(w, r, "error building role list", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	writeResponse(w, r, string(b), http.StatusOK)
+}
+
+func listRoles() []string {
+	if cfg != nil {
+		return cfg.ListProfiles(true)
+	}
+	return []string{}
+}
+
+func refreshHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method == http.MethodPost && cred != nil {
+		log.Debug("Expiring credentials for refresh")
+		cred.Expire()
+	}
+	writeResponse(w, r, "success", http.StatusOK)
+}
+
 var homeTemplate = template.Must(template.New("").Parse(`
 <!DOCTYPE html>
 <html>
@@ -344,30 +377,43 @@ var homeTemplate = template.Must(template.New("").Parse(`
 <meta charset="utf-8">
 <title>aws-runas - AWS Metadata Credential Server</title>
 <script>
-window.addEventListener("load", function(evt) {
-  document.getElementById("roles").onchange = function(evt) {
-    var xhr = new XMLHttpRequest();
+function postProfile(role) {
+  var xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function() {
       if (this.readyState == 4) { 
         if (this.status == 200) {
           var data = this.responseText;
-          console.log("RESPONSE: " + data);
           document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
         } else if (this.status == 401) {
           var mfa = prompt("Enter MFA Code", "");
-          this.open("POST", "{{.mfa_ep}}", true)
-          this.send(mfa)
+          this.open("POST", {{.mfa_ep}}, true);
+          this.send(mfa);
         }
       }
     }
 
-    xhr.open("POST", "{{.profile_ep}}", true)
-    xhr.send(evt.target.value)
+    xhr.open("POST", {{.profile_ep}}, true);
+    xhr.send(role);
+}
 
+window.addEventListener("load", function(evt) {
+  document.getElementById("roles").onchange = function(evt) {
+    postProfile(evt.target.value);
     return false;
   };
 
   document.getElementById("refresh").onclick = function(evt) {
+    var xhr = new XMLHttpRequest();
+    xhr.onreadystatechange = function() {
+      if (this.readyState == 4 && this.status == 200) {
+        r = document.getElementById("roles")
+        postProfile(r.options[r.selectedIndex].text);
+      }
+    }
+
+    xhr.open("POST", {{.refresh_ep}}, true);
+    xhr.send();
+
     return false;
   };
 });

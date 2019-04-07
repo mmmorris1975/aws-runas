@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	"io/ioutil"
 	"net/http"
@@ -304,4 +305,53 @@ func TestCredHandler(t *testing.T) {
 		t.Error("unexpected profile name")
 		return
 	}
+}
+
+func TestRefreshHandler(t *testing.T) {
+	cred = credentials.NewCredentials(new(mockProvider))
+	r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+	w := httptest.NewRecorder()
+	refreshHandler(w, r)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Error("bad response code")
+		return
+	}
+}
+
+func TestListRolesHandler(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, ListRolesPath, nil)
+	w := httptest.NewRecorder()
+	listRoleHandler(w, r)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Error("bad response code")
+		return
+	}
+
+	if res.ContentLength < 1 {
+		t.Errorf("invalid content returned")
+		return
+	}
+
+	if res.Header.Get("Content-Type") != "application/json" {
+		t.Errorf("bad content type")
+		return
+	}
+}
+
+type mockProvider string
+
+func (p *mockProvider) IsExpired() bool {
+	return true
+}
+
+func (p *mockProvider) Retrieve() (credentials.Value, error) {
+	return credentials.Value{}, nil
 }
