@@ -438,6 +438,15 @@ func refreshHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost && cred != nil {
 		log.Debug("Expiring credentials for refresh")
 		cred.Expire()
+
+		if role != nil {
+			cf := cacheFile(role.SourceProfile)
+			if len(cf) > 0 {
+				if err := os.Remove(cf); err != nil {
+					log.Debugf("Error removing cached credentials: %v", err)
+				}
+			}
+		}
 	}
 	writeResponse(w, r, "success", http.StatusOK)
 }
@@ -525,7 +534,7 @@ window.addEventListener("load", function(evt) {
 </script>
 <style>
 body {
-  background-color: purple;
+  background-color: navy;
   font-family: Tahoma, Geneva, sans-serif;
   font-size: large;
   margin: 0;
@@ -536,31 +545,67 @@ body {
   margin: auto;
   width: 30em;
   padding: 0.5em;
-  padding-top: 1.2em;
 }
 
 #message {
-  margin-top: 0.5em;
+  margin-top: 1em;
+}
+
+#title {
+  text-align: center;
+}
+
+#roles {
+  font-size: large;
+}
+
+option {
+  font-size: large;
+}
+
+#refresh {
+  background-color: crimson;
+  border: 2px solid crimson;
+  color: white;
+  padding: 0.5em 1em;
+  font-weight: bold;
+  font-size: large;
+  text-align: center;
+  text-decoration: none;
+  display: inline-block;
+  border-radius: 0.33em;
+  margin-left: 3em;
+}
+
+#refresh:hover {
+  background-color: white;
+  border: 2px solid crimson;
+  color: crimson;
 }
 </style>
 </head>
 <body>
 <div id="content">
-<form>
-<div>
-<label for="roles">Roles</label>&nbsp;
-<select id="roles" name="roles">
-  <option value="">-- Select Role--</option>
+  <div id = "title">
+  <h2>EC2 Metadata Service Role Selector</h2>
+  </div>
+
+  <div id="form">
+  <form>
+  <label for="roles"><b>Roles</b></label>&nbsp;
+  <select id="roles" name="roles">
+    <option value="">-- Select Role--</option>
 {{range $e := .roles}}
-  <option>{{$e}}</option>
+    <option>{{$e}}</option>
 {{end}}
-</select>
-</div>
-<div>
-<div id="message">&nbsp;</div>
-<button id="refresh" name="refresh">Refresh Now</button>
-</div>
-</form>
+  </select>
+  <button id="refresh" name="refresh" title="Force a refresh of the credentials, may require re-entering MFA code">
+    Refresh Now
+  </button>
+  </form>
+  </div>
+
+  <div id="message">&nbsp;</div>
 </div>
 </body>
 </html>

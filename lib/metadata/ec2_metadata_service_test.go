@@ -311,17 +311,41 @@ func TestCredHandler(t *testing.T) {
 
 func TestRefreshHandler(t *testing.T) {
 	cred = credentials.NewCredentials(new(mockProvider))
-	r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
-	w := httptest.NewRecorder()
-	refreshHandler(w, r)
 
-	res := w.Result()
-	defer res.Body.Close()
+	t.Run("nil role", func(t *testing.T) {
+		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		w := httptest.NewRecorder()
+		refreshHandler(w, r)
 
-	if res.StatusCode != http.StatusOK {
-		t.Error("bad response code")
-		return
-	}
+		res := w.Result()
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Error("bad response code")
+			return
+		}
+	})
+
+	t.Run("with role", func(t *testing.T) {
+		role = &config.AwsConfig{SourceProfile: "some-profile"}
+		cacheDir = os.TempDir()
+		defer func() {
+			role = nil
+			cacheDir = ""
+		}()
+
+		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		w := httptest.NewRecorder()
+		refreshHandler(w, r)
+
+		res := w.Result()
+		defer res.Body.Close()
+
+		if res.StatusCode != http.StatusOK {
+			t.Error("bad response code")
+			return
+		}
+	})
 }
 
 func TestListRolesHandler(t *testing.T) {
