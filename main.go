@@ -46,10 +46,11 @@ var (
 	duration     *time.Duration
 	roleDuration *time.Duration
 	cmd          *[]string
-	log          *simple_logger.Logger
 	ses          *session.Session
 	cfg          *config.AwsConfig
 	usr          *credlib.AwsIdentity
+
+	log = simple_logger.StdLogger
 )
 
 func init() {
@@ -106,7 +107,6 @@ func main() {
 	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
-	log = simple_logger.StdLogger
 	if *verbose {
 		log.SetLevel(simple_logger.DEBUG)
 	}
@@ -133,7 +133,22 @@ func main() {
 	case *ec2MdFlag:
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {
-			log.Fatal(metadata.NewEC2MetadataService(log.Level))
+			opts := new(metadata.EC2MetadataInput)
+			opts.Config = cfg  // should never be nil, from resolveConfig() call above
+			opts.Logger = log  // should never be nil, initialized at startup
+			opts.Session = ses // should never be nil, from awsSession() above
+			opts.User = usr    // should never be nil, from awsUser() above
+			opts.InitialProfile = *profile
+			opts.SessionCacheDir = filepath.Dir(sessionTokenCacheFile())
+
+			if profile != nil && len(*profile) > 0 {
+				cp := sessionTokenCredentials()
+				if _, err := cp.Get(); err != nil {
+					log.Fatal("Error getting initial credentials: %v", err)
+				}
+			}
+
+			log.Fatal(metadata.NewEC2MetadataService(opts))
 		}
 	default:
 		var c *credentials.Credentials
@@ -382,8 +397,12 @@ func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
 	})
 }
 
-func sessionTokenCredentials() *credentials.Credentials {
+func sessionTokenCredentials(cacheFile ...string) *credentials.Credentials {
 	var ew time.Duration
+
+	if len(cacheFile) < 1 || len(cacheFile[0]) < 1 {
+		cacheFile = []string{sessionTokenCacheFile()}
+	}
 
 	if cfg.RoleDuration < credlib.SessionTokenMinDuration {
 		ew = credlib.SessionTokenMinDuration / 10
@@ -392,7 +411,7 @@ func sessionTokenCredentials() *credentials.Credentials {
 	}
 
 	return credlib.NewSessionCredentials(ses, func(p *credlib.SessionTokenProvider) {
-		p.Cache = &cache.FileCredentialCache{Path: sessionTokenCacheFile()}
+		p.Cache = &cache.FileCredentialCache{Path: cacheFile[0]}
 		p.SerialNumber = cfg.MfaSerial
 		p.TokenProvider = credlib.StdinTokenProvider
 		p.Duration = cfg.SessionDuration
