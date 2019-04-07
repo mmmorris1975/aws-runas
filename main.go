@@ -129,7 +129,9 @@ func main() {
 			log.Debugf("Error checking version: %v", err)
 		}
 	case *diagFlag:
-		runDiagnostics(cfg)
+		if err := runDiagnostics(cfg); err != nil {
+			log.Debugf("error running diagnostics: %v", err)
+		}
 	case *ec2MdFlag:
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {
@@ -302,10 +304,14 @@ func handleUserCreds() *credentials.Credentials {
 
 func checkRefresh() {
 	if *refresh {
+		var err error
 		if !*sesCreds {
-			os.Remove(assumeRoleCacheFile())
+			err = os.Remove(assumeRoleCacheFile())
 		}
-		os.Remove(sessionTokenCacheFile())
+		err = os.Remove(sessionTokenCacheFile())
+		if err != nil {
+			log.Debugf("Error removing cache files: %v", err)
+		}
 	}
 }
 
@@ -332,7 +338,10 @@ func printCredExpire() {
 	if exp.Before(time.Now()) {
 		tense = "expired"
 	}
-	fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
+
+	if _, err := fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn); err != nil {
+		log.Errorf("Error printing credentials: %v", err)
+	}
 }
 
 func cacheFile(f string) string {
