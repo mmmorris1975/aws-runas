@@ -92,6 +92,9 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 		}
 	}
 
+	// This isn't the same thing as cred.IsExpired(), which just forces a call to our Retrieve() function
+	// This IsExpired() is still based on the lifetime of the initial creds we retrieved, with a window to
+	// re-get the creds before they actually expire.
 	if s.IsExpired() {
 		s.debug("Detected expired or unset session token credentials, refreshing")
 		c, err := s.getSessionToken()
@@ -114,6 +117,12 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 				s.debug("error caching credentials: %v", err)
 			}
 		}
+	}
+
+	if cc == nil {
+		// something's wacky, expire existing provider creds, and retry
+		s.SetExpiration(time.Unix(0, 0), 0)
+		return s.Retrieve()
 	}
 
 	s.debug("SESSION TOKEN CREDENTIALS: %+v", cc.Value)
