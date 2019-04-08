@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -427,6 +428,108 @@ func TestHandleOptions(t *testing.T) {
 	t.Run("nil config resolver", func(t *testing.T) {
 		if cfg == nil {
 			t.Error("nil config resolver")
+		}
+	})
+}
+
+func TestCheckSudoEnv(t *testing.T) {
+	t.Run("env vars set", func(t *testing.T) {
+		os.Setenv("SUDO_UID", "9999")
+		os.Setenv("SUDO_GID", "9998")
+		defer func() {
+			os.Unsetenv("SUDO_UID")
+			os.Unsetenv("SUDO_GID")
+		}()
+
+		uid, gid, err := checkSudoEnv()
+		if err != nil {
+			t.Error(err)
+		}
+
+		if uid != 9999 || gid != 9998 {
+			t.Errorf("Bad UID/GID value, got UID: %d, GID: %d", uid, gid)
+		}
+	})
+
+	t.Run("env vars unset", func(t *testing.T) {
+		os.Unsetenv("SUDO_UID")
+		os.Unsetenv("SUDO_GID")
+
+		_, _, err := checkSudoEnv()
+		if err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+}
+
+func TestCheckCacheDir(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Run("valid cache dir", func(t *testing.T) {
+			if _, _, err := stat(os.TempDir()); err != nil {
+				t.Error(err)
+			}
+		})
+
+		t.Run("invalid cache dir", func(t *testing.T) {
+			if _, _, err := stat(""); err == nil {
+				t.Error("did not receive expected error")
+			}
+		})
+	} else {
+		t.Skip("skipping test on Windows")
+	}
+}
+
+func TestCheckHomeDir(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Run("valid home dir", func(t *testing.T) {
+			if _, _, err := statHomeDir(); err != nil {
+				t.Error(err)
+			}
+		})
+
+		t.Run("invalid home dir", func(t *testing.T) {
+			curHome, err := os.UserHomeDir()
+			if err != nil {
+				t.Error(err)
+			}
+
+			os.Unsetenv("HOME")
+			defer os.Setenv("HOME", curHome)
+
+			if _, _, err := statHomeDir(); err == nil {
+				t.Error("did not receive expected error")
+			}
+		})
+	} else {
+		t.Skip("skipping test on Windows")
+	}
+}
+
+func TestSetPrivileges(t *testing.T) {
+	t.Run("self", func(t *testing.T) {
+		if err := setPrivileges(os.Getuid(), os.Getgid()); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("other", func(t *testing.T) {
+		if os.Getuid() != 0 {
+			if err := setPrivileges(1, 1); err == nil {
+				t.Error("did not receive expected error")
+			}
+		} else {
+			t.Skip("skipping test because we're UID 0")
+		}
+	})
+
+	t.Run("other uid", func(t *testing.T) {
+		if os.Getuid() != 0 {
+			if err := setPrivileges(1, os.Getgid()); err == nil {
+				t.Error("did not receive expected error")
+			}
+		} else {
+			t.Skip("skipping test because we're UID 0")
 		}
 	})
 }

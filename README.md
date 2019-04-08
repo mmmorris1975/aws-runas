@@ -314,7 +314,7 @@ this instead:
 
 ### Build Requirements
 
-Developed and tested using the go 1.10 tool chain, aws-sdk-go v1.13.25, and kingpin.v2 v2.2.6  
+Developed and tested using the go 1.12 tool chain, aws-sdk-go v1.18.6, and kingpin.v2 v2.2.6  
 *NOTE* This project uses the (currently) experimental `dep` dependency manager.  See https://github.com/golang/dep for details.
 
 ### Build Steps
