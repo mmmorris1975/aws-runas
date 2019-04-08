@@ -16,6 +16,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -131,6 +132,14 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 		msg = msg + " without an initial profile, set one via the web interface"
 	} else {
 		msg = msg + fmt.Sprintf(" using initial profile '%s'", profile)
+
+		// send request to ProfilePath to ensure we get a valid 'cred'
+		// personal note: it bugs the crap out of me that I have to use httptest to get a ResponseWriter
+		r, err := http.NewRequest(http.MethodPost, ProfilePath, strings.NewReader(profile))
+		if err != nil {
+			log.Debugf("error creating http request: %v", err)
+		}
+		profileHandler(httptest.NewRecorder(), r)
 	}
 
 	log.Infof(msg)
