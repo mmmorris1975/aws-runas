@@ -508,8 +508,12 @@ func TestCheckHomeDir(t *testing.T) {
 
 func TestSetPrivileges(t *testing.T) {
 	t.Run("self", func(t *testing.T) {
-		if err := setPrivileges(os.Getuid(), os.Getgid()); err != nil {
-			t.Error(err)
+		if _, ok := os.LookupEnv("CIRCLECI"); ok {
+			t.Skip("skipping test in circleci environment")
+		} else {
+			if err := setPrivileges(os.Getuid(), os.Getgid()); err != nil {
+				t.Error(err)
+			}
 		}
 	})
 
