@@ -328,7 +328,6 @@ func checkRefresh() {
 
 func printCredExpire() {
 	var f *cache.FileCredentialCache
-	var err error
 
 	if !*sesCreds && len(cfg.RoleArn) > 0 {
 		f = &cache.FileCredentialCache{Path: assumeRoleCacheFile()}

@@ -22,10 +22,13 @@ const (
 	SessionTokenDefaultDuration = 12 * time.Hour
 )
 
+// ErrMfaRequired is the error returned when an MFA device is configured for the profile
+// but no MFA code was supplied when requesting Session or Assume Role credentials.
 type ErrMfaRequired struct {
 	error
 }
 
+// Error is the implementation of the error interface for the ErrMfaRequired type
 func (e *ErrMfaRequired) Error() string {
 	return "MFA required, but no code sent"
 }
