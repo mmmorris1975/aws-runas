@@ -22,6 +22,14 @@ const (
 	SessionTokenDefaultDuration = 12 * time.Hour
 )
 
+type ErrMfaRequired struct {
+	error
+}
+
+func (e *ErrMfaRequired) Error() string {
+	return "MFA required, but no code sent"
+}
+
 // SessionTokenProvider is the type to provide settings to perform the GetSessionToken operation in the AWS API.
 // The provider borrows much from the AWS SDK AssumeRoleProvider as there is a number of common attributes between the
 // two.  An optional Cache provides the ability to cache the credentials in order to limit API calls.
@@ -84,6 +92,9 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 		}
 	}
 
+	// This isn't the same thing as cred.IsExpired(), which just forces a call to our Retrieve() function
+	// This IsExpired() is still based on the lifetime of the initial creds we retrieved, with a window to
+	// re-get the creds before they actually expire.
 	if s.IsExpired() {
 		s.debug("Detected expired or unset session token credentials, refreshing")
 		c, err := s.getSessionToken()
@@ -108,6 +119,12 @@ func (s *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 		}
 	}
 
+	if cc == nil {
+		// something's wacky, expire existing provider creds, and retry
+		s.SetExpiration(time.Unix(0, 0), 0)
+		return s.Retrieve()
+	}
+
 	s.debug("SESSION TOKEN CREDENTIALS: %+v", cc.Value)
 	return cc.Value, nil
 }
@@ -125,7 +142,7 @@ func (s *SessionTokenProvider) getSessionToken() (*sts.Credentials, error) {
 				}
 				i.TokenCode = &t
 			} else {
-				return nil, fmt.Errorf("MFA required, but no code sent")
+				return nil, new(ErrMfaRequired)
 			}
 		} else {
 			i.TokenCode = &s.TokenCode

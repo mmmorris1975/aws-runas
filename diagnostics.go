@@ -37,6 +37,8 @@ func checkEnv() {
 	if len(envAk) > 0 && len(envSt) > 0 {
 		if strings.HasPrefix(envAk, "AKIA") {
 			log.Errorf("detected static access key env var along with session token env var, this is invalid")
+		} else {
+			log.Info("environment variables appear sane")
 		}
 	}
 }
@@ -45,6 +47,8 @@ func checkRegion(c *config.AwsConfig) {
 	// Check that region is set
 	if len(c.Region) < 1 {
 		log.Errorf("region is not set, it must be specified in the config file or as an environment variable")
+	} else {
+		log.Info("region is configured in profile or environment variable")
 	}
 }
 
@@ -77,6 +81,8 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 		envAk := os.Getenv("AWS_ACCESS_KEY_ID")
 		if cfgCreds && len(envAk) > 0 {
 			log.Errorf("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+		} else {
+			log.Info("credentials appear sane")
 		}
 	}
 }
@@ -97,6 +103,8 @@ func checkCredentialProfile(profile string) bool {
 	if !p.HasKey("aws_access_key_id") || !p.HasKey("aws_secret_access_key") {
 		log.Errorf("incomplete or missing credentials for profile '%s'", profile)
 		return false
+	} else {
+		log.Info("profile credentials appear sane")
 	}
 
 	return true

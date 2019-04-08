@@ -48,12 +48,12 @@ var (
 	duration     *time.Duration
 	roleDuration *time.Duration
 	cmd          *[]string
-	log          *simple_logger.Logger
 	ses          *session.Session
 	cfg          *config.AwsConfig
 	usr          *credlib.AwsIdentity
 
 	sigCh = make(chan os.Signal, 3)
+	log   = simple_logger.StdLogger
 )
 
 func init() {
@@ -118,7 +118,6 @@ func main() {
 	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
-	log = simple_logger.StdLogger
 	if *verbose {
 		log.SetLevel(simple_logger.DEBUG)
 	}
@@ -141,9 +140,29 @@ func main() {
 			log.Debugf("Error checking version: %v", err)
 		}
 	case *diagFlag:
-		runDiagnostics(cfg)
+		if err := runDiagnostics(cfg); err != nil {
+			log.Debugf("error running diagnostics: %v", err)
+		}
 	case *ec2MdFlag:
-		metadataServer()
+		log.Debug("Metadata Server")
+		if usr.IdentityType == "user" {
+			opts := new(metadata.EC2MetadataInput)
+			opts.Config = cfg  // should never be nil, from resolveConfig() call above
+			opts.Logger = log  // should never be nil, initialized at startup
+			opts.Session = ses // should never be nil, from awsSession() above
+			opts.User = usr    // should never be nil, from awsUser() above
+			opts.InitialProfile = *profile
+			opts.SessionCacheDir = filepath.Dir(sessionTokenCacheFile())
+
+			if profile != nil && len(*profile) > 0 {
+				cp := sessionTokenCredentials()
+				if _, err := cp.Get(); err != nil {
+					log.Fatal("Error getting initial credentials: %v", err)
+				}
+			}
+
+			log.Fatal(metadata.NewEC2MetadataService(opts))
+		}
 	default:
 		var c *credentials.Credentials
 
@@ -296,10 +315,14 @@ func handleUserCreds() *credentials.Credentials {
 
 func checkRefresh() {
 	if *refresh {
+		var err error
 		if !*sesCreds {
-			os.Remove(assumeRoleCacheFile())
+			err = os.Remove(assumeRoleCacheFile())
 		}
-		os.Remove(sessionTokenCacheFile())
+		err = os.Remove(sessionTokenCacheFile())
+		if err != nil {
+			log.Debugf("Error removing cache files: %v", err)
+		}
 	}
 }
 
@@ -326,7 +349,10 @@ func printCredExpire() {
 	if exp.Before(time.Now()) {
 		tense = "expired"
 	}
-	fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn)
+
+	if _, err := fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn); err != nil {
+		log.Errorf("Error printing credentials: %v", err)
+	}
 }
 
 func cacheFile(f string) string {
@@ -391,8 +417,12 @@ func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
 	})
 }
 
-func sessionTokenCredentials() *credentials.Credentials {
+func sessionTokenCredentials(cacheFile ...string) *credentials.Credentials {
 	var ew time.Duration
+
+	if len(cacheFile) < 1 || len(cacheFile[0]) < 1 {
+		cacheFile = []string{sessionTokenCacheFile()}
+	}
 
 	if cfg.RoleDuration < credlib.SessionTokenMinDuration {
 		ew = credlib.SessionTokenMinDuration / 10
@@ -401,7 +431,7 @@ func sessionTokenCredentials() *credentials.Credentials {
 	}
 
 	return credlib.NewSessionCredentials(ses, func(p *credlib.SessionTokenProvider) {
-		p.Cache = &cache.FileCredentialCache{Path: sessionTokenCacheFile()}
+		p.Cache = &cache.FileCredentialCache{Path: cacheFile[0]}
 		p.SerialNumber = cfg.MfaSerial
 		p.TokenProvider = credlib.StdinTokenProvider
 		p.Duration = cfg.SessionDuration
@@ -442,26 +472,6 @@ func roleHandler() {
 			//	}
 			//}
 		}
-	}
-}
-
-func metadataServer() {
-	log.Debug("Metadata Server")
-	if usr.IdentityType == "user" {
-		s := session.Must(session.NewSession(new(aws.Config).WithCredentials(sessionTokenCredentials())))
-
-		// don't obey cfg.CredsDuration on purpose, use default duration. Use longer-lived session tokens to call AssumeRole
-		// do not cache assume role credentials from metadata service
-		ar := credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
-			p.Duration = credlib.AssumeRoleDefaultDuration
-			p.ExternalID = cfg.ExternalID
-			p.RoleSessionName = usr.UserName
-		})
-
-		// Fetch credentials right away so if we need to refresh and do MFA it all happens at the start, and caches the results
-		ar.Get()
-
-		log.Fatal(metadata.NewEC2MetadataService(ar, *profile, log.Level))
 	}
 }
 

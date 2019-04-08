@@ -112,6 +112,12 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 		}
 	}
 
+	if cc == nil {
+		// something's wacky, expire existing provider creds, and retry
+		p.SetExpiration(time.Unix(0, 0), 0)
+		return p.Retrieve()
+	}
+
 	p.debug("ASSUME ROLE CREDENTIALS: %+v", cc.Value)
 	return cc.Value, nil
 }
@@ -135,7 +141,7 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 				}
 				i.TokenCode = &t
 			} else {
-				return nil, fmt.Errorf("MFA required, but no code sent")
+				return nil, new(ErrMfaRequired)
 			}
 		} else {
 			i.TokenCode = aws.String(p.TokenCode)
