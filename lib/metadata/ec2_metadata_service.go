@@ -34,7 +34,7 @@ const (
 	MfaPath = "/mfa"
 	// ProfilePath is the endpoint for getting/setting the profile to use
 	ProfilePath = "/profile"
-	// ListProfilePath is the endpoint for listing all known roles
+	// ListRolesPath is the endpoint for listing all known roles
 	ListRolesPath = "/list-roles"
 	// RefreshPath is the endpoint for forcing a credential refresh
 	RefreshPath = "/refresh"
@@ -82,13 +82,20 @@ type ec2MetadataOutput struct {
 	Expiration      string
 }
 
+// EC2MetadataInput is a struct to provide options for configuring the state of the metadata service at startup
 type EC2MetadataInput struct {
-	Config          *config.AwsConfig
-	InitialProfile  string
-	Logger          *simple_logger.Logger
-	Session         *session.Session
+	// Config is the AwsConfig for a profile provided at service startup
+	Config *config.AwsConfig
+	// InitialProfile is the name of the profile provided at service startup
+	InitialProfile string
+	// Logger is the logger object to configure for the service
+	Logger *simple_logger.Logger
+	// Session is the initial AWS session.Session object to use at service startup
+	Session *session.Session
+	// SessionCacheDir is the path used to cache the session token credentials. Set to an empty string to disable caching.
 	SessionCacheDir string
-	User            *credlib.AwsIdentity
+	// User is the AwsIdentity of the callers AWS credentials.
+	User *credlib.AwsIdentity
 }
 
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
@@ -231,10 +238,9 @@ func dropPrivileges() (err error) {
 		if err != nil {
 			log.Debugf("Error checking home directory: %v", err)
 			return err
-		} else {
-			log.Debugf("Found UID/GID from home directory ownership: UID: %d, GID: %d", uid, gid)
-			return setPrivileges(uid, gid)
 		}
+		log.Debugf("Found UID/GID from home directory ownership: UID: %d, GID: %d", uid, gid)
+		return setPrivileges(uid, gid)
 	}
 	return nil
 }
@@ -283,11 +289,7 @@ func setPrivileges(uid int, gid int) error {
 	if err := unix.Setgid(gid); err != nil {
 		return err
 	}
-
-	if err := unix.Setuid(uid); err != nil {
-		return err
-	}
-	return nil
+	return unix.Setuid(uid)
 }
 
 func writeResponse(w http.ResponseWriter, r *http.Request, body string, code int) {

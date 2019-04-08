@@ -103,10 +103,9 @@ func checkCredentialProfile(profile string) bool {
 	if !p.HasKey("aws_access_key_id") || !p.HasKey("aws_secret_access_key") {
 		log.Errorf("incomplete or missing credentials for profile '%s'", profile)
 		return false
-	} else {
-		log.Info("profile credentials appear sane")
 	}
 
+	log.Info("profile credentials appear sane")
 	return true
 }
 
