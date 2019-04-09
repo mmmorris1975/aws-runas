@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,10 +19,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -52,6 +55,9 @@ var (
 	usr      *credlib.AwsIdentity
 	log      *simple_logger.Logger
 	cacheDir string
+
+	sigCh = make(chan os.Signal, 3)
+	srv   = new(http.Server)
 )
 
 func init() {
@@ -112,8 +118,11 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 		return err
 	}
 	defer func() {
-		if err := removeAddress(lo, EC2MetadataAddress); err != nil {
-			log.Debugf("Error removing network config: %v", err)
+		if os.Getuid() == 0 {
+			// this will only work if root/administrator
+			if err := removeAddress(lo, EC2MetadataAddress); err != nil {
+				log.Debugf("Error removing network config: %v", err)
+			}
 		}
 	}()
 
@@ -149,8 +158,20 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 		profileHandler(httptest.NewRecorder(), r)
 	}
 
+	// install signal handler to shutdown gracefully when we get a ^C (SIGINT) or ^\ (SIGQUIT)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+	go func() {
+		for {
+			sig := <-sigCh
+			log.Debugf("Metadata service got signal: %s", sig.String())
+			if err := srv.Shutdown(context.Background()); err != nil {
+				log.Debugf("Error shutting down metadata service: %v", err)
+			}
+		}
+	}()
+
 	log.Infof(msg)
-	return http.Serve(l, nil)
+	return srv.Serve(l)
 }
 
 func handleOptions(opts *EC2MetadataInput) error {
