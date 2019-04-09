@@ -1,0 +1,13 @@
+---
+---
+@import "{{ site.theme }}";
+
+section { width: 640px; }
+
+@media print, screen and (max-width: 1060px) {
+  section { max-width: 640px; }
+}
+
+@media print, screen and (max-width: 720px) {
+  section { width: auto }
+}
