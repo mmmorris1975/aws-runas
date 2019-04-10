@@ -44,6 +44,27 @@ The program will continue to run in the foreground and log messages about the HT
 http access log format.
 
 
+## Program Access
+When executing programs which will get their credentials via this local metadata service, it may be necessary to set the
+`AWS_SHARED_CREDENTIALS_FILE` environment variable to an invalid value so the SDK does not attempt to use the credentials
+in that file to make the AWS service calls. This is due to the default AWS credential lookup chain checking the credentials
+file before attempting to get the credentials via the metadata service.
+
+For example, running:
+```text
+$ aws s3 ls
+```
+
+Will likely not connect to the metadata service for credentials, and instead use the credentials configured in the default
+section in the .aws/credentials file. That means the example above will return an S3 bucket listing for the AWS account
+managing the default credentials, instead of the account which is configured for the role and profile which is active in
+the metadata service. One way to get around this will be to run the command like this instead (after starting the metadata service):
+
+```text
+$ AWS_SHARED_CREDENTIALS_FILE=/dev/null aws s3 ls
+```
+
+
 ## Browser Interface
 Starting with the 1.3 release, the aws-runas EC2 Metadata Service feature provides a web interface for managing the
 active profile used to retrieve credentials with the service. It can be accessed by pointing your web browser at
