@@ -2,6 +2,8 @@
 ---
 @import "{{ site.theme }}";
 
+body { font: 16px/1.4 'Quattrocento Sans', "Helvetica Neue", Helvetica, Arial, sans-serif; }
+
 section { width: 640px; }
 
 @media print, screen and (max-width: 1060px) {

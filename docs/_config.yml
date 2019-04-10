@@ -27,6 +27,7 @@ show_downloads: "true"
 markdown: kramdown
 theme: jekyll-theme-leap-day
 plugins:
+  - jekyll-sitemap
   - jekyll-feed
   - jekyll-seo-tag
   - jekyll-avatar

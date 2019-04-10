@@ -4,7 +4,7 @@ PATH := build:$(PATH)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: darwin linux windows release clean dist-clean test
+.PHONY: darwin linux windows release clean dist-clean test docs
 
 $(EXE): go.mod *.go lib/*/*.go
 	go build -v -ldflags '-X main.Version=$(VER)' -o $@
@@ -29,3 +29,8 @@ test: $(EXE)
 	go test -v ./...
 	bundle install
 	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
+
+docs:
+	cd docs && bundle install
+	cd docs && bundle exec jekyll build
+	cd docs && bundle exec jekyll serve
