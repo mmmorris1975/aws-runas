@@ -86,8 +86,8 @@ oddity of the logic AWS uses to process the config file, and is necessary for an
 If the role requires that you use MFA, then you will need to configure an attribute named `mfa_serial` in the profile,
 which contains the ARN value of the MFA token you configured for your IAM account. If you have a properly configured
 .aws/credentials file, you can find this value by running `aws-runas -m`, or under your IAM user's configuration in the
-AWS console.  The [Quick Start Guide](/quick-start.html#configuration) provides an example of what a profile configured
-to use MFA would look like.
+AWS console.  The [Quick Start Guide]({{ "quick-start.html#configuration" | relative_url }}) provides an example of what
+a profile configured to use MFA would look like.
 
 A profile's configuration also allows you to override settings set in the default profile, or the profile referenced in
 the 'source_profile' attribute. For example, if the default section configures the region as 'us-east-1' (like above),
