@@ -112,8 +112,8 @@ export AWS_SESSION_TOKEN='zzzzz'
 ```
 
 Or simply `eval $(aws-runas admin-profile)` to add these env vars in the current session. While this behavior is supported,
-it is certainly not the optimal way to use the tools, since these credentials have a short lifetime (1 hour, by default),
-and will not be automatically refreshed when they expire.
+it is certainly not the optimal way to use aws-runas, since these credentials have a short lifetime (1 hour, by default),
+and will not get automatically refreshed when they expire.
 
 ### Session Token Credentials
 Session Token credentials are the type of credentials aws-runas retrieves before making the calls to assume a role. The
@@ -157,5 +157,5 @@ export AWS_SESSION_TOKEN='zzzzz'
 ```
 
 Or simply `eval $(aws-runas -s)` to add these env vars in the current session. While this behavior is supported,
-it is certainly not the optimal way to use the tools, since you lose the ability to track when these credentials will
+it is certainly not the optimal way to use aws-runas, since you lose the ability to track when these credentials will
 expire and have aws-runas handle refreshing them.

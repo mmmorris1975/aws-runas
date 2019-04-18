@@ -18,7 +18,7 @@ using `sudo` on Linux or MacOS, or with Administrator privileges on Windows. Whi
 to configure a system to listen on the AWS hard-coded endpoint of http://169.254.169.254 for serving the metadata.  On
 non-Windows systems, root-level permissions are dropped back to the identity of the calling user as soon as the network
 interface and port are configured.  In addition to being a security best-practice, this also helps to keep the ownership
-of the credential cache files sane, and not only owned and accessible by the root user.
+of the credential cache files sane, and not owned and accessible by only the root user.
 
 Also be aware that this is not a full-blown implementation of the EC2 metadata service, it only exposes the paths
 used to obtain IAM role credentials from an EC2 instance profile. It also exposes some paths which are not part of the
@@ -67,7 +67,7 @@ $ AWS_SHARED_CREDENTIALS_FILE=/dev/null aws s3 ls
 
 ## Browser Interface
 Starting with the 1.3 release, the aws-runas EC2 Metadata Service feature provides a web interface for managing the
-active profile used to retrieve credentials with the service. It can be accessed by pointing your web browser at
+active profile used to retrieve credentials through the service. It can be accessed by pointing your web browser at
 http://169.254.169.254/ after starting the process from the command line.
 
 Below is a screenshot of the metadata service interface, and is the only screen available.
@@ -82,9 +82,9 @@ appear similar to the following screen shot...
 
 ![Metadata Service Browser Interface MFA Dialog](/assets/images/metadata-web-mfa.png)
 
-The 'Refresh Now' is not used as part of the normal workflow in the browser interface. It is provided as a way to force
-a refresh of the credentials used for the role. After clicking this button, you will be required to re-submit the current
-MFA code for the active profile, if the role requires the use of MFA. If MFA is not required, a new set of credentials
+The 'Refresh Now' button is not used as part of the normal workflow in the browser interface. It is provided as a way to
+force a refresh of the credentials used for the role. After clicking this button, you will be required to re-submit the current
+current MFA code for the active profile, if the role requires the use of MFA. If MFA is not required, a new set of credentials
 will be obtained with no other intervention required.
 
 

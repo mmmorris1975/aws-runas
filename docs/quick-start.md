@@ -30,8 +30,8 @@ to provide the full path to the file.  Many people will simply create a bin dire
 tooling.
 
 #### Windows
-After downloading and renaming the file, you'll want to move the file to a new location.  You'll want to place it in a
-location which is easily accessible, like on the desktop, or in your home directory.
+After downloading and renaming the file, you'll want to move the file to a new location.  Place it in a location which is
+easily accessible, like on the desktop, or in your home directory.
 
 ## Configuration
 Both the AWS credentials and configuration files live in a directory named `.aws` in your user's home directory.  On
@@ -66,7 +66,7 @@ region = us-east-1
 ```
 
 The above data is enough to allow you to use aws-runas to list some of the IAM roles you have access to (the '-l' option),
-find your MFA device ARN (if required, using the '-m' option), and create a set of session token credentials (the '-s'
+to find your MFA device ARN (if required, using the '-m' option), or create a set of session token credentials (the '-s'
 option).  However, it isn't enough to make aws-runas assume a role and provide you access to AWS resources outside of
 the account where your IAM user is managed.
 
@@ -110,7 +110,7 @@ export AWS_SESSION_TOKEN='RoleSessionToken'
 export AWS_SECURITY_TOKEN='RoleSessionToken'
 ```
 The AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_SESSION_TOKEN, and AWS_SECURITY_TOKEN values will be some nonsensical
-string particular to the set of credentials AWS generated for you.  On Windows the leading "export" will say "set" instead
+string, particular to the set of credentials AWS generated for you.  On Windows the leading "export" will say "set" instead
 to allow the returned values to be set as environment variables in your command line session.  This is a simple test to
 validate that the configuration is correct.
 

@@ -3,7 +3,7 @@ layout: page
 title: Configuration Guide
 ---
 # Configuration Guide
-This page provides a more in-depth look at the credentials and configuration files used by aws-runas, and some of the
+This page provides a more in-depth look at the credentials and config file used by aws-runas, and some of the
 custom parameters you can use to configure the tool.
 
 
@@ -68,7 +68,7 @@ to learn how to configure a profile for assuming a role.
 
 #### Profile Sections
 Profile sections in the configuration file are what is used to provide the settings used to assume a role with aws-runas,
-or other tools which support reading from the this file.
+or other tools which support assuming roles using this file.
 
 The minimum profile configuration required for assuming a role looks like this:
 
@@ -131,7 +131,7 @@ specified in a role profile will be used instead of a value defined in the defau
 
   * `session_token_duration` This attribute specifies the lifetime of the session token credentials (which carry the MFA information).
     This would be the setting to adjust for most cases, since it determines the interval which the session token credentials
-    (and by extension, any MFA code entry, if used) will be refreshed.  Valid values are between 15m and 36h, with the default
+    (and by extension, any MFA code entry) will be refreshed.  Valid values are between 15m and 36h, with the default
     value of 12h.
   * `credentials_duration` This attribute specifies the lifetime of the assume role credentials requested by aws-runas.
     With the exception of a narrow set of cases, it's usually safe to leave this setting at the default value of 1h. Valid
@@ -140,14 +140,14 @@ specified in a role profile will be used instead of a value defined in the defau
     aws-runas to fail with an error. One side effect of increasing this lifetime beyond 1h is that we have to request
     assume role credentials directly from AWS, using the IAM user credentials, instead of session token credentials. For
     roles requiring MFA, this means that the MFA code will need to be entered each time the assume role credentials expire,
-    expire, which is usually a shorter interval than using session token credentials to perform the assume role operation.
+    which is usually a shorter interval than using session token credentials to perform the assume role operation.
 
 
 ### Environment Variables
 Standard AWS SDK environment variables are supported by this program. (See the `Environment Variables` section in 
 [https://docs.aws.amazon.com/sdk-for-go/api/aws/session/](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/))
 Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable which will be explicitly
-unset before aws-runas executes the program supplied as an argument to the command. (It only affects the environment
+unset before aws-runas executes the program supplied as an argument to aws-runas. (It only affects the environment
 variable for the execution of aws-runas, the setting in the original environment is unaffected)
 
 If the `AWS_PROFILE` environment variable is set, it will be used in place of the 'profile' argument to the command. In
