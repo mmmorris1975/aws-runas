@@ -199,11 +199,9 @@ func ntpTime() (time.Time, error) {
 					log.Debugf("Retryable error %v, deadline duration %v", e, deadlineDuration)
 					continue
 				} else {
-					gotResponse = true
 					return t, e
 				}
 			default:
-				gotResponse = true
 				return t, e
 			}
 		}
