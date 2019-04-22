@@ -21,5 +21,4 @@ describe command ('aws-runas -D') do
     its(:stderr) { should match /INFO region is configured in profile or environment variable$/ }
     its(:stderr) { should match /INFO system time is within spec/ }
     its(:stdout) { should match /^PROFILE: default/ }
-    its(:stdout) { should match /^SOURCE PROFILE: circleci/ }
 end
