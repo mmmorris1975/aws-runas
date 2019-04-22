@@ -103,3 +103,9 @@ func TestRunDiagnostics(t *testing.T) {
 		}
 	})
 }
+
+func TestCheckTime(t *testing.T) {
+	if err := checkTime(); err != nil {
+		t.Error(err)
+	}
+}

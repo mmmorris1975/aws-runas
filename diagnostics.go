@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/binary"
 	"fmt"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/aws-runas/lib/config"
+	"math"
+	"net"
 	"os"
 	"strings"
+	"time"
 )
 
 // RunDiagnostics will sanity check various configuration items, print errors as we find them
@@ -23,6 +27,10 @@ func runDiagnostics(c *config.AwsConfig) error {
 	} else {
 		// profile is a config profile name
 		checkProfileCfg(p, c)
+	}
+
+	if err := checkTime(); err != nil {
+		return err
 	}
 
 	printConfig(p, c)
@@ -109,6 +117,36 @@ func checkCredentialProfile(profile string) bool {
 	return true
 }
 
+func checkTime() error {
+	// AWS requires that the timestamp in API requests be within 5 minutes of the time at
+	// the service endpoint. Ensure our local clock is within 5 minutes of an NTP source
+	maxDrift := 5 * time.Minute
+	warnDrift := 3 * time.Minute
+
+	nTime, err := ntpTime()
+	if err != nil {
+		log.Debugf("error checking ntp: %v", err)
+		return err
+	}
+
+	tLocal := time.Now()
+	drift := nTime.Sub(tLocal)
+	log.Debugf("ntp: %+v, local: %+v, drift: %+v", nTime.Unix(), tLocal.Unix(), drift)
+
+	if math.Abs(drift.Seconds()) >= maxDrift.Seconds() {
+		log.Error("Local time drift is more than %v, AWS API requests will be rejected", maxDrift.Truncate(time.Minute))
+		return nil
+	}
+
+	if math.Abs(drift.Seconds()) > warnDrift.Seconds() {
+		log.Warn("Local time drift is more than %v seconds, check system time", warnDrift.Truncate(time.Minute))
+		return nil
+	}
+
+	log.Infof("system time is within spec")
+	return nil
+}
+
 func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("PROFILE: %s\n", p)
 	fmt.Printf("REGION: %s\n", c.Region)
@@ -118,4 +156,90 @@ func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("ROLE ARN: %s\n", c.RoleArn)
 	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalID)
 	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.RoleDuration)
+}
+
+// NTP client bits below
+type ntpPacket struct {
+	Settings       uint8  // leap yr indicator, ver number, and mode
+	Stratum        uint8  // stratum of local clock
+	Poll           int8   // poll exponent
+	Precision      int8   // precision exponent
+	RootDelay      uint32 // root delay
+	RootDispersion uint32 // root dispersion
+	ReferenceID    uint32 // reference id
+	RefTimeSec     uint32 // reference timestamp sec
+	RefTimeFrac    uint32 // reference timestamp fractional
+	OrigTimeSec    uint32 // origin time secs
+	OrigTimeFrac   uint32 // origin time fractional
+	RxTimeSec      uint32 // receive time secs
+	RxTimeFrac     uint32 // receive time frac
+	TxTimeSec      uint32 // transmit time secs
+	TxTimeFrac     uint32 // transmit time frac
+}
+
+func ntpTime() (time.Time, error) {
+	var t time.Time
+	var err error
+
+	deadlineDuration := 200 * time.Millisecond
+	gotResponse := false
+
+	for !gotResponse {
+		if deadlineDuration > 10*time.Second {
+			gotResponse = true
+			return time.Time{}, fmt.Errorf("retry attempt limit exceeded")
+		}
+
+		t, err = fetchTime(deadlineDuration)
+		if err != nil {
+			switch e := err.(type) {
+			case *net.OpError:
+				if e.Timeout() || e.Temporary() {
+					deadlineDuration = (deadlineDuration * 3) / 2
+					log.Debugf("Retryable error %v, deadline duration %v", e, deadlineDuration)
+					continue
+				} else {
+					gotResponse = true
+					return t, e
+				}
+			default:
+				gotResponse = true
+				return t, e
+			}
+		}
+		gotResponse = true
+	}
+
+	return t, nil
+}
+
+// REF: https://medium.com/learning-the-go-programming-language/lets-make-an-ntp-client-in-go-287c4b9a969f
+func fetchTime(deadline time.Duration) (time.Time, error) {
+	// epoch times between NTP and Unix time are offset by this much
+	// REF: https://tools.ietf.org/html/rfc5905#section-6 (Figure 4)
+	var ntpUnixOffsetSec uint32 = 2208988800
+
+	c, err := net.Dial("udp", "pool.ntp.org:123")
+	if err != nil {
+		return time.Time{}, err
+	}
+	defer c.Close()
+
+	if deadline > 0 {
+		if err := c.SetReadDeadline(time.Now().Add(deadline)); err != nil {
+			return time.Time{}, err
+		}
+	}
+
+	// NTPv3 client request packet
+	if err := binary.Write(c, binary.BigEndian, &ntpPacket{Settings: 0x1B}); err != nil {
+		return time.Time{}, err
+	}
+
+	resp := new(ntpPacket)
+	if err := binary.Read(c, binary.BigEndian, resp); err != nil {
+		return time.Time{}, err
+	}
+
+	return time.Unix(int64(resp.TxTimeSec-ntpUnixOffsetSec), (int64(resp.TxTimeFrac)*1e9)>>32), nil
 }

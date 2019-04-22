@@ -15,3 +15,11 @@ describe command ('aws-runas -vu') do
   its(:stdout) { should match /^New version of aws-runas available:/ }
   its(:stderr) { should match /\s+Update check/ }
 end
+
+describe command ('aws-runas -D') do
+    its(:exit_status) { should eq 0 }
+    its(:stderr) { should match /INFO region is configured in profile or environment variable$/ }
+    its(:stderr) { should match /INFO system time is within spec/ }
+    its(:stdout) { should match /^PROFILE: default/ }
+    its(:stdout) { should match /^SOURCE PROFILE: circleci/ }
+end
