@@ -107,14 +107,6 @@ func init() {
 }
 
 func main() {
-	signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
-	go func() {
-		for {
-			sig := <-sigCh
-			log.Debugf("Got signal: %s", sig.String())
-		}
-	}()
-
 	kingpin.CommandLine.Interspersed(false)
 	kingpin.Parse()
 
@@ -181,6 +173,14 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
+			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+			go func() {
+				for {
+					sig := <-sigCh
+					log.Debugf("Got signal: %s", sig.String())
+				}
+			}()
+
 			cmd = wrapCmd(cmd)
 			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
 			c.Stdin = os.Stdin

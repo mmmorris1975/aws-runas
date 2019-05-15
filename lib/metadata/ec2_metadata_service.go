@@ -31,7 +31,7 @@ const (
 	EC2MetadataIp = "169.254.169.254"
 	// EC2MetadataCredentialPath is the base path for instance role credentials in the metadata service
 	EC2MetadataCredentialPath = "/latest/meta-data/iam/security-credentials/"
-	// MfaPath is the websocket endpoint for using MFA
+	// MfaPath is the endpoint for providing MFA data
 	MfaPath = "/mfa"
 	// ProfilePath is the endpoint for getting/setting the profile to use
 	ProfilePath = "/profile"
