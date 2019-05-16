@@ -216,13 +216,13 @@ func handleOptions(opts *EC2MetadataInput) error {
 // to not use the capabilities feature.
 func linuxSetCap() error {
 	caps := capability.CAPS | capability.AMBIENT
-	cap, err := capability.NewPid2(0)
+	c, err := capability.NewPid2(0)
 	if err != nil {
 		return err
 	}
 
-	cap.Set(caps, capability.CAP_SETGID, capability.CAP_SETUID, capability.CAP_NET_BIND_SERVICE, capability.CAP_NET_ADMIN)
-	return cap.Apply(caps)
+	c.Set(caps, capability.CAP_SETGID, capability.CAP_SETUID, capability.CAP_NET_BIND_SERVICE, capability.CAP_NET_ADMIN)
+	return c.Apply(caps)
 }
 
 // This is really the only semi-sane way to configure the necessary networking, it still requires

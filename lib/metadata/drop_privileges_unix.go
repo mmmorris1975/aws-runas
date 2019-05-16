@@ -105,10 +105,10 @@ func setPrivileges(uid int, gid int) error {
 			return err
 		}
 		return nil
-	} else {
-		if err := unix.Setgid(gid); err != nil {
-			return err
-		}
-		return unix.Setuid(uid)
 	}
+
+	if err := unix.Setgid(gid); err != nil {
+		return err
+	}
+	return unix.Setuid(uid)
 }
