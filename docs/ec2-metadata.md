@@ -20,6 +20,16 @@ non-Windows systems, root-level permissions are dropped back to the identity of 
 interface and port are configured.  In addition to being a security best-practice, this also helps to keep the ownership
 of the credential cache files sane, and not owned and accessible by only the root user.
 
+The Linux platform binary also support [capabilities](http://man7.org/linux/man-pages/man7/capabilities.7.html) which
+allows you to execute the tool without using sudo.  To enable the capabilities support for the program, you'll need to
+run the command:
+```text
+sudo setcap "cap_net_admin,cap_net_bind_service,cap_setgid,cap_setuid=p" aws-runas
+```
+This should only be required a single time when a new version is installed.  If support is added in the future to
+distribute Linux binaries as distro-specific packages, this will be done automatically as part of the post-installation
+steps.
+
 Also be aware that this is not a full-blown implementation of the EC2 metadata service, it only exposes the paths
 used to obtain IAM role credentials from an EC2 instance profile. It also exposes some paths which are not part of the
 EC2 metadata service so we can adjust the configuration of the service while it is running.

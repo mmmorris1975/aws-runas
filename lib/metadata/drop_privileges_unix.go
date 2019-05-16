@@ -8,6 +8,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"syscall"
 )
 
 func dropPrivileges() (err error) {
@@ -91,8 +92,23 @@ func stat(path string) (int, int, error) {
 
 func setPrivileges(uid int, gid int) error {
 	// REF: https://wiki.sei.cmu.edu/confluence/display/c/POS36-C.+Observe+correct+revocation+order+while+relinquishing+privileges
-	if err := unix.Setgid(gid); err != nil {
-		return err
+
+	if runtime.GOOS == "linux" {
+		// Per https://github.com/golang/sys/blob/master/unix/syscall_linux.go, Setgid and Setuid are not supported on
+		// Linux and just return an "Operation Not Supported" error, see https://github.com/golang/go/issues/1435
+		// Make the raw syscalls to drop permissions until this gets resolved
+		if _, _, err := syscall.Syscall(syscall.SYS_SETGID, uintptr(gid), 0, 0); err != 0 {
+			return err
+		}
+
+		if _, _, err := syscall.Syscall(syscall.SYS_SETUID, uintptr(uid), 0, 0); err != 0 {
+			return err
+		}
+		return nil
+	} else {
+		if err := unix.Setgid(gid); err != nil {
+			return err
+		}
+		return unix.Setuid(uid)
 	}
-	return unix.Setuid(uid)
 }

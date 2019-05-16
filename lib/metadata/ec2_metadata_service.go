@@ -12,6 +12,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/simple-logger"
+	"github.com/syndtr/gocapability/capability"
 	"html/template"
 	"io"
 	"net"
@@ -20,6 +21,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -111,6 +113,13 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 		return err
 	}
 
+	if runtime.GOOS == "linux" {
+		log.Debug("setting Linux capabilities")
+		if err := linuxSetCap(); err != nil {
+			return err
+		}
+	}
+
 	lo, err := setupInterface()
 	if err != nil {
 		return err
@@ -199,6 +208,21 @@ func handleOptions(opts *EC2MetadataInput) error {
 	cfg = cf.WithLogger(log)
 
 	return nil
+}
+
+// Set capabilities to allow us to run without sudo or setuid on Linux. After installing the tool, you must run
+// sudo /sbin/setcap "cap_net_admin,cap_net_bind_service,cap_setgid,cap_setuid=p" aws-runas
+// to enable the use of these capability settings.  You can still execute aws-runas wrapped in sudo, if you prefer
+// to not use the capabilities feature.
+func linuxSetCap() error {
+	caps := capability.CAPS | capability.AMBIENT
+	cap, err := capability.NewPid2(0)
+	if err != nil {
+		return err
+	}
+
+	cap.Set(caps, capability.CAP_SETGID, capability.CAP_SETUID, capability.CAP_NET_BIND_SERVICE, capability.CAP_NET_ADMIN)
+	return cap.Apply(caps)
 }
 
 // This is really the only semi-sane way to configure the necessary networking, it still requires

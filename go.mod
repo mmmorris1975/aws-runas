@@ -9,5 +9,6 @@ require (
 	github.com/go-ini/ini v1.41.0
 	github.com/mmmorris1975/aws-config v0.2.5
 	github.com/mmmorris1975/simple-logger v0.3.2
+	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 	golang.org/x/sys v0.0.0-20190405154228-4b34438f7a67
 )
