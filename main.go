@@ -240,6 +240,7 @@ func printCredentials() {
 		// and fall through to using linux-style env var setting syntax
 		if len(os.Getenv("SHELL")) < 1 {
 			exportToken = "set"
+			format = "%s %s=%s\n"
 		}
 	}
 
