@@ -11,18 +11,21 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/dustin/go-humanize"
+	"github.com/go-ini/ini"
 	"github.com/mmmorris1975/aws-runas/lib/cache"
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/aws-runas/lib/metadata"
 	"github.com/mmmorris1975/aws-runas/lib/util"
 	"github.com/mmmorris1975/simple-logger"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -52,8 +55,9 @@ var (
 	cfg          *config.AwsConfig
 	usr          *credlib.AwsIdentity
 
-	sigCh = make(chan os.Signal, 3)
-	log   = simple_logger.StdLogger
+	sigCh  = make(chan os.Signal, 3)
+	log    = simple_logger.StdLogger
+	cfLock = new(sync.Mutex)
 )
 
 func init() {
@@ -173,6 +177,26 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
+			tf, err := writeTempCreds(creds)
+			if err != nil {
+				log.Warnf("Error creating temporary credential file: %v", err)
+			} else {
+				defer os.Remove(tf)
+
+				go func() {
+					for {
+						if err := manageTempCreds(tf, c); err != nil {
+							log.Warnf("Error updating temporary credential file: %v", err)
+						}
+					}
+				}()
+
+				os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
+				for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
+					os.Unsetenv(v)
+				}
+			}
+
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
 			go func() {
 				for {
@@ -187,7 +211,7 @@ func main() {
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 
-			err := c.Run()
+			err = c.Run()
 			if err != nil {
 				log.Debug("Error running command")
 				log.Fatalf("%v", err)
@@ -196,6 +220,60 @@ func main() {
 			printCredentials()
 		}
 	}
+}
+
+func manageTempCreds(f string, c *credentials.Credentials) error {
+	e, _ := c.ExpiresAt()
+	log.Debugf("Will refresh role credentials at: %v", e.Local())
+
+	time.Sleep(time.Until(e))
+	creds, err := c.Get()
+	if err != nil {
+		return err
+	} else {
+		if err := updateTempCreds(f, creds); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func writeTempCreds(creds credentials.Value) (string, error) {
+	tf, err := ioutil.TempFile("", fmt.Sprintf("aws-runas-%s-*", *profile))
+	if err != nil {
+		return "", err
+	}
+	log.Debugf("Temporary credentials file: %s", tf.Name())
+	tf.Close()
+
+	if err := updateTempCreds(tf.Name(), creds); err != nil {
+		return "", err
+	}
+
+	return tf.Name(), nil
+}
+
+func updateTempCreds(f string, creds credentials.Value) error {
+	inf := ini.Empty()
+	s, err := inf.NewSection("default")
+	if err != nil {
+		return err
+	}
+
+	s.Key("aws_access_key_id").SetValue(creds.AccessKeyID)
+	s.Key("aws_secret_access_key").SetValue(creds.SecretAccessKey)
+	s.Key("aws_session_token").SetValue(creds.SessionToken)
+
+	cfLock.Lock()
+	defer cfLock.Unlock()
+	tf, err := os.OpenFile(f, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0700)
+	defer tf.Close()
+	if _, err := inf.WriteTo(tf); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func wrapCmd(cmd *[]string) *[]string {
