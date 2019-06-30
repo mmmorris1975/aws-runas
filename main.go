@@ -177,25 +177,35 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
-			tf, err := writeTempCreds(creds)
+			//tf, err := writeTempCreds(creds)
+			//if err != nil {
+			//	log.Warnf("Error creating temporary credential file: %v", err)
+			//} else {
+			//	defer os.Remove(tf)
+			//
+			//	go func() {
+			//		for {
+			//			if err := manageTempCreds(tf, c); err != nil {
+			//				log.Warnf("Error updating temporary credential file: %v", err)
+			//			}
+			//		}
+			//	}()
+			//
+			//	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
+			s, err := metadata.NewEcsMetadataService(&metadata.EcsMetadataInput{Credentials: c, Logger: log})
 			if err != nil {
-				log.Warnf("Error creating temporary credential file: %v", err)
-			} else {
-				defer os.Remove(tf)
-
-				go func() {
-					for {
-						if err := manageTempCreds(tf, c); err != nil {
-							log.Warnf("Error updating temporary credential file: %v", err)
-						}
-					}
-				}()
-
-				os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
-				for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
-					os.Unsetenv(v)
-				}
+				log.Fatal(err)
 			}
+			log.Debugf("http credential provider endpoint: %s", s.Url)
+
+			for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
+				os.Unsetenv(v)
+			}
+			os.Setenv("AWS_SHARED_CREDENTIALS_FILE", os.DevNull)
+			os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
+
+			go s.Run()
+			//}
 
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
 			go func() {
@@ -216,6 +226,7 @@ func main() {
 				log.Debug("Error running command")
 				log.Fatalf("%v", err)
 			}
+			os.Exit(0)
 		} else {
 			printCredentials()
 		}
@@ -365,7 +376,6 @@ func updateEnv(creds credentials.Value) {
 
 func handleUserCreds() *credentials.Credentials {
 	var c *credentials.Credentials
-	var sc *credentials.Credentials
 
 	checkRefresh()
 
@@ -373,7 +383,7 @@ func handleUserCreds() *credentials.Credentials {
 		// Not allowed to use session tokens to fetch assume role credentials > 1h
 		c = assumeRoleCredentials(ses)
 	} else {
-		sc = sessionTokenCredentials()
+		sc := sessionTokenCredentials()
 		s := ses.Copy(new(aws.Config).WithCredentials(sc))
 
 		if !*sesCreds && len(cfg.RoleArn) > 0 {
