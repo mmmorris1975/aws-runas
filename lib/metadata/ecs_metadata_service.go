@@ -19,8 +19,11 @@ const (
 
 // EcsMetadataInput contains the options available for customizing the behavior of the ECS Metadata Service
 type EcsMetadataInput struct {
+	// Credentials is the AWS credentials.Credentials object used to fetch the credentials.  This allows us to have
+	// the service return role credentials, or session credentials (in case the caller's code does its own role management)
 	Credentials *credentials.Credentials
-	Logger      *simple_logger.Logger
+	// Logger is the logging object to configure for the service.  If not provided, a standard logger is configured.
+	Logger *simple_logger.Logger
 }
 
 // EcsMetadataService is the object encapsulating the details of the service
@@ -34,6 +37,9 @@ type EcsMetadataService struct {
 func NewEcsMetadataService(opts *EcsMetadataInput) (*EcsMetadataService, error) {
 	cred = opts.Credentials
 	log = opts.Logger
+	if log == nil {
+		log = simple_logger.StdLogger
+	}
 
 	s := new(EcsMetadataService)
 
