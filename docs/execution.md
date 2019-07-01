@@ -7,7 +7,6 @@ How to use aws-runas to perform various functions
 
 #### Program Options
 ```text
-$ aws-runas --help
 usage: aws-runas [<flags>] [<profile>] [<cmd>...]
 
 Create an environment for interacting with the AWS API using an assumed role
@@ -28,6 +27,7 @@ Flags:
   -u, --update             Check for updates to aws-runas
   -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
       --ec2                Run as mock EC2 metadata service to provide role credentials
+  -E, --env                Pass credentials to program as environment variables
   -V, --version            Show application version.
 
 Args:

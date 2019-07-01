@@ -40,6 +40,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -u, --update             Check for updates to aws-runas
       -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
           --ec2                Run as mock EC2 metadata service to provide role credentials
+      -E, --env                Pass credentials to program as environment variables
       -V, --version            Show application version.
     
     Args:
