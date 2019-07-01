@@ -43,6 +43,7 @@ var (
 	updateFlag   *bool
 	diagFlag     *bool
 	ec2MdFlag    *bool
+	envFlag      *bool
 	profile      *string
 	mfaArn       *string
 	duration     *time.Duration
@@ -74,6 +75,7 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
 		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
+		envArgDesc          = "Pass credentials to program as environment variables"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
@@ -89,6 +91,7 @@ func init() {
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
+	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Bool()
 
 	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
 	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
@@ -173,22 +176,9 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
-			// immediate problem: this breaks docker workflows, since this endpoint isn't visible to the container,
-			// and people may be passing the env vars through to the container.
-			s, err := metadata.NewEcsMetadataService(&metadata.EcsMetadataInput{Credentials: c, Logger: log})
-			if err != nil {
-				log.Fatal(err)
+			if !*envFlag {
+				runEcsSvc(c)
 			}
-			log.Debugf("http credential provider endpoint: %s", s.Url)
-
-			for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
-				os.Unsetenv(v)
-			}
-			os.Setenv("AWS_SHARED_CREDENTIALS_FILE", os.DevNull)
-			os.Setenv("AWS_CREDENTIAL_PROFILES_FILE", os.DevNull) // seems that the AWS Java SDK uses this env var instead of AWS_SHARED_CREDENTIALS_FILE
-			os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
-
-			go s.Run()
 
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
 			go func() {
@@ -214,6 +204,27 @@ func main() {
 			printCredentials()
 		}
 	}
+}
+
+func runEcsSvc(c *credentials.Credentials) {
+	s, err := metadata.NewEcsMetadataService(&metadata.EcsMetadataInput{Credentials: c, Logger: log})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Debugf("http credential provider endpoint: %s", s.Url)
+
+	for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
+		os.Unsetenv(v)
+	}
+
+	// AWS_CREDENTIAL_PROFILES_FILE is a Java SDK specific env var for the credential file location
+	for _, v := range []string{"AWS_SHARED_CREDENTIALS_FILE", "AWS_CREDENTIAL_PROFILES_FILE"} {
+		os.Setenv(v, os.DevNull)
+	}
+
+	os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
+
+	go s.Run()
 }
 
 func wrapCmd(cmd *[]string) *[]string {
