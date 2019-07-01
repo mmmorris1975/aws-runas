@@ -173,6 +173,8 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
+			// immediate problem: this breaks docker workflows, since this endpoint isn't visible to the container,
+			// and people may be passing the env vars through to the container.
 			s, err := metadata.NewEcsMetadataService(&metadata.EcsMetadataInput{Credentials: c, Logger: log})
 			if err != nil {
 				log.Fatal(err)
@@ -183,10 +185,10 @@ func main() {
 				os.Unsetenv(v)
 			}
 			os.Setenv("AWS_SHARED_CREDENTIALS_FILE", os.DevNull)
+			os.Setenv("AWS_CREDENTIAL_PROFILES_FILE", os.DevNull) // seems that the AWS Java SDK uses this env var instead of AWS_SHARED_CREDENTIALS_FILE
 			os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
 
 			go s.Run()
-			//}
 
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
 			go func() {

@@ -67,6 +67,9 @@ func (s *EcsMetadataService) Run() {
 	}
 }
 
+// http endpoint credential provider for Go, Python, and Java (+others?) requires that we listen on the loopback interface
+// Go SDK appears to support IPv6, however Python and Java seem to restrict allowed values to only "localhost" and 127.0.0.1,
+// so IPv6 support only happens if localhost resolves to a v6 address.
 func setupListener() (net.Listener, error) {
 	loName, err := discoverLoopback()
 	if err != nil {
