@@ -31,6 +31,22 @@ describe 'tests using a profile with a role' do
       its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS:/ }
     end
 
+    describe command ('aws-runas -v exit') do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
+      its(:stderr) { should match /\s+DEBUG found loopback interface:\s+/ }
+      its(:stderr) { should match /\s+DEBUG http credential provider endpoint: http://127\.0\.0\.1:\d{4,5}/ }
+      its(:stderr} { should match /\s+DEBUG WRAPPED CMD:\s+/ }
+    end
+
+    describe command ('aws-runas -Ev exit') do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
+      its(:stderr) { should_not match /\s+DEBUG found loopback interface:\s+/ }
+      its(:stderr) { should_not match /\s+DEBUG http credential provider endpoint: http://127\.0\.0\.1:\d{4,5}/ }
+      its(:stderr} { should match /\s+DEBUG WRAPPED CMD:\s+/ }
+    end
+
     describe command ('aws-runas -vra 10m') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
