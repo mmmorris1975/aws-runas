@@ -554,6 +554,7 @@ func awsUser(resetEnv bool) {
 		os.Unsetenv("AWS_SECURITY_TOKEN")
 		os.Unsetenv("AWS_SESSION_TOKEN")
 		os.Unsetenv(config.ProfileEnvVar)
+		awsSession(*profile, cfg)
 	}
 
 	usr, err = credlib.NewAwsIdentityManager(ses).WithLogger(log).GetCallerIdentity()

@@ -108,4 +108,26 @@ describe 'tests using a profile with a role' do
         its(:stderr) { should match /\s+unknown unit d in duration 1d/ }
       end
     end
+
+    describe 'and setting invalid credentials as environment variables' do
+            before(:each) do
+                ENV['AWS_ACCESS_KEY_ID'] = 'AKIAMOCK123'
+                ENV['AWS_SECRET_ACCESS_KEY'] = 'o0oMOCK/Keyo0o'
+            end
+
+            after(:each) do
+                ENV.delete('AWS_ACCESS_KEY_ID')
+                ENV.delete('AWS_SECRET_ACCESS_KEY')
+            end
+
+            describe command ('aws-runas -v') do
+                its(:exit_status) { should eq 0 }
+                its(:stderr) { should match /\s+WARN Error getting IAM user info, retrying with AWS credential env vars unset/ }
+                its(:stdout) { should match /^export AWS_REGION='.+'$/ }
+                its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
+                its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
+                its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
+                its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+            end
+        end
 end
