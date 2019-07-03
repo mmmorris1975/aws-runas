@@ -109,7 +109,8 @@ describe 'tests using a profile with a role' do
       end
     end
 
-    describe 'and setting invalid credentials as environment variables' do
+    if ENV.fetch("CIRCLECI", false).to_s === "false"; then
+        describe 'and setting invalid credentials as environment variables' do
             before(:each) do
                 ENV['AWS_ACCESS_KEY_ID'] = 'AKIAMOCK123'
                 ENV['AWS_SECRET_ACCESS_KEY'] = 'o0oMOCK/Keyo0o'
@@ -130,4 +131,5 @@ describe 'tests using a profile with a role' do
                 its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
             end
         end
+    end
 end
