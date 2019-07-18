@@ -25,6 +25,7 @@ Flags:
   -r, --refresh            force a refresh of the cached credentials
   -v, --verbose            print verbose/debug messages
   -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
+  -o, --otp=OTP            MFA token code
   -u, --update             Check for updates to aws-runas
   -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
       --ec2                Run as mock EC2 metadata service to provide role credentials
@@ -159,3 +160,8 @@ export AWS_SESSION_TOKEN='zzzzz'
 Or simply `eval $(aws-runas -s)` to add these env vars in the current session. While this behavior is supported,
 it is certainly not the optimal way to use aws-runas, since you lose the ability to track when these credentials will
 expire and have aws-runas handle refreshing them.
+
+### Using MFA
+For roles or API calls requiring successful MFA, the tool will prompt you to enter the current MFA code if the profile
+is configured with the `mfa_serial` attribute. Alternatively, you can supply the MFA token using the `-o` command line
+option (requires version 1.3.4 or higher)
