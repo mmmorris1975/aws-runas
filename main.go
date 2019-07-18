@@ -45,6 +45,7 @@ var (
 	ec2MdFlag    *bool
 	profile      *string
 	mfaArn       *string
+	mfaCode      *string
 	duration     *time.Duration
 	roleDuration *time.Duration
 	cmd          *[]string
@@ -74,6 +75,7 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
 		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
+		mfaCodeDesc         = "MFA token code"
 	)
 
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
@@ -86,6 +88,7 @@ func init() {
 	refresh = kingpin.Flag("refresh", refreshArgDesc).Short('r').Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Bool()
 	mfaArn = kingpin.Flag("mfa-arn", mfaArnDesc).Short('M').String()
+	mfaCode = kingpin.Flag("otp", mfaCodeDesc).Short('o').String()
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
@@ -409,11 +412,16 @@ func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
 		p.RoleSessionName = usr.UserName
 		p.ExternalID = cfg.ExternalID
 		p.SerialNumber = cfg.MfaSerial
-		p.TokenProvider = credlib.StdinTokenProvider
 		p.Duration = cfg.RoleDuration
 		p.ExpiryWindow = ew
 		p.Cache = &cache.FileCredentialCache{Path: assumeRoleCacheFile()}
 		p.WithLogger(log)
+
+		if mfaCode != nil && len(*mfaCode) > 0 {
+			p.TokenCode = *mfaCode
+		} else {
+			p.TokenProvider = credlib.StdinTokenProvider
+		}
 	})
 }
 
@@ -433,10 +441,15 @@ func sessionTokenCredentials(cacheFile ...string) *credentials.Credentials {
 	return credlib.NewSessionCredentials(ses, func(p *credlib.SessionTokenProvider) {
 		p.Cache = &cache.FileCredentialCache{Path: cacheFile[0]}
 		p.SerialNumber = cfg.MfaSerial
-		p.TokenProvider = credlib.StdinTokenProvider
 		p.Duration = cfg.SessionDuration
 		p.ExpiryWindow = ew
 		p.WithLogger(log)
+
+		if mfaCode != nil && len(*mfaCode) > 0 {
+			p.TokenCode = *mfaCode
+		} else {
+			p.TokenProvider = credlib.StdinTokenProvider
+		}
 	})
 }
 
