@@ -162,7 +162,27 @@ func TestAssumeRoleCredentials(t *testing.T) {
 	}
 }
 
+func TestAssumeRoleCredentialsMfa(t *testing.T) {
+	mfaCode = aws.String("000000")
+	defer func() { mfaCode = nil }()
+
+	c := assumeRoleCredentials(nil)
+	if c == nil {
+		t.Error("nil role credentials object")
+	}
+}
+
 func TestSessionTokenCredentials(t *testing.T) {
+	c := sessionTokenCredentials()
+	if c == nil {
+		t.Error("nil session object")
+	}
+}
+
+func TestSessionTokenCredentialsMfa(t *testing.T) {
+	mfaCode = aws.String("111111")
+	defer func() { mfaCode = nil }()
+
 	c := sessionTokenCredentials()
 	if c == nil {
 		t.Error("nil session object")

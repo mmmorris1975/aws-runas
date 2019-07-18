@@ -37,6 +37,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -r, --refresh            force a refresh of the cached credentials
       -v, --verbose            print verbose/debug messages
       -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
+      -o, --otp=OTP            MFA token code
       -u, --update             Check for updates to aws-runas
       -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
           --ec2                Run as mock EC2 metadata service to provide role credentials
