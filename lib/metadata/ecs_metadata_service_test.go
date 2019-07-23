@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"io/ioutil"
-	"net"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -32,20 +31,6 @@ func TestNewEcsMetadataService(t *testing.T) {
 			t.Errorf("unexpected url scheme: %s", ecs.Url.Scheme)
 		}
 	})
-}
-
-func TestSetupListener(t *testing.T) {
-	l, err := setupListener()
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	h, _, _ := net.SplitHostPort(l.Addr().String())
-	if h != "127.0.0.1" && h != net.IPv6loopback.String() {
-		t.Errorf("non-loopback IP address returned: %s", h)
-		return
-	}
 }
 
 func TestEcsHandler(t *testing.T) {

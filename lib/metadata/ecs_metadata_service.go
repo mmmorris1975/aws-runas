@@ -8,7 +8,6 @@ import (
 	"net"
 	"net/http"
 	"net/url"
-	"strings"
 	"time"
 )
 
@@ -43,7 +42,8 @@ func NewEcsMetadataService(opts *EcsMetadataInput) (*EcsMetadataService, error) 
 
 	s := new(EcsMetadataService)
 
-	l, err := setupListener()
+	// The SDK seems to only support listening on "localhost" and 127.0.0.1, not the ::1 IPv6 loopback, try not to be clever
+	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		return nil, err
 	}
@@ -65,42 +65,6 @@ func (s *EcsMetadataService) Run() {
 	if err := http.Serve(s.lsnr, nil); err != nil {
 		log.Error(err)
 	}
-}
-
-// http endpoint credential provider for Go, Python, and Java (+others?) requires that we listen on the loopback interface
-// Go SDK appears to support IPv6, however Python and Java seem to restrict allowed values to only "localhost" and 127.0.0.1,
-// so IPv6 support only happens if localhost resolves to a v6 address.
-func setupListener() (net.Listener, error) {
-	loName, err := discoverLoopback()
-	if err != nil {
-		return nil, err
-	}
-
-	loIface, err := net.InterfaceByName(loName)
-	if err != nil {
-		return nil, err
-	}
-	log.Debugf("found loopback interface: %s", loIface.Name)
-
-	loAddrs, err := loIface.Addrs()
-	if err != nil {
-		return nil, err
-	}
-
-	for _, a := range loAddrs {
-		if strings.HasPrefix(a.Network(), "ip+net") {
-			ip, _, err := net.ParseCIDR(a.String())
-			if err != nil {
-				// Treat as non-fatal, just keep trying until we run out of loopback addresses
-				log.Debugf("error parsing interface address '%s': %v", a.String(), err)
-				continue
-			}
-
-			return net.Listen("tcp", net.JoinHostPort(ip.String(), "0"))
-		}
-	}
-
-	return nil, fmt.Errorf("no suitable loopback interface found")
 }
 
 func ecsHandler(w http.ResponseWriter, r *http.Request) {

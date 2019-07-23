@@ -34,7 +34,6 @@ describe 'tests using a profile with a role' do
     describe command ('aws-runas -v true') do
       its(:exit_status) { should eq 0 }
       its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
-      its(:stderr) { should match /\s+DEBUG found loopback interface:\s+/ }
       its(:stderr) { should match /\s+DEBUG http credential provider endpoint: http:\/\/127\.0.0.1:\d{4,5}/ }
       its(:stderr) { should match /\s+DEBUG WRAPPED CMD:\s+/ }
     end
