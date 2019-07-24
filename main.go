@@ -496,6 +496,7 @@ func roleHandler() {
 
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
+			log.Warnf("This feature is not yet implemented")
 			// todo
 			//var mfa *string
 			//if mfaArn != nil && len(*mfaArn) > 0 {
