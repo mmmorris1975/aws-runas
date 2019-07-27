@@ -38,7 +38,7 @@ jobs:
       - attach_workspace:
           at: build
 
-      - aws-cli/configure
+      - aws-cli/configure:
           profile-name: circleci
           configure-default-region: false
 
