@@ -13,6 +13,10 @@ jobs:
       - image: "circleci/golang:1.12"
 
     working_directory: /go/src/github.com/mmmorris1975/aws-runas
+
+    environment:
+      GO111MODULE: on
+
     steps:
       - checkout
 
