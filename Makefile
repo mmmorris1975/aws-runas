@@ -10,6 +10,7 @@ $(EXE): go.mod *.go lib/*/*.go
 	go build -v -ldflags '-X main.Version=$(VER)' -o $@
 
 release: $(EXE) darwin windows linux
+	docker run --rm -e VER=$(VER) -v ${PWD}:/build --entrypoint /build/scripts/package.sh debian:stretch
 
 darwin linux:
 	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)
@@ -20,7 +21,7 @@ windows:
 	osslsigncode sign -certs .ca/codesign.crt -key .ca/codesign.key -n "aws-runas" -i https://github.com/mmmorris1975/aws-runas -in $(EXE)-$(VER)-$@-$(GOARCH).exe -out $(EXE)-$(VER)-$@-$(GOARCH)-signed.exe
 
 clean:
-	rm -f $(EXE) $(EXE)-*-*-*
+	rm -f $(EXE) $(EXE)-*-*-* $(EXE)*.rpm $(EXE)*.deb
 
 dist-clean: clean
 	rm -f go.sum
