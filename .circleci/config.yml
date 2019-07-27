@@ -25,6 +25,7 @@ jobs:
           paths: aws-runas
 
   test:
+    context: aws
     docker:
       - image: "circleci/ruby:2.6-stretch"
 
