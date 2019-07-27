@@ -21,8 +21,6 @@ jobs:
       - checkout
 
       # specify any bash command here prefixed with `run: `
-      # 'go get' only pulls from master branch, and circleci doesn't support dep
-      #- run: go get -v -t -d ./...
       - run: go vet -tests=false ./...
       - run: go test -v ./...
       - run: mkdir -p build
@@ -42,10 +40,10 @@ jobs:
       - attach_workspace:
           at: build
 
-      - aws-cli/install
-      - aws-cli/configure:
-          profile-name: circleci
-          configure-default-region: false
+      #- aws-cli/install
+      #- aws-cli/configure:
+      #    profile-name: circleci
+      #    configure-default-region: false
 
       - run: echo "$PWD   <--->   $HOME"
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
