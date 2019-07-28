@@ -41,7 +41,7 @@ jobs:
           at: build
 
       - aws-cli/install
-      - aws-cli/configure
+      - aws-cli/configure:
           profile-name: circleci
           configure-default-region: false
 
