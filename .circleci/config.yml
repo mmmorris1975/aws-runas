@@ -42,7 +42,7 @@ jobs:
 
       - aws-cli/install
       - aws-cli/configure
-          profile-name: "circleci"
+          profile-name: circleci
           configure-default-region: false
 
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
