@@ -3,6 +3,9 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2.1
 
+orbs:
+  aws-cli: circleci/aws-cli@0.1.13
+
 jobs:
   build:
     docker:
@@ -36,6 +39,11 @@ jobs:
 
       - attach_workspace:
           at: build
+
+      - aws-cli/install
+      - aws-cli/configure
+          profile-name: "circleci"
+          configure-default-region: false
 
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
       - run: mkdir -p /var/tmp/rspec
