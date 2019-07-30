@@ -61,6 +61,7 @@ func Example_printCredentials() {
 	// export AWS_REGION='us-east-1'
 	// export AWS_ACCESS_KEY_ID='AKIAMOCK'
 	// export AWS_SECRET_ACCESS_KEY='SecretKey'
+	// export AWSRUNAS_PROFILE='x'
 }
 
 // requires setting up credential cache files
