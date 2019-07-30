@@ -279,7 +279,7 @@ func printCredentials() {
 	envVars := []string{
 		config.RegionEnvVar, config.DefaultRegionEnvVar,
 		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
-		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
+		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN", "AWSRUNAS_PROFILE",
 	}
 
 	for _, v := range envVars {
@@ -293,6 +293,11 @@ func printCredentials() {
 func updateEnv(creds credentials.Value) {
 	// Explicitly unset AWS_PROFILE to avoid unintended consequences
 	os.Unsetenv(config.ProfileEnvVar)
+
+	// Profile name was not a Role ARN, so let's pass that through as a new env var
+	if *profile != cfg.RoleArn {
+		os.Setenv("AWSRUNAS_PROFILE", *profile)
+	}
 
 	// Pass AWS_REGION through if it was set in our env, or found in config.
 	// Ensure that called program gets the expected region.  Also set AWS_DEFAULT_REGION
