@@ -17,8 +17,9 @@ darwin linux:
 
 # $(shell go env GOEXE) is evaluated in the context of the Makefile host (before GOOS is evaluated), so hard-code .exe
 windows:
-	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH).exe
-	osslsigncode sign -certs .ca/codesign.crt -key .ca/codesign.key -n "aws-runas" -i https://github.com/mmmorris1975/aws-runas -in $(EXE)-$(VER)-$@-$(GOARCH).exe -out $(EXE)-$(VER)-$@-$(GOARCH)-signed.exe
+	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe
+	osslsigncode sign -certs .ca/codesign.crt -key .ca/codesign.key -n "aws-runas" -i https://github.com/mmmorris1975/aws-runas -in $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe -out $(EXE)-$(VER)-$@-$(GOARCH).exe
+	rm -f $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe
 
 clean:
 	rm -f $(EXE) $(EXE)-*-*-* $(EXE)*.rpm $(EXE)*.deb
