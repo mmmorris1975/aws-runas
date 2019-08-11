@@ -246,12 +246,6 @@ func TestAssumeRoleProvider_WithLogger(t *testing.T) {
 	}
 }
 
-func Example_stdinTokenProvider() {
-	StdinTokenProvider()
-	// Output:
-	// Enter MFA Code:
-}
-
 func Example_roleDebugNilCfg() {
 	p := new(AssumeRoleProvider)
 	p.debug("test")

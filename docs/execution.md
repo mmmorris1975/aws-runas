@@ -7,7 +7,6 @@ How to use aws-runas to perform various functions
 
 #### Program Options
 ```text
-$ aws-runas --help
 usage: aws-runas [<flags>] [<profile>] [<cmd>...]
 
 Create an environment for interacting with the AWS API using an assumed role
@@ -29,6 +28,7 @@ Flags:
   -u, --update             Check for updates to aws-runas
   -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
       --ec2                Run as mock EC2 metadata service to provide role credentials
+  -E, --env                Pass credentials to program as environment variables
   -V, --version            Show application version.
 
 Args:
@@ -99,6 +99,15 @@ If necessary, the ARN for an MFA token can be provided via the `-M` command line
 $ aws-runas [-M mfa serial] arn:aws:iam::1234567890:role/my-role terraform plan
 ```
 
+#### Executing local docker containers using role credentials
+Special consideration must be given when executing docker containers which need to access AWS services using role credentials,
+and the container process does not handle the role assumption (it expects the role credentials to be provided to it).  Use
+the `-E` command line option to instruct aws-runas to pass the credentials as environment variable to docker, like this:
+
+```text
+$ aws-runas -E my-profile docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_REGION ...
+```
+
 #### Injecting assume role credentials in the environment
 Running the program with only a profile name will output an eval()-able set of environment variables for the assumed role
 credentials which can be added to the current session.
@@ -140,6 +149,15 @@ credentials to minimize the possibility of the workflow getting disrupted by exp
 
 ```text
 $ aws-runas -s admin-profile terraform plan
+```
+
+#### Executing local docker containers using session token credentials
+Special consideration must be given when executing docker containers which need to access AWS services using session token
+credentials, typically for cases where the container app manages their own assume role activities.  Use the `-E` command
+line option, along with the `-s` option  to instruct aws-runas to pass the credentials as environment variable to docker, like this:
+
+```text
+$ aws-runas -Es my-profile docker run -e AWS_ACCESS_KEY_ID -e AWS_SECRET_ACCESS_KEY -e AWS_SESSION_TOKEN -e AWS_REGION ...
 ```
 
 #### Injecting session token credentials in the environment

@@ -56,9 +56,10 @@ http access log format.
 
 ## Program Access
 When executing programs which will get their credentials via this local metadata service, it may be necessary to set the
-`AWS_SHARED_CREDENTIALS_FILE` environment variable to an invalid value so the SDK does not attempt to use the credentials
-in that file to make the AWS service calls. This is due to the default AWS credential lookup chain checking the credentials
-file before attempting to get the credentials via the metadata service.
+`AWS_SHARED_CREDENTIALS_FILE` environment variable (`AWS_CREDENTIAL_PROFILES_FILE` if you're using the Java SDK) to an
+invalid value so the SDK does not attempt to use the credentials in that file to make the AWS service calls. This is due
+to the default AWS credential lookup chain checking the credentials file before attempting to get the credentials via the
+metadata service.
 
 For example, running:
 ```text

@@ -43,6 +43,7 @@ var (
 	updateFlag   *bool
 	diagFlag     *bool
 	ec2MdFlag    *bool
+	envFlag      *bool
 	profile      *string
 	mfaArn       *string
 	mfaCode      *string
@@ -75,6 +76,7 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
 		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
+		envArgDesc          = "Pass credentials to program as environment variables"
 		mfaCodeDesc         = "MFA token code"
 	)
 
@@ -92,6 +94,7 @@ func init() {
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
+	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Bool()
 
 	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
 	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
@@ -176,6 +179,10 @@ func main() {
 		updateEnv(creds)
 
 		if len(*cmd) > 0 {
+			if !*envFlag {
+				runEcsSvc(c)
+			}
+
 			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
 			go func() {
 				for {
@@ -190,15 +197,37 @@ func main() {
 			c.Stdout = os.Stdout
 			c.Stderr = os.Stderr
 
-			err := c.Run()
+			err = c.Run()
 			if err != nil {
 				log.Debug("Error running command")
 				log.Fatalf("%v", err)
 			}
+			os.Exit(0)
 		} else {
 			printCredentials()
 		}
 	}
+}
+
+func runEcsSvc(c *credentials.Credentials) {
+	s, err := metadata.NewEcsMetadataService(&metadata.EcsMetadataInput{Credentials: c, Logger: log})
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Debugf("http credential provider endpoint: %s", s.Url)
+
+	for _, v := range []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"} {
+		os.Unsetenv(v)
+	}
+
+	// AWS_CREDENTIAL_PROFILES_FILE is a Java SDK specific env var for the credential file location
+	for _, v := range []string{"AWS_SHARED_CREDENTIALS_FILE", "AWS_CREDENTIAL_PROFILES_FILE"} {
+		os.Setenv(v, os.DevNull)
+	}
+
+	os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
+
+	go s.Run()
 }
 
 func wrapCmd(cmd *[]string) *[]string {
@@ -295,7 +324,6 @@ func updateEnv(creds credentials.Value) {
 
 func handleUserCreds() *credentials.Credentials {
 	var c *credentials.Credentials
-	var sc *credentials.Credentials
 
 	checkRefresh()
 
@@ -303,7 +331,7 @@ func handleUserCreds() *credentials.Credentials {
 		// Not allowed to use session tokens to fetch assume role credentials > 1h
 		c = assumeRoleCredentials(ses)
 	} else {
-		sc = sessionTokenCredentials()
+		sc := sessionTokenCredentials()
 		s := ses.Copy(new(aws.Config).WithCredentials(sc))
 
 		if !*sesCreds && len(cfg.RoleArn) > 0 {
@@ -473,6 +501,7 @@ func roleHandler() {
 
 		if *makeConf {
 			log.Debug("Make Configuration Files.")
+			log.Warnf("This feature is not yet implemented")
 			// todo
 			//var mfa *string
 			//if mfaArn != nil && len(*mfaArn) > 0 {
