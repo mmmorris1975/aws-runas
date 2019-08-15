@@ -1,5 +1,20 @@
 require 'spec_helper'
 
+describe 'test default profile' do
+    before(:each) do
+      ENV['AWS_PROFILE']='default'
+    end
+
+    after(:each) do
+      ENV.delete('AWS_PROFILE')
+    end
+
+    describe command ('aws-runas -v') do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should_not match /InvalidParameter: 1 validation error/ }
+    end
+end
+
 describe 'tests using a profile without a role' do
     before(:each) do
       ENV['AWS_PROFILE']='circleci'
