@@ -327,7 +327,7 @@ func handleUserCreds() *credentials.Credentials {
 
 	checkRefresh()
 
-	if cfg.RoleDuration > 1*time.Hour {
+	if cfg.RoleDuration > 1*time.Hour && len(cfg.RoleArn) > 0 {
 		// Not allowed to use session tokens to fetch assume role credentials > 1h
 		c = assumeRoleCredentials(ses)
 	} else {
