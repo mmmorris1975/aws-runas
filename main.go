@@ -67,6 +67,13 @@ var (
 	log   = simple_logger.StdLogger
 )
 
+type cmdArgs struct {
+	profile   *string
+	cmd       *[]string
+	target    *string
+	localPort *uint16
+}
+
 func init() {
 	const (
 		cmdDesc             = "Create an environment for interacting with the AWS API using an assumed role"
@@ -115,44 +122,18 @@ func init() {
 
 	shell = kingpin.Command("shell", "Start an SSM shell session to the given target")
 	shellArgs.profile = profileEnvArg(shell, profileArgDesc)
-	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").Required().String() // bare instance id
+	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").Required().String()
 
 	fwd = kingpin.Command("forward", "Start an SSM port-forwarding session to the given target").Alias("fwd")
 	fwdArgs.localPort = fwd.Flag("port", fwdPortDesc).Short('p').Default("0").Uint16()
 	fwdArgs.profile = profileEnvArg(fwd, profileArgDesc)
-	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").Required().String() // instance_id:port value (can't use built-in TCP() parser, since it tries to resolve the host side)
+	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").Required().String()
 
 	kingpin.Version(Version)
 	kingpin.CommandLine.VersionFlag.Short('V')
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.CommandLine.Help = cmdDesc
 	kingpin.CommandLine.Interspersed(false)
-}
-
-type cmdArgs struct {
-	profile   *string
-	cmd       *[]string
-	target    *string
-	localPort *uint16
-}
-
-// return the 1st non-nil value with a length > 0, otherwise return nil
-func coalesce(vals ...*string) *string {
-	for _, v := range vals {
-		if v != nil && len(*v) > 0 {
-			return v
-		}
-	}
-	return nil
-}
-
-// If AWS_PROFILE env var is set, use its value.  Otherwise, create a kingpin command arg to fetch it from the cmdline
-func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
-	ev := os.Getenv(config.ProfileEnvVar)
-	if len(ev) < 1 {
-		return cmd.Arg("profile", desc).Required().String()
-	}
-	return &ev
 }
 
 func main() {
@@ -271,6 +252,25 @@ func main() {
 			}
 		}
 	}
+}
+
+// return the 1st non-nil value with a length > 0, otherwise return nil
+func coalesce(vals ...*string) *string {
+	for _, v := range vals {
+		if v != nil && len(*v) > 0 {
+			return v
+		}
+	}
+	return nil
+}
+
+// If AWS_PROFILE env var is set, use its value.  Otherwise, create a kingpin command arg to fetch it from the cmdline
+func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
+	ev := os.Getenv(config.ProfileEnvVar)
+	if len(ev) < 1 {
+		return cmd.Arg("profile", desc).Required().String()
+	}
+	return &ev
 }
 
 func runEcsSvc(c *credentials.Credentials) {

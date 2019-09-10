@@ -1,19 +1,27 @@
 package ssm
 
 import (
+	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
+	"os"
+	"os/exec"
 )
 
 type SessionHandler struct {
-	client ssmiface.SSMAPI
-	log    aws.Logger
+	client   ssmiface.SSMAPI
+	log      aws.Logger
+	region   string
+	endpoint string
 }
 
 func NewSsmHandler(c client.ConfigProvider) *SessionHandler {
-	return &SessionHandler{client: ssm.New(c)}
+	s := ssm.New(c)
+	r := s.SigningRegion
+	ep := s.Endpoint
+	return &SessionHandler{client: s, region: r, endpoint: ep}
 }
 
 func (h *SessionHandler) WithLogger(l aws.Logger) *SessionHandler {
@@ -23,29 +31,43 @@ func (h *SessionHandler) WithLogger(l aws.Logger) *SessionHandler {
 
 func (h *SessionHandler) StartSession(target string) error {
 	in := ssm.StartSessionInput{Target: aws.String(target)}
-	return h.send(&in)
+	return h.run(&in)
 }
 
 func (h *SessionHandler) ForwardPort(target, lp, rp string) error {
-	params := make(map[string][]*string)
-	params["localPortNumber"] = []*string{aws.String(lp)}
-	params["portNumber"] = []*string{aws.String(rp)}
+	params := map[string][]*string{
+		"localPortNumber": {aws.String(lp)},
+		"portNumber":      {aws.String(rp)},
+	}
 
 	in := ssm.StartSessionInput{
 		DocumentName: aws.String("AWS-StartPortForwardingSession"),
 		Target:       aws.String(target),
 		Parameters:   params,
 	}
-	return h.send(&in)
+	return h.run(&in)
 }
 
-func (h *SessionHandler) send(input *ssm.StartSessionInput) error {
+func (h *SessionHandler) run(input *ssm.StartSessionInput) error {
 	out, err := h.client.StartSession(input)
 	if err != nil {
 		return err
 	}
 
-	// todo output is a websocket URL which we need to connect to in order to dtn
-	h.log.Log(out)
-	return nil
+	outJ, err := json.Marshal(out)
+	if err != nil {
+		return err
+	}
+
+	inJ, err := json.Marshal(input)
+	if err != nil {
+		return err
+	}
+
+	c := exec.Command("session-manager-plugin", string(outJ), h.region, "StartSession", "", string(inJ), h.endpoint)
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
+
+	return c.Run()
 }
