@@ -195,6 +195,14 @@ func main() {
 			c = assumeRoleCredentials(ses)
 		}
 
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+		go func() {
+			for {
+				sig := <-sigCh
+				log.Debugf("Got signal: %s", sig.String())
+			}
+		}()
+
 		switch p {
 		case shell.FullCommand():
 			h := ssm.NewSsmHandler(ses.Copy(ses.Config.WithCredentials(c))).WithLogger(log)
@@ -226,14 +234,6 @@ func main() {
 				if !*envFlag {
 					runEcsSvc(c)
 				}
-
-				signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
-				go func() {
-					for {
-						sig := <-sigCh
-						log.Debugf("Got signal: %s", sig.String())
-					}
-				}()
 
 				cmd = wrapCmd(cmd)
 				c := exec.Command((*cmd)[0], (*cmd)[1:]...)
