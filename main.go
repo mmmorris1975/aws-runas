@@ -647,7 +647,7 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 	if len(cfg.SourceProfile) > 0 {
 		p = cfg.SourceProfile
 	}
-	opts.Profile = p // This is causing issues which using AWS SDK 1.22+, removing it allows circleci to pass, but fails local rspec tests
+	opts.Profile = p
 
 	// Do not set opts.SharedConfigState to enabled so we only get credentials for the profile.  We don't want the config
 	// file values getting in the way (like prompting for MFA and assuming roles) at this point.
