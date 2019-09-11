@@ -31,7 +31,12 @@ func (h *SessionHandler) WithLogger(l aws.Logger) *SessionHandler {
 
 func (h *SessionHandler) StartSession(target string) error {
 	in := ssm.StartSessionInput{Target: aws.String(target)}
-	return h.run(&in)
+
+	c, err := h.cmd(&in)
+	if err != nil {
+		return err
+	}
+	return c.Run()
 }
 
 func (h *SessionHandler) ForwardPort(target, lp, rp string) error {
@@ -45,23 +50,28 @@ func (h *SessionHandler) ForwardPort(target, lp, rp string) error {
 		Target:       aws.String(target),
 		Parameters:   params,
 	}
-	return h.run(&in)
-}
 
-func (h *SessionHandler) run(input *ssm.StartSessionInput) error {
-	out, err := h.client.StartSession(input)
+	c, err := h.cmd(&in)
 	if err != nil {
 		return err
+	}
+	return c.Run()
+}
+
+func (h *SessionHandler) cmd(input *ssm.StartSessionInput) (*exec.Cmd, error) {
+	out, err := h.client.StartSession(input)
+	if err != nil {
+		return nil, err
 	}
 
 	outJ, err := json.Marshal(out)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	inJ, err := json.Marshal(input)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	c := exec.Command("session-manager-plugin", string(outJ), h.region, "StartSession", "", string(inJ), h.endpoint)
@@ -69,5 +79,5 @@ func (h *SessionHandler) run(input *ssm.StartSessionInput) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
-	return c.Run()
+	return c, nil
 }
