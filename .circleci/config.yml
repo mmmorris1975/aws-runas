@@ -3,8 +3,8 @@
 # Check https://circleci.com/docs/2.0/language-go/ for more details
 version: 2.1
 
-orbs:
-  aws-cli: circleci/aws-cli@0.1.16
+#orbs:
+#  aws-cli: circleci/aws-cli@0.1.16
 
 jobs:
   build:
@@ -40,12 +40,10 @@ jobs:
       - attach_workspace:
           at: build
 
-      - aws-cli/install
-      - aws-cli/setup:
-          profile-name: circleci
-          aws-access-key-id: AWS_KEY
-          aws-secret-access-key: AWS_SECRET
-          configure-default-region: false
+      #- aws-cli/install
+      #- aws-cli/setup:
+      #    profile-name: circleci
+      #    configure-default-region: false
 
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
       - run: mkdir -p /var/tmp/rspec
