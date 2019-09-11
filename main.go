@@ -627,7 +627,7 @@ func resolveConfig() {
 }
 
 func awsSession(profile string, cfg *config.AwsConfig) {
-	var p string
+	//var p string
 
 	sc := new(aws.Config).WithLogger(log).WithCredentialsChainVerboseErrors(true).WithRegion(cfg.Region)
 	if *verbose {
@@ -637,7 +637,7 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 
 	// profile was not a role ARN (implies that it's a profile in the config file)
 	if profile != cfg.RoleArn {
-		p = profile
+		//p = profile
 	} else {
 		// profile appears to be an ARN, and may have been set as the AWS_PROFILE env var.  Unset that to allow
 		// the SDK session to properly resolve credentials
@@ -645,9 +645,9 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 	}
 
 	if len(cfg.SourceProfile) > 0 {
-		p = cfg.SourceProfile
+		//p = cfg.SourceProfile
 	}
-	opts.Profile = p
+	//opts.Profile = p // This is causing issues which using AWS SDK 1.22+
 
 	// Do not set opts.SharedConfigState to enabled so we only get credentials for the profile.  We don't want the config
 	// file values getting in the way (like prompting for MFA and assuming roles) at this point.
