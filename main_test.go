@@ -202,3 +202,17 @@ func TestResolveConfig(t *testing.T) {
 		t.Error("session duration mismatch")
 	}
 }
+
+func TestCoalesce(t *testing.T) {
+	t.Run("all nil", func(t *testing.T) {
+		if x := coalesce(nil, nil); x != nil {
+			t.Error("non-nil value")
+		}
+	})
+
+	t.Run("mid val", func(t *testing.T) {
+		if x := coalesce(nil, aws.String("val"), nil); x == nil {
+			t.Error("unexpected nil value")
+		}
+	})
+}

@@ -23,7 +23,7 @@ func runDiagnostics(c *config.AwsConfig) error {
 	if p == c.RoleArn {
 		// profile was a Role ARN, config will be whatever was explicitly passed + env var config,
 		// and possibly a default config, if the config file exists and has the default section
-		log.Infof("Role ARN provided as the profile, configuration file will not be checked")
+		log.Info("Role ARN provided as the profile, configuration file will not be checked")
 	} else {
 		// profile is a config profile name
 		checkProfileCfg(p, c)
@@ -88,7 +88,7 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 		// check for profile creds and env var creds at the same time
 		envAk := os.Getenv("AWS_ACCESS_KEY_ID")
 		if cfgCreds && len(envAk) > 0 {
-			log.Errorf("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+			log.Error("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
 		} else {
 			log.Info("credentials appear sane")
 		}
@@ -134,16 +134,16 @@ func checkTime() error {
 	log.Debugf("ntp: %+v, local: %+v, drift: %+v", nTime.Unix(), tLocal.Unix(), drift)
 
 	if math.Abs(drift.Seconds()) >= maxDrift.Seconds() {
-		log.Error("Local time drift is more than %v, AWS API requests will be rejected", maxDrift.Truncate(time.Minute))
+		log.Errorf("Local time drift is more than %v, AWS API requests will be rejected", maxDrift.Truncate(time.Minute))
 		return nil
 	}
 
 	if math.Abs(drift.Seconds()) > warnDrift.Seconds() {
-		log.Warn("Local time drift is more than %v seconds, check system time", warnDrift.Truncate(time.Minute))
+		log.Warnf("Local time drift is more than %v seconds, check system time", warnDrift.Truncate(time.Minute))
 		return nil
 	}
 
-	log.Infof("system time is within spec")
+	log.Info("system time is within spec")
 	return nil
 }
 

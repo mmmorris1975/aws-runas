@@ -122,12 +122,12 @@ func init() {
 
 	shell = kingpin.Command("shell", "Start an SSM shell session to the given target")
 	shellArgs.profile = profileEnvArg(shell, profileArgDesc)
-	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").Required().String()
+	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").String()
 
 	fwd = kingpin.Command("forward", "Start an SSM port-forwarding session to the given target").Alias("fwd")
 	fwdArgs.localPort = fwd.Flag("port", fwdPortDesc).Short('p').Default("0").Uint16()
 	fwdArgs.profile = profileEnvArg(fwd, profileArgDesc)
-	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").Required().String()
+	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").String()
 
 	kingpin.Version(Version)
 	kingpin.CommandLine.VersionFlag.Short('V')
@@ -138,7 +138,7 @@ func init() {
 
 func main() {
 	p := kingpin.Parse()
-	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile)
+	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, aws.String("default"))
 
 	if *verbose {
 		log.SetLevel(simple_logger.DEBUG)
@@ -268,7 +268,7 @@ func coalesce(vals ...*string) *string {
 func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
 	ev := os.Getenv(config.ProfileEnvVar)
 	if len(ev) < 1 {
-		return cmd.Arg("profile", desc).Required().String()
+		return cmd.Arg("profile", desc).String()
 	}
 	return &ev
 }

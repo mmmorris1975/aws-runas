@@ -56,6 +56,7 @@ func TestNewSsmHandler(t *testing.T) {
 		h := NewSsmHandler(session.Must(session.NewSession())).WithLogger(logger.StdLogger)
 		if h == nil {
 			t.Error("nil client")
+			return
 		}
 
 		if h.log == nil {
