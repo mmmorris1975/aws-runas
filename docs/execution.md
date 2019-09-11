@@ -45,6 +45,7 @@ the resolved profile data. Some of the items checked are:
   * Checking that the profile sets the `source_profile` attribute if the `role_arn` attribute is detected
   * Mis-matched or conflicting AWS credential settings
   * Missing static IAM user credentials
+  * Local system time is within the allowed time drift for the AWS API
 
 When contacting the developers for support, it is helpful to provide the diagnostic output in conjunction with the
 verbose flag `aws-runas -Dv`
@@ -92,6 +93,9 @@ $ aws-runas admin-profile aws s3 ls
 #### Running a command using a role ARN
 The program supports supplying the 'profile' argument as a role ARN instead of a named profile in the config file. This
 may be useful for cases where it's not desirable/feasible to keep a local copy of the config file, and the role ARN is static.
+
+When using the tool in this way, the necessary IAM credentials must be supplied as either environment variables, or configured
+in the `default` section of the ~/.aws/credentials file.
 
 If necessary, the ARN for an MFA token can be provided via the `-M` command line option.
 

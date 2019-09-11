@@ -116,7 +116,7 @@ func init() {
 
 	// Can not use Command() if you also have top-level Arg()s defined, so wrap "typical" behavior as the default command
 	// so users can continue to use the tool as before
-	exe = kingpin.Command("exec", "run the provided command").Default().Hidden() // to hide or not to hide, that is the question
+	exe = kingpin.Command("exec", cmdDesc).Default().Hidden() // to hide or not to hide, that is the question
 	execArgs.profile = profileEnvArg(exe, profileArgDesc)
 	execArgs.cmd = exe.Arg("cmd", cmdArgDesc).Strings()
 
