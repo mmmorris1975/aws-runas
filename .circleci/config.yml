@@ -61,5 +61,6 @@ workflows:
     jobs:
       - build
       - test:
+          context: aws
           requires:
             - build
