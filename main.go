@@ -637,7 +637,7 @@ func awsSession(profile string, cfg *config.AwsConfig) {
 
 	// profile was not a role ARN (implies that it's a profile in the config file)
 	if profile != cfg.RoleArn {
-		//p = profile
+		p = profile
 	} else {
 		// profile appears to be an ARN, and may have been set as the AWS_PROFILE env var.  Unset that to allow
 		// the SDK session to properly resolve credentials
