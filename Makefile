@@ -13,12 +13,14 @@ release: $(EXE) darwin windows linux
 	docker run --rm -e VER=$(VER) -v ${PWD}:/build --entrypoint /build/scripts/package.sh debian:stretch
 
 darwin linux:
-	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)
+	GOOS=$@ go build -ldflags '-s -w -X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)
+	upx -v $(EXE)-$(VER)-$@-$(GOARCH)
 
 # $(shell go env GOEXE) is evaluated in the context of the Makefile host (before GOOS is evaluated), so hard-code .exe
 windows:
-	GOOS=$@ go build -ldflags '-X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe
+	GOOS=$@ go build -ldflags '-s -w -X main.Version=$(VER)' -o $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe
 	osslsigncode sign -certs .ca/codesign.crt -key .ca/codesign.key -n "aws-runas" -i https://github.com/mmmorris1975/aws-runas -in $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe -out $(EXE)-$(VER)-$@-$(GOARCH).exe
+	upx -v $(EXE)-$(VER)-$@-$(GOARCH).exe
 	rm -f $(EXE)-$(VER)-$@-$(GOARCH)-unsigned.exe
 
 clean:
