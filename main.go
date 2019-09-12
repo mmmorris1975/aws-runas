@@ -15,8 +15,10 @@ import (
 	"github.com/mmmorris1975/aws-runas/lib/config"
 	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
 	"github.com/mmmorris1975/aws-runas/lib/metadata"
+	"github.com/mmmorris1975/aws-runas/lib/ssm"
 	"github.com/mmmorris1975/aws-runas/lib/util"
 	"github.com/mmmorris1975/simple-logger"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -49,14 +51,28 @@ var (
 	mfaCode      *string
 	duration     *time.Duration
 	roleDuration *time.Duration
-	cmd          *[]string
 	ses          *session.Session
 	cfg          *config.AwsConfig
 	usr          *credlib.AwsIdentity
 
+	exe   *kingpin.CmdClause
+	shell *kingpin.CmdClause
+	fwd   *kingpin.CmdClause
+
+	execArgs  = new(cmdArgs)
+	shellArgs = new(cmdArgs)
+	fwdArgs   = new(cmdArgs)
+
 	sigCh = make(chan os.Signal, 3)
 	log   = simple_logger.StdLogger
 )
+
+type cmdArgs struct {
+	profile   *string
+	cmd       *[]string
+	target    *string
+	localPort *uint16
+}
 
 func init() {
 	const (
@@ -78,8 +94,10 @@ func init() {
 		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
 		envArgDesc          = "Pass credentials to program as environment variables"
 		mfaCodeDesc         = "MFA token code"
+		fwdPortDesc         = "The local port for the forwarded connection"
 	)
 
+	// top-level flags
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Duration()
 	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Duration()
 	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
@@ -96,25 +114,31 @@ func init() {
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
 	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Bool()
 
-	// if AWS_PROFILE env var is NOT set, it MUST be 1st non-flag arg
-	// if AWS_PROFILE env var is set, all non-flag args will be treated as cmd
-	if v, ok := os.LookupEnv(config.ProfileEnvVar); !ok {
-		profile = kingpin.Arg("profile", profileArgDesc).String()
-	} else {
-		profile = aws.String(v)
-	}
+	// Can not use Command() if you also have top-level Arg()s defined, so wrap "typical" behavior as the default command
+	// so users can continue to use the tool as before
+	exe = kingpin.Command("exec", cmdDesc).Default().Hidden() // to hide or not to hide, that is the question
+	execArgs.profile = profileEnvArg(exe, profileArgDesc)
+	execArgs.cmd = exe.Arg("cmd", cmdArgDesc).Strings()
 
-	cmd = CmdArg(kingpin.Arg("cmd", cmdArgDesc))
+	shell = kingpin.Command("shell", "Start an SSM shell session to the given target")
+	shellArgs.profile = profileEnvArg(shell, profileArgDesc)
+	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").String()
+
+	fwd = kingpin.Command("forward", "Start an SSM port-forwarding session to the given target").Alias("fwd")
+	fwdArgs.localPort = fwd.Flag("port", fwdPortDesc).Short('p').Default("0").Uint16()
+	fwdArgs.profile = profileEnvArg(fwd, profileArgDesc)
+	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").String()
 
 	kingpin.Version(Version)
 	kingpin.CommandLine.VersionFlag.Short('V')
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.CommandLine.Help = cmdDesc
+	kingpin.CommandLine.Interspersed(false)
 }
 
 func main() {
-	kingpin.CommandLine.Interspersed(false)
-	kingpin.Parse()
+	p := kingpin.Parse()
+	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, aws.String("default"))
 
 	if *verbose {
 		log.SetLevel(simple_logger.DEBUG)
@@ -171,42 +195,82 @@ func main() {
 			c = assumeRoleCredentials(ses)
 		}
 
-		creds, err := c.Get()
-		if err != nil {
-			log.Fatalf("Error getting credentials: %v", err)
-		}
-
-		updateEnv(creds)
-
-		if len(*cmd) > 0 {
-			if !*envFlag {
-				runEcsSvc(c)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+		go func() {
+			for {
+				sig := <-sigCh
+				log.Debugf("Got signal: %s", sig.String())
 			}
+		}()
 
-			signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
-			go func() {
-				for {
-					sig := <-sigCh
-					log.Debugf("Got signal: %s", sig.String())
-				}
-			}()
-
-			cmd = wrapCmd(cmd)
-			c := exec.Command((*cmd)[0], (*cmd)[1:]...)
-			c.Stdin = os.Stdin
-			c.Stdout = os.Stdout
-			c.Stderr = os.Stderr
-
-			err = c.Run()
+		switch p {
+		case shell.FullCommand():
+			h := ssm.NewSsmHandler(ses.Copy(ses.Config.WithCredentials(c))).WithLogger(log)
+			if err := h.StartSession(*shellArgs.target); err != nil {
+				log.Fatal(err)
+			}
+		case fwd.FullCommand():
+			host, rp, err := net.SplitHostPort(*fwdArgs.target)
 			if err != nil {
-				log.Debug("Error running command")
-				log.Fatalf("%v", err)
+				log.Fatal(err)
 			}
-			os.Exit(0)
-		} else {
-			printCredentials()
+			lp := fmt.Sprintf("%d", *fwdArgs.localPort)
+
+			h := ssm.NewSsmHandler(ses.Copy(ses.Config.WithCredentials(c))).WithLogger(log)
+			if err := h.ForwardPort(host, lp, rp); err != nil {
+				log.Fatal(err)
+			}
+		default:
+			creds, err := c.Get()
+			if err != nil {
+				log.Fatalf("Error getting credentials: %v", err)
+			}
+
+			updateEnv(creds)
+
+			cmd := execArgs.cmd
+
+			if len(*cmd) > 0 {
+				if !*envFlag {
+					runEcsSvc(c)
+				}
+
+				cmd = wrapCmd(cmd)
+				c := exec.Command((*cmd)[0], (*cmd)[1:]...)
+				c.Stdin = os.Stdin
+				c.Stdout = os.Stdout
+				c.Stderr = os.Stderr
+
+				err = c.Run()
+				if err != nil {
+					log.Debug("Error running command")
+					log.Fatalf("%v", err)
+				}
+				os.Exit(0)
+			} else {
+				printCredentials()
+			}
 		}
 	}
+}
+
+// return the 1st non-nil value with a length > 0, otherwise return nil
+func coalesce(vals ...*string) *string {
+	for _, v := range vals {
+		if v != nil && len(*v) > 0 {
+			return v
+		}
+	}
+	return nil
+}
+
+// If AWS_PROFILE env var is set, use its value.  Otherwise, create a kingpin command arg to fetch it from the cmdline
+func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
+	ev := os.Getenv(config.ProfileEnvVar)
+	if len(ev) < 1 {
+		return cmd.Arg("profile", desc).String()
+	}
+	return &ev
 }
 
 func runEcsSvc(c *credentials.Credentials) {

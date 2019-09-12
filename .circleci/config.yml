@@ -4,7 +4,7 @@
 version: 2.1
 
 orbs:
-  aws-cli: circleci/aws-cli@0.1.13
+  aws-cli: circleci/aws-cli@0.1.16
 
 jobs:
   build:
@@ -41,8 +41,8 @@ jobs:
           at: build
 
       - aws-cli/install
-      - aws-cli/configure:
-          profile-name: circleci
+      - aws-cli/setup:
+          profile-name: default
           configure-default-region: false
 
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3

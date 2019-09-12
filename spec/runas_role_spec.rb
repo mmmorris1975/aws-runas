@@ -138,7 +138,7 @@ describe 'tests using a profile with a role' do
 
             describe command ('aws-runas -v') do
                 its(:exit_status) { should eq 0 }
-                its(:stderr) { should match /\s+WARN Error getting IAM user info, retrying with AWS credential env vars unset/ }
+                #its(:stderr) { should match /\s+WARN Error getting IAM user info, retrying with AWS credential env vars unset/ }
                 its(:stdout) { should match /^export AWS_REGION='.+'$/ }
                 its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
                 its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
