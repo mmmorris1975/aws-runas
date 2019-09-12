@@ -10,26 +10,29 @@ import (
 	"os/exec"
 )
 
-type SessionHandler struct {
+type sessionHandler struct {
 	client   ssmiface.SSMAPI
 	log      aws.Logger
 	region   string
 	endpoint string
 }
 
-func NewSsmHandler(c client.ConfigProvider) *SessionHandler {
+// NewSsmHandler creates the handler type needed to create shell and port-forwarding sessions
+func NewSsmHandler(c client.ConfigProvider) *sessionHandler {
 	s := ssm.New(c)
 	r := s.SigningRegion
 	ep := s.Endpoint
-	return &SessionHandler{client: s, region: r, endpoint: ep}
+	return &sessionHandler{client: s, region: r, endpoint: ep}
 }
 
-func (h *SessionHandler) WithLogger(l aws.Logger) *SessionHandler {
+// WithLogger is a fluent method used with NewSsmHandler to configure a conforming logging type
+func (h *sessionHandler) WithLogger(l aws.Logger) *sessionHandler {
 	h.log = l
 	return h
 }
 
-func (h *SessionHandler) StartSession(target string) error {
+// StartSession will initiate an SSM shell session with the provided target EC2 instance
+func (h *sessionHandler) StartSession(target string) error {
 	in := ssm.StartSessionInput{Target: aws.String(target)}
 
 	c, err := h.cmd(&in)
@@ -39,7 +42,9 @@ func (h *SessionHandler) StartSession(target string) error {
 	return c.Run()
 }
 
-func (h *SessionHandler) ForwardPort(target, lp, rp string) error {
+// ForwardPort will open an SSM port-forwarding session with the provided target EC2 instance using the
+// provided local and remote ports (lp and rp, respectively).  If lp is 0, a random, open local port is chosen.
+func (h *sessionHandler) ForwardPort(target, lp, rp string) error {
 	params := map[string][]*string{
 		"localPortNumber": {aws.String(lp)},
 		"portNumber":      {aws.String(rp)},
@@ -58,7 +63,7 @@ func (h *SessionHandler) ForwardPort(target, lp, rp string) error {
 	return c.Run()
 }
 
-func (h *SessionHandler) cmd(input *ssm.StartSessionInput) (*exec.Cmd, error) {
+func (h *sessionHandler) cmd(input *ssm.StartSessionInput) (*exec.Cmd, error) {
 	out, err := h.client.StartSession(input)
 	if err != nil {
 		return nil, err

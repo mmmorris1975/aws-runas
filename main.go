@@ -419,10 +419,13 @@ func checkRefresh() {
 		var err error
 		if !*sesCreds {
 			err = os.Remove(assumeRoleCacheFile())
+			if err != nil {
+				log.Debugf("Error removing role cache files: %v", err)
+			}
 		}
 		err = os.Remove(sessionTokenCacheFile())
 		if err != nil {
-			log.Debugf("Error removing cache files: %v", err)
+			log.Debugf("Error removing session cache files: %v", err)
 		}
 	}
 }

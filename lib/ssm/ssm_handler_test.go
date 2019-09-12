@@ -66,7 +66,7 @@ func TestNewSsmHandler(t *testing.T) {
 }
 
 func TestCmd(t *testing.T) {
-	h := &SessionHandler{client: new(mockSsmClient), region: "us-east-1"}
+	h := &sessionHandler{client: new(mockSsmClient), region: "us-east-1"}
 
 	t.Run("empty target", func(t *testing.T) {
 		if _, err := h.cmd(new(ssm.StartSessionInput)); err == nil {
@@ -82,14 +82,15 @@ func TestCmd(t *testing.T) {
 
 	t.Run("cmd", func(t *testing.T) {
 		in := &ssm.StartSessionInput{Target: aws.String("i-deadbeef")}
-		if c, err := h.cmd(in); err != nil {
+		c, err := h.cmd(in)
+		if err != nil {
 			t.Error(err)
 			return
-		} else {
-			if len(c.Args) < 1 || c.Args[0] != "session-manager-plugin" || c.Args[3] != "StartSession" {
-				t.Errorf("bad command: %v", c.Args)
-				return
-			}
+		}
+
+		if len(c.Args) < 1 || c.Args[0] != "session-manager-plugin" || c.Args[3] != "StartSession" {
+			t.Errorf("bad command: %v", c.Args)
+			return
 		}
 	})
 }
