@@ -549,6 +549,11 @@ func lookupMfa() ([]*iam.MFADevice, error) {
 
 func resolveConfig() {
 	usrCfg := config.AwsConfig{MfaSerial: *mfaArn, SessionDuration: *duration, RoleDuration: *roleDuration}
+	if _, err := arn.Parse(*profile); err == nil {
+		// profile is a valid ARN, so it won't be in the config file, set it in our usrCfg
+		usrCfg.RoleArn = *profile
+	}
+
 	r, err := config.NewConfigResolver(&usrCfg)
 	if err != nil {
 		log.Error(err)
