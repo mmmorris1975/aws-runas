@@ -52,7 +52,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.12 tool chain and aws-sdk-go v1.18.6  
+Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.25.11  
 *NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
 
 ### Build Steps
