@@ -1,10 +1,10 @@
 package main
 
 import (
+	"aws-runas/lib/config"
 	"encoding/binary"
 	"fmt"
 	cfglib "github.com/mmmorris1975/aws-config/config"
-	"github.com/mmmorris1975/aws-runas/lib/config"
 	"math"
 	"net"
 	"os"
@@ -151,11 +151,11 @@ func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("PROFILE: %s\n", p)
 	fmt.Printf("REGION: %s\n", c.Region)
 	fmt.Printf("SOURCE PROFILE: %s\n", c.SourceProfile)
-	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionDuration)
+	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionTokenDuration)
 	fmt.Printf("MFA SERIAL: %s\n", c.MfaSerial)
 	fmt.Printf("ROLE ARN: %s\n", c.RoleArn)
-	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalID)
-	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.RoleDuration)
+	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalId)
+	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.CredentialsDuration)
 }
 
 // NTP client bits below

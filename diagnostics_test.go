@@ -1,8 +1,9 @@
 package main
 
 import (
+	cfglib "aws-runas/lib/config"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/mmmorris1975/aws-runas/lib/config"
+	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger"
 	"os"
 	"testing"
@@ -32,28 +33,28 @@ func Example_checkEnvPass() {
 
 func Example_checkRegionFail() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
-	checkRegion(new(config.AwsConfig))
+	checkRegion(new(cfglib.AwsConfig))
 	// Output:
 	// ERROR region is not set, it must be specified in the config file or as an environment variable
 }
 
 func Example_checkRegionPass() {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
-	c := config.AwsConfig{Region: "us-east-3"}
+	c := cfglib.AwsConfig{AwsConfig: &config.AwsConfig{Region: "us-east-3"}}
 	checkRegion(&c)
 	// Output:
 	// INFO region is configured in profile or environment variable
 }
 
 func Example_printConfig() {
-	c := new(config.AwsConfig)
+	c := new(cfglib.AwsConfig)
 	c.Region = "us-east-3"
 	c.SourceProfile = "x"
 	c.RoleArn = "my-role"
-	c.RoleDuration = 10 * time.Minute
-	c.SessionDuration = 20 * time.Minute
+	c.SessionTokenDuration = 10 * time.Minute
+	c.CredentialsDuration = 20 * time.Minute
 	c.MfaSerial = "my-mfa"
-	c.ExternalID = "abcde"
+	c.ExternalId = "abcde"
 
 	printConfig("p", c)
 	// Output:
@@ -88,7 +89,7 @@ func TestRunDiagnostics(t *testing.T) {
 	log = simple_logger.NewLogger(os.Stdout, "", 0)
 
 	t.Run("empty config", func(t *testing.T) {
-		if err := runDiagnostics(new(config.AwsConfig)); err != nil {
+		if err := runDiagnostics(new(cfglib.AwsConfig)); err != nil {
 			t.Error(err)
 		}
 	})
@@ -97,7 +98,7 @@ func TestRunDiagnostics(t *testing.T) {
 		p := *profile
 		defer func() { profile = &p }()
 		profile = aws.String("my-role")
-		c := config.AwsConfig{Region: "us-west-3", RoleArn: "my-role"}
+		c := cfglib.AwsConfig{AwsConfig: &config.AwsConfig{Region: "us-west-3", RoleArn: "my-role"}}
 		if err := runDiagnostics(&c); err != nil {
 			t.Error(err)
 		}
