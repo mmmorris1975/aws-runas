@@ -1,8 +1,9 @@
 package metadata
 
 import (
+	cfglib "aws-runas/lib/config"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/mmmorris1975/aws-runas/lib/config"
+	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger"
 	"io/ioutil"
 	"net/http"
@@ -19,7 +20,7 @@ func TestMain(m *testing.M) {
 	log = simple_logger.StdLogger
 
 	var err error
-	cfg, err = config.NewConfigResolver(nil)
+	cfg, err = config.NewAwsConfigResolver(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -328,7 +329,7 @@ func TestRefreshHandler(t *testing.T) {
 	})
 
 	t.Run("with role", func(t *testing.T) {
-		role = &config.AwsConfig{SourceProfile: "some-profile"}
+		role = &cfglib.AwsConfig{AwsConfig: &config.AwsConfig{SourceProfile: "some-profile"}}
 		cacheDir = os.TempDir()
 		defer func() {
 			role = nil

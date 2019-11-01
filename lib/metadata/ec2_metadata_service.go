@@ -1,6 +1,10 @@
 package metadata
 
 import (
+	"aws-runas/lib/cache"
+	cfglib "aws-runas/lib/config"
+	credlib "aws-runas/lib/credentials"
+	"aws-runas/lib/identity"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -8,9 +12,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/mmmorris1975/aws-runas/lib/cache"
-	"github.com/mmmorris1975/aws-runas/lib/config"
-	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
+	"github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger"
 	"github.com/syndtr/gocapability/capability"
 	"html/template"
@@ -48,11 +50,11 @@ var (
 	EC2MetadataAddress *net.IPAddr
 
 	profile  string
-	role     *config.AwsConfig
-	cfg      config.ConfigResolver
+	role     *cfglib.AwsConfig
+	cfg      config.AwsConfigResolver
 	s        *session.Session
 	cred     *credentials.Credentials
-	usr      *credlib.AwsIdentity
+	usr      *identity.Identity
 	log      *simple_logger.Logger
 	cacheDir string
 
@@ -91,7 +93,7 @@ type ec2MetadataOutput struct {
 // EC2MetadataInput is a struct to provide options for configuring the state of the metadata service at startup
 type EC2MetadataInput struct {
 	// Config is the AwsConfig for a profile provided at service startup
-	Config *config.AwsConfig
+	Config *cfglib.AwsConfig
 	// InitialProfile is the name of the profile provided at service startup
 	InitialProfile string
 	// Logger is the logger object to configure for the service
@@ -101,7 +103,7 @@ type EC2MetadataInput struct {
 	// SessionCacheDir is the path used to cache the session token credentials. Set to an empty string to disable caching.
 	SessionCacheDir string
 	// User is the AwsIdentity of the callers AWS credentials.
-	User *credlib.AwsIdentity
+	User *identity.Identity
 }
 
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
@@ -201,11 +203,12 @@ func handleOptions(opts *EC2MetadataInput) error {
 		cacheDir = d
 	}
 
-	cf, err := config.NewConfigResolver(nil)
+	cf, err := config.NewAwsConfigResolver(nil)
 	if err != nil {
 		return err
 	}
-	cfg = cf.WithLogger(log)
+	cfg = cf
+	//cfg = cf.WithLogger(log)
 
 	return nil
 }
@@ -300,18 +303,23 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		role = p
-		cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
-			pv.Duration = role.SessionDuration
+		var err error
+		role, err = cfglib.Wrap(p)
+		if err != nil {
+			// todo
+		}
+
+		cred = credlib.NewSessionTokenCredentials(s, func(pv *credlib.SessionTokenProvider) {
+			pv.Duration = role.SessionTokenDuration
 			pv.SerialNumber = role.MfaSerial
 
 			cf := cacheFile(role.SourceProfile)
 			if len(cf) > 0 {
-				pv.Cache = &cache.FileCredentialCache{Path: cf}
+				pv.Cache = cache.NewFileCredentialCache(cf)
 			}
 		})
 
-		_, err := cred.Get()
+		_, err = cred.Get()
 		if err != nil {
 			switch t := err.(type) {
 			case *credlib.ErrMfaRequired:
@@ -349,7 +357,7 @@ func getProfileConfig(r io.Reader) (*config.AwsConfig, *handlerError) {
 	}
 
 	profile = string(b[:n])
-	p, err := cfg.ResolveConfig(profile)
+	p, err := cfg.Resolve(profile)
 	if err != nil {
 		log.Error(err)
 		return nil, newHandlerError("Error resolving profile config", http.StatusInternalServerError)
@@ -370,14 +378,14 @@ func mfaHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cred = credlib.NewSessionCredentials(s, func(pv *credlib.SessionTokenProvider) {
-		pv.Duration = role.SessionDuration
+	cred = credlib.NewSessionTokenCredentials(s, func(pv *credlib.SessionTokenProvider) {
+		pv.Duration = role.SessionTokenDuration
 		pv.SerialNumber = role.MfaSerial
 		pv.TokenCode = mfa
 
 		cf := cacheFile(role.SourceProfile)
 		if len(cf) > 0 {
-			pv.Cache = &cache.FileCredentialCache{Path: cf}
+			pv.Cache = cache.NewFileCredentialCache(cf)
 		}
 	})
 
@@ -429,7 +437,7 @@ func updateSession(p string) (err error) {
 	s = session.Must(session.NewSessionWithOptions(o))
 
 	if usr == nil {
-		usr, err = credlib.NewAwsIdentityManager(s).WithLogger(log).GetCallerIdentity()
+		usr, err = identity.NewAwsIdentityProvider(s).WithLogger(log).GetIdentity()
 		if err != nil {
 			return err
 		}
@@ -460,8 +468,8 @@ func assumeRole() ([]byte, error) {
 	log.Debugf("ROLE ARN: %s", role.RoleArn)
 	ar := credlib.NewAssumeRoleCredentials(s.Copy(new(aws.Config).WithCredentials(cred)), role.RoleArn, func(p *credlib.AssumeRoleProvider) {
 		p.Duration = credlib.AssumeRoleDefaultDuration
-		p.ExternalID = role.ExternalID
-		p.RoleSessionName = usr.UserName
+		p.ExternalID = role.ExternalId
+		p.RoleSessionName = usr.Username
 	})
 
 	v, err := ar.Get()
