@@ -1,14 +1,11 @@
 package credentials
 
 import (
-	"fmt"
+	"aws-runas/lib/cache"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/mmmorris1975/aws-runas/lib/cache"
-	"os"
 	"time"
 )
 
@@ -23,39 +20,25 @@ const (
 	AssumeRoleDefaultDuration = 1 * time.Hour
 )
 
-// AssumeRoleProvider is the type to provide settings to perform the Assume Role operation in the AWS API.
-// This is purposely very similar to the AWS SDK AssumeRoleProvider, with the addition of an optional Cache to
-// allow the ability to cache the credentials in order to limit API calls.
+// AssumeRoleProvider provides the settings to perform the AssumeRole operation in the AWS API.
+// An optional Cache provides the ability to cache the credentials in order to limit API calls.
 type AssumeRoleProvider struct {
-	credentials.Expiry
-	client          stscreds.AssumeRoler
-	cfg             *aws.Config
-	log             aws.Logger
+	*stsCredentialProvider
 	RoleARN         string
 	RoleSessionName string
 	ExternalID      string
-	Duration        time.Duration
-	SerialNumber    string
-	TokenCode       string
-	TokenProvider   func() (string, error)
-	ExpiryWindow    time.Duration
-	Cache           cache.CredentialCacher
 }
 
 // NewAssumeRoleCredentials configures a default AssumeRoleProvider, and wraps it in an AWS credentials.Credentials object
-// to allow Assume Role credential fetching.  The default AssumeRoleProvides uses the specified client.ConfigProvider to
+// to allow Assume Role credential fetching.  The default AssumeRoleProvider uses the specified client.ConfigProvider to
 // create a new sts.STS client, and the provided roleArn as the role to assume; The credential duration is set to
 // AssumeRoleDefaultDuration, and the ExpiryWindow is set to 10% of the duration value.  A list of options can be provided
 // to add configuration to the AssumeRoleProvider, such as overriding the Duration and ExpiryWindow, or specifying additional
 // Assume Role configuration like MFA SerialNumber of ExternalID.
-func NewAssumeRoleCredentials(c client.ConfigProvider, roleArn string, options ...func(*AssumeRoleProvider)) *credentials.Credentials {
-	p := &AssumeRoleProvider{
-		client:       sts.New(c),
-		cfg:          c.ClientConfig("sts").Config,
-		RoleARN:      roleArn,
-		Duration:     AssumeRoleDefaultDuration,
-		ExpiryWindow: AssumeRoleDefaultDuration / 10,
-	}
+func NewAssumeRoleCredentials(cfg client.ConfigProvider, roleArn string, options ...func(*AssumeRoleProvider)) *credentials.Credentials {
+	p := &AssumeRoleProvider{stsCredentialProvider: newStsCredentialProvider(cfg), RoleARN: roleArn}
+	p.Duration = AssumeRoleDefaultDuration
+	p.ExpiryWindow = p.Duration / 10
 
 	for _, o := range options {
 		o(p)
@@ -64,66 +47,40 @@ func NewAssumeRoleCredentials(c client.ConfigProvider, roleArn string, options .
 	return credentials.NewCredentials(p)
 }
 
-// WithLogger configures a conforming Logger
-func (p *AssumeRoleProvider) WithLogger(l aws.Logger) *AssumeRoleProvider {
-	p.log = l
-	return p
-}
-
 // Retrieve implements the AWS credentials.Provider interface to return a set of Assume Role credentials.
 // If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
 // are expired, the credentials will be refreshed, and stored back in the cache.
 func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
-	var cc *cache.CacheableCredentials
 	var err error
-
-	if p.Cache != nil {
-		cc, err = p.Cache.Fetch()
-		if err != nil {
-			// Just mark as expired, and re-get the SessionToken creds from AWS
-			// May want to log/notify that a failure happened, for troubleshooting
-			p.Expiry.SetExpiration(time.Now(), SessionTokenMaxDuration)
-		} else {
-			p.debug("Found cached assume role credentials")
-			p.Expiry.SetExpiration(time.Unix(cc.Expiration, 0), p.ExpiryWindow)
-		}
-	}
+	creds := p.checkCache()
 
 	if p.IsExpired() {
 		p.debug("Detected expired or unset assume role credentials, refreshing")
-		c, err := p.assumeRole()
+		creds, err = p.retrieve()
 		if err != nil {
 			return credentials.Value{}, err
 		}
 
-		cc = &cache.CacheableCredentials{
-			Value: credentials.Value{
-				AccessKeyID:     *c.AccessKeyId,
-				SecretAccessKey: *c.SecretAccessKey,
-				SessionToken:    *c.SessionToken,
-				ProviderName:    AssumeRoleProviderName,
-			},
-			Expiration: c.Expiration.Unix(),
-		}
-
 		if p.Cache != nil {
-			if err := p.Cache.Store(cc); err != nil {
+			if err := p.Cache.Store(creds); err != nil {
 				p.debug("error caching credentials: %v", err)
 			}
 		}
 	}
 
-	if cc == nil {
+	if creds == nil {
 		// something's wacky, expire existing provider creds, and retry
 		p.SetExpiration(time.Unix(0, 0), 0)
 		return p.Retrieve()
 	}
 
-	p.debug("ASSUME ROLE CREDENTIALS: %+v", cc.Value)
-	return cc.Value, nil
+	v := creds.Value(AssumeRoleProviderName)
+
+	p.debug("ASSUME ROLE CREDENTIALS: %+v", v)
+	return v, nil
 }
 
-func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
+func (p *AssumeRoleProvider) retrieve() (*cache.CacheableCredentials, error) {
 	i := new(sts.AssumeRoleInput).SetDurationSeconds(p.validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
 		SetRoleSessionName(p.RoleSessionName)
 
@@ -131,22 +88,14 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 		i.ExternalId = aws.String(p.ExternalID)
 	}
 
-	if len(p.SerialNumber) > 0 {
-		i.SerialNumber = aws.String(p.SerialNumber)
+	t, err := p.handleMfa()
+	if err != nil {
+		return nil, err
+	}
 
-		if len(p.TokenCode) < 1 {
-			if p.TokenProvider != nil {
-				t, err := p.TokenProvider()
-				if err != nil {
-					return nil, err
-				}
-				i.TokenCode = &t
-			} else {
-				return nil, new(ErrMfaRequired)
-			}
-		} else {
-			i.TokenCode = aws.String(p.TokenCode)
-		}
+	if len(p.SerialNumber) > 0 {
+		i.SerialNumber = &p.SerialNumber
+		i.TokenCode = t
 	}
 
 	o, err := p.AssumeRole(i)
@@ -154,7 +103,9 @@ func (p *AssumeRoleProvider) assumeRole() (*sts.Credentials, error) {
 		return nil, err
 	}
 	p.Expiry.SetExpiration(*o.Credentials.Expiration, p.ExpiryWindow)
-	return o.Credentials, nil
+
+	c := cache.CacheableCredentials(*o.Credentials)
+	return &c, nil
 }
 
 // AssumeRole implements the AssumeRoler interface, calling the AssumeRole method on the underlying client
@@ -163,20 +114,8 @@ func (p *AssumeRoleProvider) AssumeRole(input *sts.AssumeRoleInput) (*sts.Assume
 	return p.client.AssumeRole(input)
 }
 
-func (p *AssumeRoleProvider) debug(f string, v ...interface{}) {
-	if p.cfg != nil && p.cfg.LogLevel.AtLeast(aws.LogDebug) && p.log != nil {
-		p.log.Log(fmt.Sprintf(f, v...))
-	}
-}
-
-// StdinTokenProvider will print a prompt to Stderr for a user to enter the MFA code
-func StdinTokenProvider() (string, error) {
-	var mfaCode string
-	fmt.Fprint(os.Stderr, "Enter MFA Code: ")
-	_, err := fmt.Scanln(&mfaCode)
-	return mfaCode, err
-}
-
+// Sanity check the requested duration, and fix if out of bounds.  The returned value is the accepted type for the
+// SetDurationSeconds() setting for the AWS credential request
 func (p *AssumeRoleProvider) validateDuration(d time.Duration) int64 {
 	s := int64(d.Seconds())
 

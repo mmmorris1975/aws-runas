@@ -1,218 +1,292 @@
 package main
 
 import (
+	"aws-runas/lib/config"
+	"aws-runas/lib/identity"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/mmmorris1975/aws-runas/lib/config"
-	credlib "github.com/mmmorris1975/aws-runas/lib/credentials"
+	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	cfglib "github.com/mmmorris1975/aws-config/config"
+	"net/http"
+	"net/http/httptest"
+	"net/url"
 	"os"
-	"strings"
 	"testing"
 	"time"
 )
 
-func TestMain(m *testing.M) {
+func TestResolveConfig(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", ".aws/config")
-	profile = aws.String("x")
-	cfg = new(config.AwsConfig)
-	usr = new(credlib.AwsIdentity)
-	awsSession(*profile, cfg)
-	os.Exit(m.Run())
-}
+	defer os.Unsetenv("AWS_CONFIG_FILE")
 
-func TestWrapCmd(t *testing.T) {
-	t.Run("nil cmd", func(t *testing.T) {
-		c := wrapCmd(nil)
-		if len(*c) > 0 {
-			t.Error("should have received empty value")
+	t.Run("default", func(t *testing.T) {
+		profile = coalesce(nil, nil, nil, aws.String("default"))
+
+		if err := resolveConfig(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if cfg.Region != "us-east-2" || cfg.CredentialsDuration < 1 || cfg.DurationSeconds != 3601 {
+			t.Error("data mismatch")
 		}
 	})
 
-	t.Run("empty cmd", func(t *testing.T) {
-		c := wrapCmd(new([]string))
-		if len(*c) > 0 {
-			t.Error("should have received empty value")
+	t.Run("good arn profile", func(t *testing.T) {
+		profile = aws.String("arn:aws:iam::1234567890:role/Admin")
+
+		if err := resolveConfig(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if cfg.Region != "us-east-2" || cfg.CredentialsDuration < 1 || cfg.DurationSeconds != 3601 {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("bad arn profile", func(t *testing.T) {
+		// unparseable ARN would drop down to looking up named profile, which will be invalid for this test, so we get 2 for 1
+		profile = aws.String("aws:arn::role/Admin")
+
+		if err := resolveConfig(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("bad jump role arn", func(t *testing.T) {
+		profile = aws.String("default")
+		jumpArn = aws.String("aws:arn::role/Admin")
+
+		if err := resolveConfig(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("user duration", func(t *testing.T) {
+		d := 8 * time.Hour
+		profile = aws.String("default")
+		roleDuration = &d
+		jumpArn = aws.String(ev["JUMP_ROLE_ARN"])
+
+		if err := resolveConfig(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if cfg.DurationSeconds != int(d.Seconds()) || cfg.CredentialsDuration != d {
+			t.Error("data mismatch")
+		}
+	})
+}
+
+func TestAwsSession(t *testing.T) {
+	t.Run("empty config", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Error("did not see expected panic")
+			}
+		}()
+		cfg = new(config.AwsConfig)
+		awsSession()
+	})
+
+	t.Run("good", func(t *testing.T) {
+		profile = aws.String("aProfile")
+		verbose = aws.Bool(true)
+
+		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg.Region = "us-east-1"
+
+		awsSession()
+
+		if *ses.Config.Region != cfg.Region || !ses.Config.LogLevel.AtLeast(aws.LogDebug) {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("arn profile", func(t *testing.T) {
+		profile = aws.String("arn:aws:iam::1234567890:role/Role")
+		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg.Region = "us-east-2"
+		cfg.RoleArn = *profile
+
+		awsSession()
+
+		if *ses.Config.Region != cfg.Region {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("source profile", func(t *testing.T) {
+		profile = aws.String("aProfile")
+		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg.Region = "us-west-1"
+		cfg.SourceProfile = "source"
+
+		awsSession()
+
+		if *ses.Config.Region != cfg.Region {
+			t.Error("data mismatch")
+		}
+	})
+}
+
+func TestPrintRoles(t *testing.T) {
+	usr = &identity.Identity{
+		IdentityType: "user",
+		Username:     "mock-user",
+	}
+
+	t.Run("error", func(t *testing.T) {
+		idp = &mockIdp{test: "error"}
+		if err := printRoles(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		idp = &mockIdp{test: "empty"}
+		if err := printRoles(); err != nil {
+			t.Error(err)
+			return
 		}
 	})
 
 	t.Run("good", func(t *testing.T) {
-		c := wrapCmd(&[]string{"ls"})
-		if len(*c) < 1 {
-			t.Error("empty command returned")
+		idp = new(mockIdp)
+		if err := printRoles(); err != nil {
+			t.Error(err)
+			return
 		}
 	})
 }
 
-func Example_printCredentials() {
-	env := make(map[string]string)
-	env["AWS_ACCESS_KEY_ID"] = "AKIAMOCK"
-	env["AWS_SECRET_ACCESS_KEY"] = "SecretKey"
-	env["AWS_PROFILE"] = "p"
-	env["AWS_REGION"] = "us-east-1"
-
-	for k, v := range env {
-		os.Setenv(k, v)
-		defer os.Unsetenv(k)
+func ExamplePrintRoles() {
+	usr = &identity.Identity{
+		IdentityType: "user",
+		Username:     "mock-user",
 	}
 
-	printCredentials()
+	idp = new(mockIdp)
+
+	printRoles()
 	// Output:
-	// export AWS_REGION='us-east-1'
-	// export AWS_ACCESS_KEY_ID='AKIAMOCK'
-	// export AWS_SECRET_ACCESS_KEY='SecretKey'
-	// export AWSRUNAS_PROFILE='x'
+	// Available role ARNs for mock-user
+	//   arn:aws:iam::1234567890:role/Admin
 }
 
-// requires setting up credential cache files
-//func ExamplePrintCredExpire() {
-//
-//}
-
-func TestUpdateEnv(t *testing.T) {
-	defer os.Unsetenv("AWS_ACCESS_KEY_ID")
-	defer os.Unsetenv("AWS_SECRET_ACCESS_KEY")
-	defer os.Unsetenv("AWS_SESSION_TOKEN")
-	defer os.Unsetenv("AWS_SECURITY_TOKEN")
-
-	c := credentials.Value{AccessKeyID: "AKIAMOCK", SecretAccessKey: "SecretKey", SessionToken: "SecurityToken"}
-	updateEnv(c)
-
-	v, ok := os.LookupEnv("AWS_ACCESS_KEY_ID")
-	if !ok || v != c.AccessKeyID {
-		t.Error("bad access key")
+func TestPrintMfa(t *testing.T) {
+	usr = &identity.Identity{
+		IdentityType: "user",
+		Username:     "mock-user",
 	}
 
-	v, ok = os.LookupEnv("AWS_SECRET_ACCESS_KEY")
-	if !ok || v != c.SecretAccessKey {
-		t.Error("bad secret key")
-	}
-
-	v, ok = os.LookupEnv("AWS_SESSION_TOKEN")
-	if !ok || v != c.SessionToken {
-		t.Error("bad session token key")
-	}
-
-	v, ok = os.LookupEnv("AWS_SECURITY_TOKEN")
-	if !ok || v != c.SessionToken {
-		t.Error("bad security token key")
-	}
-}
-
-func TestHandleUserCreds(t *testing.T) {
-	t.Run("role duration > 1 hour", func(t *testing.T) {
-		cfg.RoleDuration = 2 * time.Hour
-		defer func() { cfg.RoleDuration = credlib.AssumeRoleMinDuration }()
-		handleUserCreds()
-	})
-
-	t.Run("session creds only", func(t *testing.T) {
-		sesCreds = aws.Bool(true)
-		defer func() { sesCreds = aws.Bool(false) }()
-		handleUserCreds()
-	})
-
-	t.Run("assume role creds", func(t *testing.T) {
-		cfg.RoleArn = "my-role"
-		defer func() { cfg.RoleArn = "" }()
-		handleUserCreds()
-	})
-}
-
-func TestCheckRefresh(t *testing.T) {
-	refresh = aws.Bool(true)
-	defer func() { refresh = aws.Bool(false); sesCreds = aws.Bool(false) }()
-	checkRefresh()
-}
-
-func TestAssumeRoleCacheFile(t *testing.T) {
-	// returned name will change depending on the machine it runs on
-	oldP := *profile
-	profile = aws.String("arn:aws:iam::123456789012:role/Administrator")
-	cfg.RoleArn = *profile
-	defer func() { profile = &oldP; cfg.RoleArn = "" }()
-
-	f := assumeRoleCacheFile()
-	if len(f) < 1 {
-		t.Error("empty role cache name")
-	}
-
-	if !strings.HasSuffix(f, fmt.Sprintf("%s_%s", assumeRoleCachePrefix, "123456789012-Administrator")) {
-		t.Error("bad role cache name")
-	}
-}
-
-func TestSessionTokenCacheFile(t *testing.T) {
-	// returned name will change depending on the machine it runs on
-	t.Run("profile", func(t *testing.T) {
-		f := sessionTokenCacheFile()
-		if len(f) < 1 {
-			t.Error("empty session cache name")
+	t.Run("error", func(t *testing.T) {
+		m := &mockIam{test: "error"}
+		if err := printMfa(m); err == nil {
+			t.Error("did not receive expected error")
 		}
+	})
 
-		if !strings.HasSuffix(f, fmt.Sprintf("%s_%s", sessionTokenCachePrefix, "x")) {
-			t.Error("bad session cache name")
+	t.Run("empty", func(t *testing.T) {
+		m := &mockIam{test: "empty"}
+		if err := printMfa(m); err != nil {
+			t.Error(err)
+			return
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		m := new(mockIam)
+		if err := printMfa(m); err != nil {
+			t.Error(err)
+			return
 		}
 	})
 }
 
-func TestAssumeRoleCredentials(t *testing.T) {
-	c := assumeRoleCredentials(nil)
-	if c == nil {
-		t.Error("nil role credentials object")
+func ExamplePrintMfa() {
+	usr = &identity.Identity{
+		IdentityType: "user",
+		Username:     "mock-user",
+	}
+
+	printMfa(new(mockIam))
+	// Output:
+	// 123456
+}
+
+func TestSamlClientWithReauth(t *testing.T) {
+	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Headers", "X-MockTest-Only,X-MockTest-NoAuth")
+		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://%s/auth/SSOPOST/metaAlias/realm/saml-idp"/>
+  </IDPSSODescriptor>
+</EntityDescriptor>`, r.Host)
+	}))
+	defer s.Close()
+
+	u, _ := url.Parse(s.URL)
+
+	cookieFile = os.DevNull
+	samlUser = aws.String("good")
+	samlPass = aws.String("bad")
+	mfaCode = aws.String("")
+	cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig), SamlMetadataUrl: u}
+
+	c, err := samlClientWithReauth()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if c.Client().Username != *samlUser || c.Client().Password != *samlPass {
+		t.Error("data mismatch")
 	}
 }
 
-func TestAssumeRoleCredentialsMfa(t *testing.T) {
-	mfaCode = aws.String("000000")
-	defer func() { mfaCode = nil }()
-
-	c := assumeRoleCredentials(nil)
-	if c == nil {
-		t.Error("nil role credentials object")
-	}
+type mockIdp struct {
+	identity.Provider
+	test string
 }
 
-func TestSessionTokenCredentials(t *testing.T) {
-	c := sessionTokenCredentials()
-	if c == nil {
-		t.Error("nil session object")
+func (p *mockIdp) Roles(user ...string) (identity.Roles, error) {
+	if p.test == "error" {
+		return nil, fmt.Errorf("I'm an error")
 	}
+
+	if p.test == "empty" {
+		return []string{}, nil
+	}
+
+	return []string{
+		"arn:aws:iam::1234567890:role/Admin",
+		"arn:aws:iam::*:role/ReadOnly",
+		"arn:aws:iam::0987654321:*",
+		"*",
+	}, nil
 }
 
-func TestSessionTokenCredentialsMfa(t *testing.T) {
-	mfaCode = aws.String("111111")
-	defer func() { mfaCode = nil }()
-
-	c := sessionTokenCredentials()
-	if c == nil {
-		t.Error("nil session object")
-	}
+type mockIam struct {
+	iamiface.IAMAPI
+	test string
 }
 
-func TestResolveConfig(t *testing.T) {
-	d := 30 * time.Minute
-	duration = &d
-	resolveConfig()
-	if cfg == nil {
-		t.Error("nil config object")
+func (m *mockIam) ListMFADevices(in *iam.ListMFADevicesInput) (*iam.ListMFADevicesOutput, error) {
+	if m.test == "error" {
+		return nil, fmt.Errorf("I'm an error")
 	}
 
-	if cfg.SessionDuration != 30*time.Minute {
-		t.Error("session duration mismatch")
+	if m.test == "empty" {
+		return &iam.ListMFADevicesOutput{IsTruncated: aws.Bool(false), MFADevices: []*iam.MFADevice{}}, nil
 	}
-}
 
-func TestCoalesce(t *testing.T) {
-	t.Run("all nil", func(t *testing.T) {
-		if x := coalesce(nil, nil); x != nil {
-			t.Error("non-nil value")
-		}
-	})
-
-	t.Run("mid val", func(t *testing.T) {
-		if x := coalesce(nil, aws.String("val"), nil); x == nil {
-			t.Error("unexpected nil value")
-		}
-	})
+	return &iam.ListMFADevicesOutput{
+		IsTruncated: aws.Bool(false),
+		MFADevices:  []*iam.MFADevice{&iam.MFADevice{SerialNumber: aws.String("123456")}},
+	}, nil
 }

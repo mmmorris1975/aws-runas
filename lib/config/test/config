@@ -1,20 +1,25 @@
 [default]
+region = us-east-1
+session_token_duration = 20h
+credentials_duration = 1h
+
+[profile simple]
 region = us-west-1
 
-[profile source]
-region = us-east-1
-mfa_serial = ABCDEFG
-session_token_duration = 16h
+[profile iam]
+source_profile = simple
+role_arn = arn:aws:iam::1234567890:role/my-role
+mfa_serial = arn:aws:iam::1234567890:mfa/123456
+external_id = qq
 
-[profile role1]
+[profile duration_override]
 source_profile = default
-role_arn = role1
+duration_seconds = 1800
+role_arn = arn:aws:iam::1234567890:role/Admin
+mfa_serial = arn:aws:iam::1234567890:mfa/987654
 
-[profile role2]
-source_profile = source
-role_arn = role2
-
-[profile role3]
-source_profile = other
-role_arn = role3
-mfa_serial = 876543210
+[profile saml]
+region = eu-west-1
+source_profile = simple
+jump_role_arn = arn:aws:iam::1234567890:role/Admin
+saml_metadata_url = https://example.org/saml/metadata

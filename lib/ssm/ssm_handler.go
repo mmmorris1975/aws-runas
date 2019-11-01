@@ -15,14 +15,13 @@ type sessionHandler struct {
 	log      aws.Logger
 	region   string
 	endpoint string
+	testing  bool
 }
 
 // NewSsmHandler creates the handler type needed to create shell and port-forwarding sessions
 func NewSsmHandler(c client.ConfigProvider) *sessionHandler {
 	s := ssm.New(c)
-	r := s.SigningRegion
-	ep := s.Endpoint
-	return &sessionHandler{client: s, region: r, endpoint: ep}
+	return &sessionHandler{client: s, region: s.SigningRegion, endpoint: s.Endpoint, log: aws.NewDefaultLogger()}
 }
 
 // WithLogger is a fluent method used with NewSsmHandler to configure a conforming logging type
@@ -38,6 +37,10 @@ func (h *sessionHandler) StartSession(target string) error {
 	c, err := h.cmd(&in)
 	if err != nil {
 		return err
+	}
+
+	if h.testing {
+		return nil
 	}
 	return c.Run()
 }
@@ -59,6 +62,10 @@ func (h *sessionHandler) ForwardPort(target, lp, rp string) error {
 	c, err := h.cmd(&in)
 	if err != nil {
 		return err
+	}
+
+	if h.testing {
+		return nil
 	}
 	return c.Run()
 }

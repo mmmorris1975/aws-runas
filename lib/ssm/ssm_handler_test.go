@@ -65,6 +65,36 @@ func TestNewSsmHandler(t *testing.T) {
 	})
 }
 
+func TestSessionHandler_StartSession(t *testing.T) {
+	h := &sessionHandler{
+		client:   new(mockSsmClient),
+		log:      aws.NewDefaultLogger(),
+		region:   "us-east-1",
+		endpoint: "ep-mock",
+		testing:  true,
+	}
+
+	if err := h.StartSession("i-deadbeef"); err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestSessionHandler_ForwardPort(t *testing.T) {
+	h := &sessionHandler{
+		client:   new(mockSsmClient),
+		log:      aws.NewDefaultLogger(),
+		region:   "us-east-1",
+		endpoint: "ep-mock",
+		testing:  true,
+	}
+
+	if err := h.ForwardPort("i-deadbeef", "1234", "22"); err != nil {
+		t.Error(err)
+		return
+	}
+}
+
 func TestCmd(t *testing.T) {
 	h := &sessionHandler{client: new(mockSsmClient), region: "us-east-1"}
 
