@@ -91,7 +91,7 @@ func resolveConfig() error {
 	if err != nil {
 		return err
 	}
-	log.Debug("ENV Config: %+v", env)
+	log.Debugf("ENV Config: %+v", env)
 
 	// user-supplied config
 	usrCfg := &cfglib.AwsConfig{
@@ -99,7 +99,7 @@ func resolveConfig() error {
 		MfaSerial:  *mfaArn,
 		Profile:    *profile,
 	}
-	log.Debug("USER Config: %+v", usrCfg)
+	log.Debugf("USER Config: %+v", usrCfg)
 
 	if _, err := arn.Parse(*profile); err == nil {
 		// profile is a well-formed ARN, so it won't be in the config file, set it in our usrCfg
@@ -114,13 +114,13 @@ func resolveConfig() error {
 			return err
 		}
 	}
-	log.Debug("PROFILE Config: %+v", resolvedProfile)
+	log.Debugf("PROFILE Config: %+v", resolvedProfile)
 
 	mergedCfg, err := res.Merge(resolvedProfile, env, usrCfg)
 	if err != nil {
 		return err
 	}
-	log.Debug("MERGED Config: %+v", mergedCfg)
+	log.Debugf("MERGED Config: %+v", mergedCfg)
 
 	cfg, err = finalConfig(mergedCfg)
 	return err
@@ -157,7 +157,7 @@ func finalConfig(cfg *cfglib.AwsConfig) (*config.AwsConfig, error) {
 		newCfg.SamlUsername = *samlUser
 	}
 
-	log.Debug("FINAL Config: %+v", newCfg)
+	log.Debugf("FINAL Config: %+v", newCfg)
 	return newCfg, nil
 }
 
