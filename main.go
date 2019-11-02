@@ -5,7 +5,9 @@ import (
 	"aws-runas/lib/config"
 	credlib "aws-runas/lib/credentials"
 	"aws-runas/lib/identity"
+	"aws-runas/lib/metadata"
 	"aws-runas/lib/saml"
+	"aws-runas/lib/ssm"
 	"fmt"
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
@@ -18,10 +20,15 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger/logger"
+	"net"
 	"os"
+	"os/exec"
+	"os/signal"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -40,11 +47,12 @@ var (
 	usr        *identity.Identity
 
 	log        = logger.StdLogger
+	sigCh      = make(chan os.Signal, 3)
 	cookieFile = filepath.Join(filepath.Dir(defaults.SharedConfigFilename()), ".saml-client.cookies")
 )
 
 func main() {
-	kingpin.Parse()
+	p := kingpin.Parse()
 	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, aws.String("default"))
 
 	if *verbose {
@@ -95,12 +103,178 @@ func main() {
 			c = assumeRoleCredentials(ses)
 		}
 
-		v, err := c.Get()
-		if err != nil {
-			log.Fatal(err)
+		signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
+		go func() {
+			for {
+				sig := <-sigCh
+				log.Debugf("Got signal: %s", sig.String())
+			}
+		}()
+
+		switch p {
+		case shell.FullCommand():
+			h := ssm.NewSsmHandler(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log)))
+			if err := h.StartSession(*shellArgs.target); err != nil {
+				log.Fatal(err)
+			}
+		case fwd.FullCommand():
+			host, remPort, err := net.SplitHostPort(*fwdArgs.target)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			locPort := fmt.Sprintf("%d", *fwdArgs.localPort)
+
+			h := ssm.NewSsmHandler(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log)))
+			if err := h.ForwardPort(host, locPort, remPort); err != nil {
+				log.Fatal(err)
+			}
+		default:
+			creds, err := c.Get()
+			if err != nil {
+				log.Fatalf("Error getting credentials: %v", err)
+			}
+
+			updateEnv(creds)
+			cmd := *execArgs.cmd
+
+			if len(cmd) > 0 {
+				if !*envFlag {
+					runEcsSvc(c)
+				}
+
+				wrapped := wrapCmd(cmd)
+				c := exec.Command(wrapped[0], wrapped[1:]...)
+				c.Stdin = os.Stdin
+				c.Stdout = os.Stdout
+				c.Stderr = os.Stderr
+
+				err = c.Run()
+				if err != nil {
+					log.Debug("Error running command")
+					log.Fatalf("%v", err)
+				}
+				os.Exit(0)
+			} else {
+				printCredentials()
+			}
 		}
-		log.Infof("%+v", v)
 	}
+}
+
+func updateEnv(creds credentials.Value) {
+	// Explicitly unset AWS_PROFILE to avoid unintended consequences
+	os.Unsetenv(cfglib.ProfileEnvVar)
+
+	// Profile name was not a Role ARN, so let's pass that through as a new env var
+	if *profile != cfg.RoleArn {
+		os.Setenv("AWSRUNAS_PROFILE", *profile)
+	}
+
+	// Pass AWS_REGION through if it was set in our env, or found in config.
+	// Ensure that called program gets the expected region.  Also set AWS_DEFAULT_REGION
+	// so awscli works as expected, otherwise it will use any region from the profile
+	if cfg != nil && len(cfg.Region) > 0 {
+		os.Setenv("AWS_REGION", cfg.Region)
+		os.Setenv("AWS_DEFAULT_REGION", cfg.Region)
+	}
+
+	os.Setenv("AWS_ACCESS_KEY_ID", creds.AccessKeyID)
+	os.Setenv("AWS_SECRET_ACCESS_KEY", creds.SecretAccessKey)
+
+	// If session token creds were returned, set them. Otherwise explicitly unset them
+	// to keep the sdk from getting confused.  AFAIK, we should always have SessionTokens,
+	// since our entire process revolves around them. But always code defensively
+	if len(creds.SessionToken) > 0 {
+		os.Setenv("AWS_SESSION_TOKEN", creds.SessionToken)
+		os.Setenv("AWS_SECURITY_TOKEN", creds.SessionToken)
+	} else {
+		os.Unsetenv("AWS_SESSION_TOKEN")
+		os.Unsetenv("AWS_SECURITY_TOKEN")
+	}
+}
+
+func printCredentials() {
+	format := "%s %s='%s'\n"
+	exportToken := "export"
+
+	switch runtime.GOOS {
+	case "windows":
+		// SHELL env var is not set by default in "normal" Windows cmd.exe and PowerShell sessions.
+		// If we detect it, assume we're running under something like git-bash (or maybe Cygwin?)
+		// and fall through to using linux-style env var setting syntax
+		if len(os.Getenv("SHELL")) < 1 {
+			exportToken = "set"
+			format = "%s %s=%s\n"
+		}
+	}
+
+	envVars := []string{
+		"AWS_REGION", "AWS_DEFAULT_REGION",
+		"AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN", "AWSRUNAS_PROFILE",
+	}
+
+	for _, v := range envVars {
+		val, ok := os.LookupEnv(v)
+		if ok {
+			fmt.Printf(format, exportToken, v, val)
+		}
+	}
+}
+
+func runEcsSvc(c *credentials.Credentials) {
+	// modify the execution environment to force use of ECS credential URL
+	unsetEnv := []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
+	for _, e := range unsetEnv {
+		os.Unsetenv(e)
+	}
+
+	// AWS_CREDENTIAL_PROFILES_FILE is a Java SDK specific env var for the credential file location
+	for _, v := range []string{"AWS_SHARED_CREDENTIALS_FILE", "AWS_CREDENTIAL_PROFILES_FILE"} {
+		os.Setenv(v, os.DevNull)
+	}
+
+	in := &metadata.EcsMetadataInput{Credentials: c, Logger: log}
+	s, err := metadata.NewEcsMetadataService(in)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
+	go s.Run()
+}
+
+func wrapCmd(cmd []string) []string {
+	// If on a non-windows platform, with the SHELL environment variable set, and a call to
+	// exec.LookPath() for the command fails, run the command in a sub-shell so we can support shell aliases.
+	newCmd := make([]string, 0)
+	if len(cmd) < 1 {
+		return newCmd
+	}
+
+	if runtime.GOOS != "windows" {
+		c, err := exec.LookPath(cmd[0])
+		if len(c) < 1 || err != nil {
+			sh := os.Getenv("SHELL")
+			if strings.HasSuffix(sh, "/bash") || strings.HasSuffix(sh, "/fish") ||
+				strings.HasSuffix(sh, "/zsh") || strings.HasSuffix(sh, "/ksh") {
+				newCmd = append(newCmd, sh, "-i", "-c", strings.Join(cmd, " "))
+			}
+			// Add other shells here as need arises
+		}
+	}
+
+	if len(newCmd) == 0 {
+		// We haven't wrapped provided command
+		newCmd = append(newCmd, cmd...)
+	}
+
+	if log != nil {
+		log.Debugf("WRAPPED CMD: %v", newCmd)
+	}
+
+	return newCmd
 }
 
 // return the 1st non-nil value with a length > 0, otherwise return nil
