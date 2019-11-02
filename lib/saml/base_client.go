@@ -23,6 +23,8 @@ const (
 	MfaTypeCode = "code"
 	// MfaTypePush indicates the use of MFA push notifications
 	MfaTypePush = "push"
+	// IdentityProviderSaml is the name which names the the provider which resolved the identity
+	IdentityProviderSaml = "SAMLIdentityProvider"
 )
 
 type SamlClient struct {
@@ -154,7 +156,7 @@ func getAwsSamlIdentity(d string) (*identity.Identity, error) {
 	return &identity.Identity{
 		IdentityType: "user",
 		Username:     m[1],
-		Provider:     "SAMLClient",
+		Provider:     IdentityProviderSaml,
 	}, nil
 }
 

@@ -3,12 +3,14 @@ package main
 import (
 	"aws-runas/lib/cache"
 	"aws-runas/lib/config"
+	credlib "aws-runas/lib/credentials"
 	"aws-runas/lib/identity"
 	"aws-runas/lib/saml"
 	"fmt"
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -19,6 +21,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"time"
 )
 
 var (
@@ -50,6 +53,7 @@ func main() {
 	if err := awsUser(); err != nil {
 		log.Fatal(err)
 	}
+	log.Debugf("USER: %+v", usr)
 
 	switch {
 	case *listMfa:
@@ -63,7 +67,27 @@ func main() {
 	case *diagFlag:
 	case *ec2MdFlag:
 	default:
+		var c *credentials.Credentials
 
+		if usr.IdentityType == "user" {
+			if usr.Provider == saml.IdentityProviderSaml {
+				var err error
+				c, err = handleSamlUserCredentials()
+				if err != nil {
+					log.Fatal(err)
+				}
+			} else {
+				c = handleAwsUserCredentials()
+			}
+		} else {
+			// possibly on EC2 ... do AssumeRole directly
+		}
+
+		v, err := c.Get()
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Infof("%+v", v)
 	}
 }
 
@@ -99,7 +123,6 @@ func resolveConfig() error {
 		MfaSerial:  *mfaArn,
 		Profile:    *profile,
 	}
-	log.Debugf("USER Config: %+v", usrCfg)
 
 	if _, err := arn.Parse(*profile); err == nil {
 		// profile is a well-formed ARN, so it won't be in the config file, set it in our usrCfg
@@ -114,11 +137,28 @@ func resolveConfig() error {
 			return err
 		}
 	}
+	log.Debugf("USER Config: %+v", usrCfg)
 	log.Debugf("PROFILE Config: %+v", resolvedProfile)
 
-	mergedCfg, err := res.Merge(resolvedProfile, env, usrCfg)
+	mergedCfg, err := res.Merge(resolvedProfile, env)
 	if err != nil {
 		return err
+	}
+
+	if len(usrCfg.ExternalId) > 0 {
+		mergedCfg.ExternalId = usrCfg.ExternalId
+	}
+
+	if len(usrCfg.MfaSerial) > 0 {
+		mergedCfg.MfaSerial = usrCfg.ExternalId
+	}
+
+	if len(usrCfg.Profile) > 0 {
+		mergedCfg.Profile = usrCfg.Profile
+	}
+
+	if len(usrCfg.RoleArn) > 0 {
+		mergedCfg.RoleArn = usrCfg.RoleArn
 	}
 	log.Debugf("MERGED Config: %+v", mergedCfg)
 
@@ -277,4 +317,62 @@ func printRoles() {
 		}
 		fmt.Println("  " + r)
 	}
+}
+
+func handleSamlUserCredentials() (*credentials.Credentials, error) {
+	var c *credentials.Credentials
+
+	samlDoc, err := samlClient.AwsSaml()
+	if err != nil {
+		return nil, err
+	}
+
+	d, err := samlClient.GetSessionDuration()
+	if err != nil {
+		return nil, err
+	}
+
+	sc := credlib.NewSamlRoleCredentials(ses, cfg.RoleArn, samlDoc, func(p *credlib.SamlRoleProvider) {
+		p.Log = log
+		p.RoleSessionName = usr.Username
+		p.Duration = time.Duration(d) * time.Second
+		p.ExpiryWindow = time.Duration(d) * time.Second / 10
+		p.Cache = cache.NewFileCredentialCache(os.DevNull) // todo use a real file
+
+		if len(cfg.JumpRoleArn.Resource) > 0 {
+			p.RoleARN = cfg.JumpRoleArn.String()
+		}
+	})
+
+	if len(cfg.JumpRoleArn.Resource) > 0 {
+		s := ses.Copy(new(aws.Config).WithCredentials(sc))
+		c = credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+			p.Log = log
+			p.RoleSessionName = usr.Username
+			p.Duration = cfg.CredentialsDuration
+			p.ExpiryWindow = cfg.CredentialsDuration / 10
+			p.ExternalID = cfg.ExternalId
+			p.Cache = cache.NewFileCredentialCache(os.DevNull) // todo use a real file
+		})
+	} else {
+		c = sc
+	}
+
+	return c, nil
+}
+
+func handleAwsUserCredentials() *credentials.Credentials {
+	var c *credentials.Credentials
+	// if cfg.CredentialsDuration > 1 * time.Hour && len(cfg.RoleArn) > 0
+	//   do AssumeRole directly since you can't use Session Tokens to assume roles longer than 1 hour
+	//   - cache these creds as role credentials
+	// else
+	//   fetch SessionTokenCredentials
+	//   - cache these creds as session token credentials
+	//   if !*sesCreds && len(cfg.RoleArn) > 0
+	//     RoleArn is set ... unset MfaToken and do AssumeRole using SessionTokenCredentials
+	//     - cache these creds as role credentials
+	//   else
+	//     the -s option was passed or no RoleArn was found
+	return c
 }

@@ -2,7 +2,7 @@ package credentials
 
 import (
 	"aws-runas/lib/cache"
-	"fmt"
+	"encoding/base64"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -100,10 +100,14 @@ func (p *SamlRoleProvider) setPrincipalArn() {
 		return
 	}
 
-	m := re.FindAllStringSubmatch(p.SAMLAssertion, -1)
+	d, err := base64.StdEncoding.DecodeString(p.SAMLAssertion)
+	if err != nil {
+		return
+	}
+
+	m := re.FindAllStringSubmatch(string(d), -1)
 	if m != nil {
 		for _, r := range m {
-			fmt.Printf("%s -> %+v", p.RoleARN, r)
 			if strings.EqualFold(r[1], p.RoleARN) {
 				p.principalArn = r[2]
 				return

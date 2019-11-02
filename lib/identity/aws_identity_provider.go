@@ -16,6 +16,9 @@ import (
 	"sync"
 )
 
+// IdentityProviderAws is the name which names the the provider which resolved the identity
+const IdentityProviderAws = "AwsIdentityProvider"
+
 // AwsIdentityProvider gets identity information for AWS IAM users
 type AwsIdentityProvider struct {
 	iamClient iamiface.IAMAPI
@@ -56,7 +59,7 @@ func (p *AwsIdentityProvider) GetIdentity() (*Identity, error) {
 		return nil, err
 	}
 
-	id := &Identity{Provider: "AwsIdentityProvider"}
+	id := &Identity{Provider: IdentityProviderAws}
 
 	r := strings.Split(a.Resource, "/")
 	id.IdentityType = r[0]
