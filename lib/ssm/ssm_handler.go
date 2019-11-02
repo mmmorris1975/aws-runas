@@ -98,7 +98,7 @@ func (h *sessionHandler) cmd(input *ssm.StartSessionInput) (*exec.Cmd, error) {
 }
 
 func (h *sessionHandler) debug(f string, msg ...interface{}) {
-	if h.cfg.LogLevel.AtLeast(aws.LogDebug) {
+	if h.log != nil && h.cfg.LogLevel.AtLeast(aws.LogDebug) {
 		h.log.Log(fmt.Sprintf(f, msg...))
 	}
 }
