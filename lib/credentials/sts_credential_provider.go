@@ -40,9 +40,10 @@ func (p *stsCredentialProvider) checkCache() *cache.CacheableCredentials {
 		var err error
 		creds, err = p.Cache.Load()
 		if err != nil {
+			p.debug("cache load error: %v", err)
 			p.SetExpiration(time.Now(), SessionTokenMaxDuration)
 		} else {
-			p.SetExpiration(*creds.Expiration, p.Duration)
+			p.SetExpiration(*creds.Expiration, p.ExpiryWindow)
 		}
 	}
 

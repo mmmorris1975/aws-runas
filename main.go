@@ -10,6 +10,7 @@ import (
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -22,6 +23,12 @@ import (
 	"sort"
 	"strings"
 	"time"
+)
+
+const (
+	assumeRoleCachePrefix   = ".aws_assume_role"
+	sessionTokenCachePrefix = ".aws_session_token"
+	jumpRoleCachePrefix     = ".aws_saml_role"
 )
 
 var (
@@ -65,7 +72,11 @@ func main() {
 			log.Fatal(err)
 		}
 	case *diagFlag:
+		// todo
+		log.Fatal("not implemented")
 	case *ec2MdFlag:
+		// todo
+		log.Fatal("not implemented")
 	default:
 		var c *credentials.Credentials
 
@@ -81,6 +92,7 @@ func main() {
 			}
 		} else {
 			// possibly on EC2 ... do AssumeRole directly
+			c = assumeRoleCredentials(ses)
 		}
 
 		v, err := c.Get()
@@ -337,23 +349,19 @@ func handleSamlUserCredentials() (*credentials.Credentials, error) {
 		p.RoleSessionName = usr.Username
 		p.Duration = time.Duration(d) * time.Second
 		p.ExpiryWindow = time.Duration(d) * time.Second / 10
-		p.Cache = cache.NewFileCredentialCache(os.DevNull) // todo use a real file
+		p.Cache = cache.NewFileCredentialCache(roleCredCacheName())
 
 		if len(cfg.JumpRoleArn.Resource) > 0 {
 			p.RoleARN = cfg.JumpRoleArn.String()
+			p.Cache = cache.NewFileCredentialCache(jumpRoleCredCacheName())
 		}
 	})
 
 	if len(cfg.JumpRoleArn.Resource) > 0 {
+		cfg.MfaSerial = "" // explicitly unset MfaSerial since MFA is handled by SAML
 		s := ses.Copy(new(aws.Config).WithCredentials(sc))
-		c = credlib.NewAssumeRoleCredentials(s, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
-			p.Log = log
-			p.RoleSessionName = usr.Username
-			p.Duration = cfg.CredentialsDuration
-			p.ExpiryWindow = cfg.CredentialsDuration / 10
-			p.ExternalID = cfg.ExternalId
-			p.Cache = cache.NewFileCredentialCache(os.DevNull) // todo use a real file
-		})
+
+		c = assumeRoleCredentials(s)
 	} else {
 		c = sc
 	}
@@ -363,16 +371,113 @@ func handleSamlUserCredentials() (*credentials.Credentials, error) {
 
 func handleAwsUserCredentials() *credentials.Credentials {
 	var c *credentials.Credentials
-	// if cfg.CredentialsDuration > 1 * time.Hour && len(cfg.RoleArn) > 0
-	//   do AssumeRole directly since you can't use Session Tokens to assume roles longer than 1 hour
-	//   - cache these creds as role credentials
-	// else
-	//   fetch SessionTokenCredentials
-	//   - cache these creds as session token credentials
-	//   if !*sesCreds && len(cfg.RoleArn) > 0
-	//     RoleArn is set ... unset MfaToken and do AssumeRole using SessionTokenCredentials
-	//     - cache these creds as role credentials
-	//   else
-	//     the -s option was passed or no RoleArn was found
+
+	if cfg.CredentialsDuration > 1*time.Hour && len(cfg.RoleArn) > 0 {
+		c = assumeRoleCredentials(ses)
+	} else {
+		sc := sessionTokenCredentials(ses)
+
+		if !*sesCreds && len(cfg.RoleArn) > 0 {
+			cfg.MfaSerial = "" // explicitly unset MfaSerial since MFA is handled in the session credentials
+			s := ses.Copy(new(aws.Config).WithCredentials(sc))
+
+			c = assumeRoleCredentials(s)
+		} else {
+			c = sc
+		}
+	}
+
 	return c
+}
+
+func sessionTokenCredentials(c client.ConfigProvider) *credentials.Credentials {
+	if c == nil {
+		c = ses
+	}
+
+	ew := cfg.SessionTokenDuration / 10
+	if cfg.SessionTokenDuration < credlib.SessionTokenMinDuration {
+		ew = credlib.SessionTokenMinDuration / 10
+	}
+
+	return credlib.NewSessionTokenCredentials(c, func(p *credlib.SessionTokenProvider) {
+		p.Cache = cache.NewFileCredentialCache(sessionCredCacheName())
+		p.Duration = cfg.SessionTokenDuration
+		p.ExpiryWindow = ew
+		p.Log = log
+		p.SerialNumber = cfg.MfaSerial
+		p.TokenCode = *mfaCode
+		p.TokenProvider = credlib.StdinMfaTokenProvider
+	})
+}
+
+func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
+	if c == nil {
+		c = ses
+	}
+
+	ew := cfg.CredentialsDuration / 10
+	if cfg.CredentialsDuration < credlib.AssumeRoleMinDuration {
+		ew = credlib.AssumeRoleMinDuration / 10
+	}
+
+	return credlib.NewAssumeRoleCredentials(c, cfg.RoleArn, func(p *credlib.AssumeRoleProvider) {
+		p.Cache = cache.NewFileCredentialCache(roleCredCacheName())
+		p.Duration = cfg.CredentialsDuration
+		p.ExternalID = cfg.ExternalId
+		p.ExpiryWindow = ew
+		p.Log = log
+		p.RoleSessionName = usr.Username
+		p.SerialNumber = cfg.MfaSerial
+		p.TokenCode = *mfaCode
+		p.TokenProvider = credlib.StdinMfaTokenProvider
+	})
+}
+
+func sessionCredCacheName() string {
+	f := os.DevNull
+
+	p := cfg.SourceProfile
+	if len(p) < 1 {
+		if len(*profile) > 0 {
+			p = *profile
+		} else {
+			p = "default"
+		}
+	}
+
+	f = cacheFile(fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p))
+	log.Debugf("SessionToken CACHE PATH: %s", f)
+	return f
+}
+
+func roleCredCacheName() string {
+	f := os.DevNull
+
+	p := *profile
+	if *profile == cfg.RoleArn {
+		a, _ := arn.Parse(*profile) // if we get this far, it's assumed the ARN will parse
+		r := strings.Split(a.Resource, "/")
+		p = fmt.Sprintf("%s-%s", a.AccountID, r[len(r)-1])
+	}
+
+	f = cacheFile(fmt.Sprintf("%s_%s", assumeRoleCachePrefix, p))
+	log.Debugf("AssumeRole CACHE PATH: %s", f)
+	return f
+}
+
+func jumpRoleCredCacheName() string {
+	f := os.DevNull
+
+	r := strings.Split(cfg.JumpRoleArn.Resource, "/")
+	p := fmt.Sprintf("%s-%s", cfg.JumpRoleArn.AccountID, r[len(r)-1])
+
+	f = cacheFile(fmt.Sprintf("%s_%s", jumpRoleCachePrefix, p))
+	log.Debugf("SAML JumpRole CACHE PATH: %s", f)
+	return f
+}
+
+func cacheFile(f string) string {
+	d := filepath.Dir(defaults.SharedCredentialsFilename())
+	return filepath.Join(d, f)
 }
