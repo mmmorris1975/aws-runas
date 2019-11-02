@@ -96,7 +96,7 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 }
 
 func checkCredentialProfile(profile string) bool {
-	cfg, err := cfglib.NewAwsCredentialsFile(nil)
+	cfg, err := cfglib.NewIniCredentialProvider(nil)
 	if err != nil {
 		log.Errorf("error loading credentials file: %v", err)
 		return false

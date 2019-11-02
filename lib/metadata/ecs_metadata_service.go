@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	simple_logger "github.com/mmmorris1975/simple-logger"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"net"
 	"net/http"
 	"net/url"
@@ -22,7 +22,7 @@ type EcsMetadataInput struct {
 	// the service return role credentials, or session credentials (in case the caller's code does its own role management)
 	Credentials *credentials.Credentials
 	// Logger is the logging object to configure for the service.  If not provided, a standard logger is configured.
-	Logger *simple_logger.Logger
+	Logger *logger.Logger
 }
 
 // EcsMetadataService is the object encapsulating the details of the service
@@ -37,7 +37,7 @@ func NewEcsMetadataService(opts *EcsMetadataInput) (*EcsMetadataService, error) 
 	cred = opts.Credentials
 	log = opts.Logger
 	if log == nil {
-		log = simple_logger.StdLogger
+		log = logger.StdLogger
 	}
 
 	s := new(EcsMetadataService)

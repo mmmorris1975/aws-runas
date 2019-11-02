@@ -26,7 +26,7 @@ func TestVersionCheck_Http(t *testing.T) {
 	}
 }
 
-func ExampleVersionCheck() {
+func Example_versionCheck() {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Location", "https://example.org/aws-runas/releases/0.0.0/")
 		w.WriteHeader(http.StatusFound)

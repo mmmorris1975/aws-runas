@@ -4,14 +4,14 @@ import (
 	cfglib "aws-runas/lib/config"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mmmorris1975/aws-config/config"
-	"github.com/mmmorris1975/simple-logger"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"os"
 	"testing"
 	"time"
 )
 
 func Example_checkEnvFail() {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAMOCK")
 	os.Setenv("AWS_SESSION_TOKEN", "token")
 	defer func() { os.Unsetenv("AWS_ACCESS_KEY_ID"); os.Unsetenv("AWS_SESSION_TOKEN") }()
@@ -22,7 +22,7 @@ func Example_checkEnvFail() {
 }
 
 func Example_checkEnvPass() {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 	os.Setenv("AWS_ACCESS_KEY_ID", "AKIAMOCK")
 	defer func() { os.Unsetenv("AWS_ACCESS_KEY_ID"); os.Unsetenv("AWS_SESSION_TOKEN") }()
 
@@ -32,14 +32,14 @@ func Example_checkEnvPass() {
 }
 
 func Example_checkRegionFail() {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 	checkRegion(new(cfglib.AwsConfig))
 	// Output:
 	// ERROR region is not set, it must be specified in the config file or as an environment variable
 }
 
 func Example_checkRegionPass() {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 	c := cfglib.AwsConfig{AwsConfig: &config.AwsConfig{Region: "us-east-3"}}
 	checkRegion(&c)
 	// Output:
@@ -69,7 +69,7 @@ func Example_printConfig() {
 }
 
 func TestCheckProfile(t *testing.T) {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 	t.Run("empty", func(t *testing.T) {
 		p := checkProfile("")
 		if p != "default" {
@@ -86,7 +86,7 @@ func TestCheckProfile(t *testing.T) {
 }
 
 func TestRunDiagnostics(t *testing.T) {
-	log = simple_logger.NewLogger(os.Stdout, "", 0)
+	log = logger.NewLogger(os.Stdout, "", 0)
 
 	t.Run("empty config", func(t *testing.T) {
 		if err := runDiagnostics(new(cfglib.AwsConfig)); err != nil {

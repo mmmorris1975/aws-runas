@@ -4,7 +4,7 @@ import (
 	cfglib "aws-runas/lib/config"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/mmmorris1975/aws-config/config"
-	"github.com/mmmorris1975/simple-logger"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -17,7 +17,7 @@ import (
 func TestMain(m *testing.M) {
 	os.Setenv("AWS_CONFIG_FILE", "../../.aws/config")
 	profile = "circle-role"
-	log = simple_logger.StdLogger
+	log = logger.StdLogger
 
 	var err error
 	cfg, err = config.NewAwsConfigResolver(nil)

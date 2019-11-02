@@ -13,7 +13,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/mmmorris1975/aws-config/config"
-	"github.com/mmmorris1975/simple-logger"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"github.com/syndtr/gocapability/capability"
 	"html/template"
 	"io"
@@ -55,7 +55,7 @@ var (
 	s        *session.Session
 	cred     *credentials.Credentials
 	usr      *identity.Identity
-	log      *simple_logger.Logger
+	log      *logger.Logger
 	cacheDir string
 
 	sigCh = make(chan os.Signal, 3)
@@ -97,7 +97,7 @@ type EC2MetadataInput struct {
 	// InitialProfile is the name of the profile provided at service startup
 	InitialProfile string
 	// Logger is the logger object to configure for the service
-	Logger *simple_logger.Logger
+	Logger *logger.Logger
 	// Session is the initial AWS session.Session object to use at service startup
 	Session *session.Session
 	// SessionCacheDir is the path used to cache the session token credentials. Set to an empty string to disable caching.
@@ -186,7 +186,7 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 func handleOptions(opts *EC2MetadataInput) error {
 	log = opts.Logger
 	if log == nil {
-		log = simple_logger.StdLogger
+		log = logger.StdLogger
 	}
 
 	s = opts.Session
@@ -428,7 +428,7 @@ func updateSession(p string) (err error) {
 		sc = s.Config
 	} else {
 		sc = new(aws.Config).WithCredentialsChainVerboseErrors(true).WithLogger(log)
-		if log.Level == simple_logger.DEBUG {
+		if log.Level == logger.DEBUG {
 			sc.LogLevel = aws.LogLevel(aws.LogDebug)
 		}
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	cfglib "github.com/mmmorris1975/aws-config/config"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"os"
 	"path/filepath"
 	"sort"
@@ -28,6 +29,7 @@ var (
 	idp        identity.Provider
 	usr        *identity.Identity
 
+	log        = logger.StdLogger
 	cookieFile = filepath.Join(filepath.Dir(defaults.SharedConfigFilename()), ".saml-client.cookies")
 )
 
@@ -36,33 +38,27 @@ func main() {
 	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, aws.String("default"))
 
 	if *verbose {
-		// todo set debug log level
+		log.SetLevel(logger.DEBUG)
 	}
 
 	if err := resolveConfig(); err != nil {
-		// fixme ... bad times (fatal)
+		log.Fatal(err)
 	}
 
 	awsSession()
 
 	if err := awsUser(); err != nil {
-		// fixme ... bad times (fatal)
-		fmt.Printf("%v\n", err)
-		return
+		log.Fatal(err)
 	}
 
 	switch {
 	case *listMfa:
-		if err := printMfa(iam.New(ses)); err != nil {
-			// fixme ... bad times
-		}
+		printMfa(iam.New(ses))
 	case *listRoles:
-		if err := printRoles(); err != nil {
-			// fixme ... bad times
-		}
+		printRoles()
 	case *updateFlag:
 		if err := versionCheck(Version); err != nil {
-			// fixme ... bad times
+			log.Fatal(err)
 		}
 	case *diagFlag:
 	case *ec2MdFlag:
@@ -95,6 +91,7 @@ func resolveConfig() error {
 	if err != nil {
 		return err
 	}
+	log.Debug("ENV Config: %+v", env)
 
 	// user-supplied config
 	usrCfg := &cfglib.AwsConfig{
@@ -102,6 +99,7 @@ func resolveConfig() error {
 		MfaSerial:  *mfaArn,
 		Profile:    *profile,
 	}
+	log.Debug("USER Config: %+v", usrCfg)
 
 	if _, err := arn.Parse(*profile); err == nil {
 		// profile is a well-formed ARN, so it won't be in the config file, set it in our usrCfg
@@ -116,11 +114,13 @@ func resolveConfig() error {
 			return err
 		}
 	}
+	log.Debug("PROFILE Config: %+v", resolvedProfile)
 
 	mergedCfg, err := res.Merge(resolvedProfile, env, usrCfg)
 	if err != nil {
 		return err
 	}
+	log.Debug("MERGED Config: %+v", mergedCfg)
 
 	cfg, err = finalConfig(mergedCfg)
 	return err
@@ -157,14 +157,14 @@ func finalConfig(cfg *cfglib.AwsConfig) (*config.AwsConfig, error) {
 		newCfg.SamlUsername = *samlUser
 	}
 
+	log.Debug("FINAL Config: %+v", newCfg)
 	return newCfg, nil
 }
 
 func awsSession() {
 	var p string
 
-	// todo add logger
-	sc := new(aws.Config).WithRegion(cfg.Region).WithCredentialsChainVerboseErrors(true).WithLogger(nil)
+	sc := new(aws.Config).WithRegion(cfg.Region).WithCredentialsChainVerboseErrors(true).WithLogger(log)
 	if *verbose {
 		sc.LogLevel = aws.LogLevel(aws.LogDebug)
 	}
@@ -194,6 +194,7 @@ func awsUser() error {
 	// default to AWS IAM identity, switch to SAML identity if SamlMetadataUrl config attribute is set
 	idp = identity.NewAwsIdentityProvider(ses)
 	if cfg.SamlMetadataUrl != nil && len(cfg.SamlMetadataUrl.String()) > 0 {
+		log.Debug("Using SAML Identity")
 		samlClient, err = samlClientWithReauth()
 		if err != nil {
 			return err
@@ -244,7 +245,7 @@ func samlClientWithReauth() (saml.AwsSamlClient, error) {
 	return c, nil
 }
 
-func printMfa(c iamiface.IAMAPI) error {
+func printMfa(c iamiface.IAMAPI) {
 	// By passing in the iamiface.IAMAPI interface type we can make this function testable with a mock IAM client
 	//
 	// MFA retrieval only supported for AWS IAM users (not roles).  If a non-nil samlClient is detected
@@ -252,20 +253,19 @@ func printMfa(c iamiface.IAMAPI) error {
 	if usr.IdentityType == "user" && samlClient == nil {
 		res, err := c.ListMFADevices(new(iam.ListMFADevicesInput))
 		if err != nil {
-			return err
+			log.Fatal(err)
 		}
 
 		for _, d := range res.MFADevices {
 			fmt.Println(*d.SerialNumber)
 		}
 	}
-	return nil
 }
 
-func printRoles() error {
+func printRoles() {
 	roles, err := idp.Roles()
 	if err != nil {
-		return err
+		log.Fatal(err)
 	}
 	sort.Strings(roles)
 
@@ -277,6 +277,4 @@ func printRoles() error {
 		}
 		fmt.Println("  " + r)
 	}
-
-	return nil
 }

@@ -141,29 +141,21 @@ func TestPrintRoles(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		idp = &mockIdp{test: "error"}
-		if err := printRoles(); err == nil {
-			t.Error("did not receive expected error")
-		}
+		printRoles()
 	})
 
 	t.Run("empty", func(t *testing.T) {
 		idp = &mockIdp{test: "empty"}
-		if err := printRoles(); err != nil {
-			t.Error(err)
-			return
-		}
+		printRoles()
 	})
 
 	t.Run("good", func(t *testing.T) {
 		idp = new(mockIdp)
-		if err := printRoles(); err != nil {
-			t.Error(err)
-			return
-		}
+		printRoles()
 	})
 }
 
-func ExamplePrintRoles() {
+func Example_printRoles() {
 	usr = &identity.Identity{
 		IdentityType: "user",
 		Username:     "mock-user",
@@ -177,7 +169,7 @@ func ExamplePrintRoles() {
 	//   arn:aws:iam::1234567890:role/Admin
 }
 
-func TestPrintMfa(t *testing.T) {
+func Test_printMfa(t *testing.T) {
 	usr = &identity.Identity{
 		IdentityType: "user",
 		Username:     "mock-user",
@@ -185,29 +177,21 @@ func TestPrintMfa(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		m := &mockIam{test: "error"}
-		if err := printMfa(m); err == nil {
-			t.Error("did not receive expected error")
-		}
+		printMfa(m)
 	})
 
 	t.Run("empty", func(t *testing.T) {
 		m := &mockIam{test: "empty"}
-		if err := printMfa(m); err != nil {
-			t.Error(err)
-			return
-		}
+		printMfa(m)
 	})
 
 	t.Run("good", func(t *testing.T) {
 		m := new(mockIam)
-		if err := printMfa(m); err != nil {
-			t.Error(err)
-			return
-		}
+		printMfa(m)
 	})
 }
 
-func ExamplePrintMfa() {
+func Example_printMfa() {
 	usr = &identity.Identity{
 		IdentityType: "user",
 		Username:     "mock-user",
