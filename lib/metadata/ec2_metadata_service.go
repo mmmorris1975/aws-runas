@@ -99,6 +99,7 @@ type EC2MetadataInput struct {
 	User *identity.Identity
 }
 
+// fixme this code only supports IAM credentials, add support for SAML as well
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
 // requests for instance role credentials.  SDKs will first look up the path in ec2MetadataCredentialPath,
 // which returns the name of the instance role in use, it then appends that value to the previous request url
@@ -201,7 +202,6 @@ func handleOptions(opts *EC2MetadataInput) error {
 		return err
 	}
 	cfg = cf
-	//cfg = cf.WithLogger(log)
 
 	return nil
 }

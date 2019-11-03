@@ -83,8 +83,19 @@ func main() {
 		// todo
 		log.Fatal("not implemented")
 	case *ec2MdFlag:
-		// todo
-		log.Fatal("not implemented")
+		log.Debug("Metadata Server")
+		if usr.IdentityType == "user" {
+			opts := &metadata.EC2MetadataInput{
+				Config:          cfg,
+				InitialProfile:  cfg.Profile,
+				Logger:          log,
+				Session:         ses,
+				SessionCacheDir: filepath.Dir(sessionCredCacheName()),
+				User:            usr,
+			}
+
+			log.Fatal(metadata.NewEC2MetadataService(opts))
+		}
 	default:
 		var c *credentials.Credentials
 
