@@ -19,12 +19,12 @@ func TestDiscoverLoopback(t *testing.T) {
 //	}
 //
 //	t.Run("ConfigureAddress", func(t *testing.T) {
-//		if err := addAddress(lo, EC2MetadataAddress); err != nil {
+//		if err := addAddress(lo, ec2MetadataAddress); err != nil {
 //			t.Errorf("Unexpected error configuring metadata service address: %v", err)
 //		}
 //	})
 //	t.Run("RemoveAddress", func(t *testing.T) {
-//		if err := removeAddress(lo, EC2MetadataAddress); err != nil {
+//		if err := removeAddress(lo, ec2MetadataAddress); err != nil {
 //			t.Errorf("Unexpected error removing metadata service address: %v", err)
 //		}
 //	})

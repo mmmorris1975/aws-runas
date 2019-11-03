@@ -37,7 +37,7 @@ func TestEcsHandler(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		cred = credentials.NewStaticCredentials("MockAK", "MockSK", "MockToken")
 
-		r := httptest.NewRequest(http.MethodGet, EcsCredentialsPath, nil)
+		r := httptest.NewRequest(http.MethodGet, ecsCredentialsPath, nil)
 		w := httptest.NewRecorder()
 
 		ecsHandler(w, r)
@@ -70,7 +70,7 @@ func TestEcsHandler(t *testing.T) {
 		p := credentials.ErrorProvider{Err: fmt.Errorf("bad times"), ProviderName: "Error Provider"}
 		cred = credentials.NewCredentials(&p)
 
-		r := httptest.NewRequest(http.MethodGet, EcsCredentialsPath, nil)
+		r := httptest.NewRequest(http.MethodGet, ecsCredentialsPath, nil)
 		w := httptest.NewRecorder()
 
 		ecsHandler(w, r)

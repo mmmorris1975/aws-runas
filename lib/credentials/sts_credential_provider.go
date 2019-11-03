@@ -11,6 +11,12 @@ import (
 	"time"
 )
 
+type ErrMfaRequired uint8
+
+func (e *ErrMfaRequired) Error() string {
+	return "MFA required, but no code sent"
+}
+
 type stsCredentialProvider struct {
 	credentials.Expiry
 	client        stsiface.STSAPI
@@ -59,7 +65,7 @@ func (p *stsCredentialProvider) handleMfa() (*string, error) {
 			}
 			p.TokenCode = t
 		} else {
-			return nil, fmt.Errorf("MFA required, but no code sent")
+			return nil, new(ErrMfaRequired)
 		}
 	}
 

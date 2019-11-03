@@ -287,7 +287,7 @@ func TestGetMfa(t *testing.T) {
 
 func TestCredHandler(t *testing.T) {
 	// can only test the bare-path request, otherwise we're calling out to AWS
-	r := httptest.NewRequest(http.MethodGet, EC2MetadataCredentialPath, nil)
+	r := httptest.NewRequest(http.MethodGet, ec2MetadataCredentialPath, nil)
 	w := httptest.NewRecorder()
 	credHandler(w, r)
 
@@ -315,7 +315,7 @@ func TestRefreshHandler(t *testing.T) {
 	cred = credentials.NewCredentials(new(mockProvider))
 
 	t.Run("nil role", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		r := httptest.NewRequest(http.MethodPost, refreshPath, nil)
 		w := httptest.NewRecorder()
 		refreshHandler(w, r)
 
@@ -336,7 +336,7 @@ func TestRefreshHandler(t *testing.T) {
 			cacheDir = ""
 		}()
 
-		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		r := httptest.NewRequest(http.MethodPost, refreshPath, nil)
 		w := httptest.NewRecorder()
 		refreshHandler(w, r)
 
@@ -351,7 +351,7 @@ func TestRefreshHandler(t *testing.T) {
 }
 
 func TestListRolesHandler(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, ListRolesPath, nil)
+	r := httptest.NewRequest(http.MethodGet, listRolesPath, nil)
 	w := httptest.NewRecorder()
 	listRoleHandler(w, r)
 

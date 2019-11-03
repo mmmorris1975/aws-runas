@@ -31,23 +31,16 @@ import (
 )
 
 const (
-	// EC2MetadataIp is the address used to contact the metadata service, per AWS
-	EC2MetadataIp = "169.254.169.254"
-	// EC2MetadataCredentialPath is the base path for instance role credentials in the metadata service
-	EC2MetadataCredentialPath = "/latest/meta-data/iam/security-credentials/"
-	// MfaPath is the endpoint for providing MFA data
-	MfaPath = "/mfa"
-	// ProfilePath is the endpoint for getting/setting the profile to use
-	ProfilePath = "/profile"
-	// ListRolesPath is the endpoint for listing all known roles
-	ListRolesPath = "/list-roles"
-	// RefreshPath is the endpoint for forcing a credential refresh
-	RefreshPath = "/refresh"
+	ec2MetadataIp             = "169.254.169.254"
+	ec2MetadataCredentialPath = "/latest/meta-data/iam/security-credentials/"
+	mfaPath                   = "/mfa"
+	profilePath               = "/profile"
+	listRolesPath             = "/list-roles"
+	refreshPath               = "/refresh"
 )
 
 var (
-	// EC2MetadataAddress is the net.IPAddr of the EC2 metadata service
-	EC2MetadataAddress *net.IPAddr
+	ec2MetadataAddress *net.IPAddr
 
 	profile  string
 	role     *cfglib.AwsConfig
@@ -63,7 +56,7 @@ var (
 )
 
 func init() {
-	EC2MetadataAddress, _ = net.ResolveIPAddr("ip", EC2MetadataIp)
+	ec2MetadataAddress, _ = net.ResolveIPAddr("ip", ec2MetadataIp)
 }
 
 type handlerError struct {
@@ -107,7 +100,7 @@ type EC2MetadataInput struct {
 }
 
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service path for handling
-// requests for instance role credentials.  SDKs will first look up the path in EC2MetadataCredentialPath,
+// requests for instance role credentials.  SDKs will first look up the path in ec2MetadataCredentialPath,
 // which returns the name of the instance role in use, it then appends that value to the previous request url
 // and expects the response body to contain the credential data in json format.
 func NewEC2MetadataService(opts *EC2MetadataInput) error {
@@ -129,13 +122,13 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	defer func() {
 		if os.Getuid() == 0 {
 			// this will only work if root/administrator
-			if err := removeAddress(lo, EC2MetadataAddress); err != nil {
+			if err := removeAddress(lo, ec2MetadataAddress); err != nil {
 				log.Debugf("Error removing network config: %v", err)
 			}
 		}
 	}()
 
-	hp := net.JoinHostPort(EC2MetadataAddress.String(), "80")
+	hp := net.JoinHostPort(ec2MetadataAddress.String(), "80")
 	l, err := net.Listen("tcp4", hp)
 	if err != nil {
 		log.Fatalf("Error creating listener: %v", err)
@@ -146,11 +139,11 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	}
 
 	http.HandleFunc("/", homeHandler)
-	http.HandleFunc(MfaPath, mfaHandler)
-	http.HandleFunc(ProfilePath, profileHandler)
-	http.HandleFunc(EC2MetadataCredentialPath, credHandler)
-	http.HandleFunc(ListRolesPath, listRoleHandler)
-	http.HandleFunc(RefreshPath, refreshHandler)
+	http.HandleFunc(mfaPath, mfaHandler)
+	http.HandleFunc(profilePath, profileHandler)
+	http.HandleFunc(ec2MetadataCredentialPath, credHandler)
+	http.HandleFunc(listRolesPath, listRoleHandler)
+	http.HandleFunc(refreshPath, refreshHandler)
 
 	msg := fmt.Sprintf("EC2 Metadata Service ready on http://%s", hp)
 	if len(profile) < 1 {
@@ -158,9 +151,9 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	} else {
 		msg = msg + fmt.Sprintf(" using initial profile '%s'", profile)
 
-		// send request to ProfilePath to ensure we get a valid 'cred'
+		// send request to profilePath to ensure we get a valid 'cred'
 		// personal note: it bugs the crap out of me that I have to use httptest to get a ResponseWriter
-		r, err := http.NewRequest(http.MethodPost, ProfilePath, strings.NewReader(profile))
+		r, err := http.NewRequest(http.MethodPost, profilePath, strings.NewReader(profile))
 		if err != nil {
 			log.Debugf("error creating http request: %v", err)
 		}
@@ -239,12 +232,12 @@ func setupInterface() (string, error) {
 	}
 	log.Debugf("LOOPBACK INTERFACE: %s", lo)
 
-	if err := addAddress(lo, EC2MetadataAddress); err != nil {
-		if err := removeAddress(lo, EC2MetadataAddress); err != nil {
+	if err := addAddress(lo, ec2MetadataAddress); err != nil {
+		if err := removeAddress(lo, ec2MetadataAddress); err != nil {
 			return "", err
 		}
 
-		if err := addAddress(lo, EC2MetadataAddress); err != nil {
+		if err := addAddress(lo, ec2MetadataAddress); err != nil {
 			return "", err
 		}
 	}
@@ -273,9 +266,9 @@ func writeResponse(w http.ResponseWriter, r *http.Request, body string, code int
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	d := make(map[string]interface{})
 	d["roles"] = listRoles()
-	d["profile_ep"] = ProfilePath
-	d["mfa_ep"] = MfaPath
-	d["refresh_ep"] = RefreshPath
+	d["profile_ep"] = profilePath
+	d["mfa_ep"] = mfaPath
+	d["refresh_ep"] = refreshPath
 
 	b := new(strings.Builder)
 	if err := homeTemplate.Execute(b, d); err != nil {
