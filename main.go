@@ -447,7 +447,7 @@ func samlClientWithReauth() (saml.AwsSamlClient, error) {
 	}
 
 	c, err := saml.GetClient(cfg.SamlMetadataUrl.String(), func(s *saml.SamlClient) {
-		s.Username = *samlUser
+		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
 		s.MfaToken = *mfaCode
 		s.SetCookieJar(jar)
