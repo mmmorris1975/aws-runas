@@ -139,10 +139,11 @@ func TestPrintRoles(t *testing.T) {
 		Username:     "mock-user",
 	}
 
-	t.Run("error", func(t *testing.T) {
-		idp = &mockIdp{test: "error"}
-		printRoles()
-	})
+	// This isn't testable any more now that we're going Fatal() on error
+	//t.Run("error", func(t *testing.T) {
+	//	idp = &mockIdp{test: "error"}
+	//	printRoles()
+	//})
 
 	t.Run("empty", func(t *testing.T) {
 		idp = &mockIdp{test: "empty"}
@@ -175,10 +176,11 @@ func Test_printMfa(t *testing.T) {
 		Username:     "mock-user",
 	}
 
-	t.Run("error", func(t *testing.T) {
-		m := &mockIam{test: "error"}
-		printMfa(m)
-	})
+	// This isn't testable any more now that we're going Fatal() on error
+	//t.Run("error", func(t *testing.T) {
+	//	m := &mockIam{test: "error"}
+	//	printMfa(m)
+	//})
 
 	t.Run("empty", func(t *testing.T) {
 		m := &mockIam{test: "empty"}
@@ -215,12 +217,13 @@ func TestSamlClientWithReauth(t *testing.T) {
 	defer s.Close()
 
 	u, _ := url.Parse(s.URL)
+	cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+	cfg.SamlUsername = "good"
+	cfg.SamlMetadataUrl = u
 
 	cookieFile = os.DevNull
-	samlUser = aws.String("good")
 	samlPass = aws.String("bad")
 	mfaCode = aws.String("")
-	cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig), SamlMetadataUrl: u}
 
 	c, err := samlClientWithReauth()
 	if err != nil {
@@ -228,7 +231,7 @@ func TestSamlClientWithReauth(t *testing.T) {
 		return
 	}
 
-	if c.Client().Username != *samlUser || c.Client().Password != *samlPass {
+	if c.Client().Username != cfg.SamlUsername || c.Client().Password != *samlPass {
 		t.Error("data mismatch")
 	}
 }

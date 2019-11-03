@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"aws-runas/lib/cache"
+	"encoding/base64"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
@@ -203,7 +204,8 @@ func newSamlRoleProvider() *SamlRoleProvider {
 		RoleARN:               "arn:aws:iam::1234567890:role/Admin",
 	}
 	p.client = new(stsMock)
-	p.SAMLAssertion = fmt.Sprintf(">%s,%s<", p.RoleARN, princArn)
+	data := fmt.Sprintf(">%s,%s<", p.RoleARN, princArn)
+	p.SAMLAssertion = base64.StdEncoding.EncodeToString([]byte(data))
 	p.setPrincipalArn()
 
 	return p

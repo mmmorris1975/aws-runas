@@ -71,14 +71,14 @@ func Example_printConfig() {
 func TestCheckProfile(t *testing.T) {
 	log = logger.NewLogger(os.Stdout, "", 0)
 	t.Run("empty", func(t *testing.T) {
-		p := checkProfile("")
+		p := checkProfile(aws.String(""))
 		if p != "default" {
 			t.Errorf("did not get default profile")
 		}
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		p := checkProfile("x")
+		p := checkProfile(aws.String("x"))
 		if p != "x" {
 			t.Errorf("did not get input profile")
 		}
@@ -89,14 +89,13 @@ func TestRunDiagnostics(t *testing.T) {
 	log = logger.NewLogger(os.Stdout, "", 0)
 
 	t.Run("empty config", func(t *testing.T) {
-		if err := runDiagnostics(new(cfglib.AwsConfig)); err != nil {
+		c := &cfglib.AwsConfig{AwsConfig: new(config.AwsConfig)}
+		if err := runDiagnostics(c); err != nil {
 			t.Error(err)
 		}
 	})
 
 	t.Run("role config", func(t *testing.T) {
-		p := *profile
-		defer func() { profile = &p }()
 		profile = aws.String("my-role")
 		c := cfglib.AwsConfig{AwsConfig: &config.AwsConfig{Region: "us-west-3", RoleArn: "my-role"}}
 		if err := runDiagnostics(&c); err != nil {

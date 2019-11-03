@@ -4,6 +4,7 @@ import (
 	"aws-runas/lib/config"
 	"encoding/binary"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"math"
 	"net"
@@ -18,7 +19,7 @@ func runDiagnostics(c *config.AwsConfig) error {
 
 	checkEnv()
 	checkRegion(c)
-	p := checkProfile(*profile)
+	p := checkProfile(profile)
 
 	if p == c.RoleArn {
 		// profile was a Role ARN, config will be whatever was explicitly passed + env var config,
@@ -60,12 +61,12 @@ func checkRegion(c *config.AwsConfig) {
 	}
 }
 
-func checkProfile(p string) string {
-	if len(p) < 1 {
+func checkProfile(p *string) string {
+	if p == nil || len(*p) < 1 {
 		log.Warn("No profile specified, will only check default section. Provide a profile name for more validation")
-		p = "default"
+		p = aws.String("default")
 	}
-	return p
+	return *p
 }
 
 func checkProfileCfg(p string, c *config.AwsConfig) {

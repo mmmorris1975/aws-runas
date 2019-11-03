@@ -56,7 +56,7 @@ func TestForgerockSamlClient_AwsSaml(t *testing.T) {
 			return
 		}
 
-		if id.IdentityType != "user" || id.Provider != "SAMLClient" || id.Username != "my-saml-user" {
+		if id.IdentityType != "user" || id.Provider != "SAMLIdentityProvider" || id.Username != "my-saml-user" {
 			t.Error("data mismatch")
 			return
 		}

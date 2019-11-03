@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"aws-runas/lib/cache"
+	"encoding/base64"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
@@ -76,8 +77,13 @@ func (m *stsMock) validateSAMLAssertion(saml *string, role *string, p *string) e
 		return err
 	}
 
+	decodedSaml, err := base64.StdEncoding.DecodeString(*saml)
+	if err != nil {
+		return err
+	}
+
 	if saml != nil && len(*saml) > 0 {
-		if !strings.Contains(*saml, fmt.Sprintf("%s,%s", *role, *p)) {
+		if !strings.Contains(string(decodedSaml), fmt.Sprintf("%s,%s", *role, *p)) {
 			return fmt.Errorf("role not authorized")
 		}
 
