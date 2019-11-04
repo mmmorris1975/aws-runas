@@ -175,7 +175,7 @@ func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalId)
 	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.CredentialsDuration)
 
-	if c.SamlUsername != nil && len(c.SamlMetadataUrl.String()) > 0 {
+	if c.SamlMetadataUrl != nil && len(c.SamlMetadataUrl.String()) > 0 {
 		fmt.Printf("SAML METADATA URL: %s\n", c.SamlMetadataUrl.String())
 		fmt.Printf("SAML USERNAME: %s\n", c.SamlUsername)
 		fmt.Printf("JUMP ROLE ARN: %s\n", c.JumpRoleArn.String())
