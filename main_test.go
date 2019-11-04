@@ -3,8 +3,11 @@ package main
 import (
 	"aws-runas/lib/config"
 	"aws-runas/lib/identity"
+	"aws-runas/lib/saml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	cfglib "github.com/mmmorris1975/aws-config/config"
@@ -15,6 +18,8 @@ import (
 	"testing"
 	"time"
 )
+
+var emptyConfig = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
 
 func TestResolveConfig(t *testing.T) {
 	os.Setenv("AWS_CONFIG_FILE", ".aws/config")
@@ -96,7 +101,7 @@ func TestAwsSession(t *testing.T) {
 		profile = aws.String("aProfile")
 		verbose = aws.Bool(true)
 
-		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg = emptyConfig
 		cfg.Region = "us-east-1"
 
 		awsSession()
@@ -108,7 +113,7 @@ func TestAwsSession(t *testing.T) {
 
 	t.Run("arn profile", func(t *testing.T) {
 		profile = aws.String("arn:aws:iam::1234567890:role/Role")
-		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg = emptyConfig
 		cfg.Region = "us-east-2"
 		cfg.RoleArn = *profile
 
@@ -121,7 +126,7 @@ func TestAwsSession(t *testing.T) {
 
 	t.Run("source profile", func(t *testing.T) {
 		profile = aws.String("aProfile")
-		cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+		cfg = emptyConfig
 		cfg.Region = "us-west-1"
 		cfg.SourceProfile = "source"
 
@@ -217,7 +222,7 @@ func TestSamlClientWithReauth(t *testing.T) {
 	defer s.Close()
 
 	u, _ := url.Parse(s.URL)
-	cfg = &config.AwsConfig{AwsConfig: new(cfglib.AwsConfig)}
+	cfg = emptyConfig
 	cfg.SamlUsername = "good"
 	cfg.SamlMetadataUrl = u
 
@@ -234,6 +239,171 @@ func TestSamlClientWithReauth(t *testing.T) {
 	if c.Client().Username != cfg.SamlUsername || c.Client().Password != *samlPass {
 		t.Error("data mismatch")
 	}
+}
+
+func TestCheckRefresh(t *testing.T) {
+	cfg = emptyConfig
+	cfg.Profile = "mock"
+	cfg.SourceProfile = ""
+	profile = aws.String(cfg.Profile)
+
+	t.Run("no refresh", func(t *testing.T) {
+		refresh = aws.Bool(false)
+		checkRefresh()
+	})
+
+	t.Run("iam user", func(t *testing.T) {
+		refresh = aws.Bool(true)
+		usr = &identity.Identity{IdentityType: "user", Provider: identity.IdentityProviderAws}
+		checkRefresh()
+	})
+
+	t.Run("saml user", func(t *testing.T) {
+		refresh = aws.Bool(true)
+		usr = &identity.Identity{IdentityType: "user", Provider: saml.IdentityProviderSaml}
+		checkRefresh()
+	})
+}
+
+func TestPrintCredExpire(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		c := credentials.NewCredentials(&mockCredProvider{})
+		printCredExpire(c)
+	})
+
+	t.Run("expired", func(t *testing.T) {
+		c := credentials.NewCredentials(&mockCredProvider{expired: true})
+		printCredExpire(c)
+	})
+}
+
+func TestHandleAwsUserCredentials(t *testing.T) {
+	ses = session.Must(session.NewSession())
+	usr = new(identity.Identity)
+	mfaCode = aws.String("")
+	profile = aws.String("mock")
+
+	t.Run("long role", func(t *testing.T) {
+		cfg = emptyConfig
+		cfg.RoleArn = "arn:aws:iam::1234567890:role/Admin"
+		cfg.CredentialsDuration = 4 * time.Hour
+		handleAwsUserCredentials()
+	})
+
+	t.Run("session creds", func(t *testing.T) {
+		cfg = emptyConfig
+		handleAwsUserCredentials()
+	})
+
+	t.Run("standard role", func(t *testing.T) {
+		cfg = emptyConfig
+		cfg.RoleArn = "arn:aws:iam::1234567890:role/Admin"
+		cfg.CredentialsDuration = 1 * time.Minute
+		handleAwsUserCredentials()
+	})
+}
+
+func TestUpdateEnv(t *testing.T) {
+	profile = aws.String("mock")
+	creds := credentials.Value{
+		AccessKeyID:     "mockAK",
+		SecretAccessKey: "mockSK",
+	}
+
+	defer func() {
+		v := []string{"AWS_REGION", "AWS_DEFAULT_REGION", "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY",
+			"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN", "AWSRUNAS_PROFILE"}
+		for _, x := range v {
+			os.Unsetenv(x)
+		}
+	}()
+
+	t.Run("basic", func(t *testing.T) {
+		cfg = emptyConfig
+		updateEnv(creds)
+
+		if _, ok := os.LookupEnv("AWS_SESSION_TOKEN"); ok {
+			t.Error("AWS_SESSION_TOKEN unexpectedly set")
+		}
+
+		if ak := os.Getenv("AWS_ACCESS_KEY_ID"); ak != creds.AccessKeyID {
+			t.Error("access key mismatch")
+		}
+
+		if sk := os.Getenv("AWS_SECRET_ACCESS_KEY"); sk != creds.SecretAccessKey {
+			t.Error("secret key mismatch")
+		}
+	})
+
+	t.Run("with region", func(t *testing.T) {
+		cfg = emptyConfig
+		cfg.Region = "us-east-2"
+
+		updateEnv(creds)
+
+		if r := os.Getenv("AWS_REGION"); r != cfg.Region {
+			t.Error("region mismatch")
+		}
+	})
+
+	t.Run("session creds", func(t *testing.T) {
+		cfg = emptyConfig
+		creds.SessionToken = "sessionTok"
+
+		updateEnv(creds)
+
+		if r := os.Getenv("AWS_SESSION_TOKEN"); r != creds.SessionToken {
+			t.Error("session token mismatch")
+		}
+	})
+}
+
+func TestWrapCmd(t *testing.T) {
+	t.Run("unwrapped", func(t *testing.T) {
+		cmd := wrapCmd([]string{"true"})
+
+		if len(cmd) > 1 || cmd[0] != "true" {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("wrapped", func(t *testing.T) {
+		os.Setenv("SHELL", "/mock/bash")
+		defer os.Unsetenv("SHELL")
+
+		cmd := wrapCmd([]string{"not-a-thing", "-v"})
+
+		if len(cmd) != 4 || cmd[0] != "/mock/bash" {
+			t.Log(cmd)
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		cmd := wrapCmd([]string{})
+		if len(cmd) > 0 {
+			t.Error("data mismatch")
+		}
+	})
+}
+
+func Example_printCredentials() {
+	env := make(map[string]string)
+	env["AWS_ACCESS_KEY_ID"] = "AKIAMOCK"
+	env["AWS_SECRET_ACCESS_KEY"] = "SecretKey"
+	env["AWS_PROFILE"] = "p"
+	env["AWS_REGION"] = "us-east-1"
+
+	for k, v := range env {
+		os.Setenv(k, v)
+		defer os.Unsetenv(k)
+	}
+
+	printCredentials()
+	// Output:
+	// export AWS_REGION='us-east-1'
+	// export AWS_ACCESS_KEY_ID='AKIAMOCK'
+	// export AWS_SECRET_ACCESS_KEY='SecretKey'
 }
 
 type mockIdp struct {
@@ -276,4 +446,26 @@ func (m *mockIam) ListMFADevices(in *iam.ListMFADevicesInput) (*iam.ListMFADevic
 		IsTruncated: aws.Bool(false),
 		MFADevices:  []*iam.MFADevice{&iam.MFADevice{SerialNumber: aws.String("123456")}},
 	}, nil
+}
+
+type mockCredProvider struct {
+	*credentials.Expiry
+	expired bool
+}
+
+func (p *mockCredProvider) IsExpired() bool {
+	return p.Expiry.IsExpired()
+}
+
+func (p *mockCredProvider) Retrieve() (credentials.Value, error) {
+	if p.Expiry == nil {
+		p.Expiry = new(credentials.Expiry)
+	}
+
+	d := 1 * time.Hour
+	if p.expired {
+		d = d * -1
+	}
+	p.Expiry.SetExpiration(time.Now().Add(d), 1*time.Second)
+	return credentials.Value{}, nil
 }
