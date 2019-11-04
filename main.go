@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/dustin/go-humanize"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger/logger"
 	"net"
@@ -101,6 +102,8 @@ func main() {
 		var c *credentials.Credentials
 
 		if usr.IdentityType == "user" {
+			checkRefresh()
+
 			if usr.Provider == saml.IdentityProviderSaml {
 				var err error
 				c, err = handleSamlUserCredentials()
@@ -109,6 +112,10 @@ func main() {
 				}
 			} else {
 				c = handleAwsUserCredentials()
+			}
+
+			if *showExpire {
+				printCredExpire(c)
 			}
 		} else {
 			// possibly on EC2 ... do AssumeRole directly
@@ -666,4 +673,68 @@ func jumpRoleCredCacheName() string {
 func cacheFile(f string) string {
 	d := filepath.Dir(defaults.SharedCredentialsFilename())
 	return filepath.Join(d, f)
+}
+
+// providers require that the credentials are loaded before the ExpiresAt() call will do anything meaningful, so we'll
+// call Get() here and load (or re-fetch) the credentials.  This should mean that someone will never see a message about
+// their credentials being expired, since the call to Get() would force a refresh if they are actually expired or invalid.
+func printCredExpire(c *credentials.Credentials) {
+	_, err := c.Get()
+	if err != nil {
+		log.Errorf("error loading credentials: %v", err)
+		return
+	}
+
+	t, err := c.ExpiresAt()
+	if err != nil {
+		log.Errorf("error checking credential expiration: %v", err)
+		return
+	}
+
+	format := t.Format("2006-01-02 15:04:05")
+	hmn := humanize.Time(t)
+
+	tense := "will expire"
+	if t.Before(time.Now()) {
+		tense = "expired"
+	}
+
+	if _, err := fmt.Fprintf(os.Stderr, "Credentials %s on %s (%s)\n", tense, format, hmn); err != nil {
+		log.Errorf("Error printing credentials: %v", err)
+	}
+}
+
+// this gets a little weird when dealing with saml credentials, since we're initializing the provider very early
+// (as part of awsUser()), it means that deleting the cookie file doesn't do much until the next time we run the tool.
+// Additionally, the cookie file may contain multiple saml provider cookies, so we could dork up other profiles by
+// whacking the entire file.  Not going to over think things yet, until someone comes up with a requirement to do so.
+func checkRefresh() {
+	if *refresh {
+		if usr.Provider == saml.IdentityProviderSaml {
+			//if err := os.Remove(cookieFile); err != nil {
+			//	if !os.IsNotExist(err) {
+			//		log.Errorf("error removing cookie jar: %v", err)
+			//	}
+			//}
+
+			if err := os.Remove(jumpRoleCredCacheName()); err != nil {
+				if !os.IsNotExist(err) {
+					log.Errorf("error removing jump role cred cache: %v", err)
+				}
+			}
+		} else {
+			log.Infof("deleting session creds")
+			if err := os.Remove(sessionCredCacheName()); err != nil {
+				if !os.IsNotExist(err) {
+					log.Errorf("error removing session cred cache: %v", err)
+				}
+			}
+		}
+
+		if err := os.Remove(roleCredCacheName()); err != nil {
+			if !os.IsNotExist(err) {
+				log.Errorf("error removing role cred cache: %v", err)
+			}
+		}
+	}
 }
