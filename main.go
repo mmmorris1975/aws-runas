@@ -80,8 +80,9 @@ func main() {
 			log.Fatal(err)
 		}
 	case *diagFlag:
-		// todo
-		log.Fatal("not implemented")
+		if err := runDiagnostics(cfg); err != nil {
+			log.Debugf("error running diagnostics: %v", err)
+		}
 	case *ec2MdFlag:
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {

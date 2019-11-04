@@ -33,7 +33,8 @@ func Example_checkEnvPass() {
 
 func Example_checkRegionFail() {
 	log = logger.NewLogger(os.Stdout, "", 0)
-	checkRegion(new(cfglib.AwsConfig))
+	c := cfglib.AwsConfig{AwsConfig: new(config.AwsConfig)}
+	checkRegion(&c)
 	// Output:
 	// ERROR region is not set, it must be specified in the config file or as an environment variable
 }
@@ -47,7 +48,7 @@ func Example_checkRegionPass() {
 }
 
 func Example_printConfig() {
-	c := new(cfglib.AwsConfig)
+	c := &cfglib.AwsConfig{AwsConfig: new(config.AwsConfig)}
 	c.Region = "us-east-3"
 	c.SourceProfile = "x"
 	c.RoleArn = "my-role"
@@ -61,11 +62,11 @@ func Example_printConfig() {
 	// PROFILE: p
 	// REGION: us-east-3
 	// SOURCE PROFILE: x
-	// SESSION TOKEN DURATION: 20m0s
+	// SESSION TOKEN DURATION: 10m0s
 	// MFA SERIAL: my-mfa
 	// ROLE ARN: my-role
 	// EXTERNAL ID: abcde
-	// ASSUME ROLE CREDENTIAL DURATION: 10m0s
+	// ASSUME ROLE CREDENTIAL DURATION: 20m0s
 }
 
 func TestCheckProfile(t *testing.T) {
