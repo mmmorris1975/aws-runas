@@ -32,6 +32,19 @@ func TestNewEcsMetadataService(t *testing.T) {
 			t.Errorf("unexpected url scheme: %s", ecs.Url.Scheme)
 		}
 	})
+
+	t.Run("with opts", func(t *testing.T) {
+		ecs, err := NewEcsMetadataService(&EcsMetadataInput{Logger: logger.StdLogger})
+
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if ecs.Url.Scheme != "http" {
+			t.Errorf("unexpected url scheme: %s", ecs.Url.Scheme)
+		}
+	})
 }
 
 func TestEcsHandler(t *testing.T) {

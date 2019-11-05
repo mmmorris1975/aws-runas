@@ -526,6 +526,10 @@ func TestHandleSamlUserCredentials(t *testing.T) {
 	})
 }
 
+func TestRunEcsSvc(t *testing.T) {
+	runEcsSvc(credentials.NewCredentials(new(mockCredProvider)))
+}
+
 type mockIdp struct {
 	identity.Provider
 	test string

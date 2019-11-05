@@ -35,7 +35,7 @@ type ecsMetadataService struct {
 func NewEcsMetadataService(opts *EcsMetadataInput) (*ecsMetadataService, error) {
 	cred = opts.Credentials
 	log = logger.StdLogger
-	if log != nil {
+	if opts.Logger != nil {
 		log = opts.Logger
 	}
 
