@@ -7,14 +7,17 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
+	"strings"
 	"testing"
 	"time"
 )
@@ -199,6 +202,7 @@ func Test_printMfa(t *testing.T) {
 }
 
 func Example_printMfa() {
+	samlClient = nil
 	usr = &identity.Identity{
 		IdentityType: "user",
 		Username:     "mock-user",
@@ -210,18 +214,7 @@ func Example_printMfa() {
 }
 
 func TestSamlClientWithReauth(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Headers", "X-MockTest-Only,X-MockTest-NoAuth")
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
-  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://%s/auth/SSOPOST/metaAlias/realm/saml-idp"/>
-  </IDPSSODescriptor>
-</EntityDescriptor>`, r.Host)
-	}))
-	defer s.Close()
-
-	u, _ := url.Parse(s.URL)
+	u, _ := url.Parse(samlSvr.URL)
 	cfg = emptyConfig
 	cfg.SamlUsername = "good"
 	cfg.SamlMetadataUrl = u
@@ -278,7 +271,7 @@ func TestPrintCredExpire(t *testing.T) {
 }
 
 func TestHandleAwsUserCredentials(t *testing.T) {
-	ses = session.Must(session.NewSession())
+	ses = mock.Session
 	usr = new(identity.Identity)
 	mfaCode = aws.String("")
 	profile = aws.String("mock")
@@ -292,6 +285,8 @@ func TestHandleAwsUserCredentials(t *testing.T) {
 
 	t.Run("session creds", func(t *testing.T) {
 		cfg = emptyConfig
+		sesCreds = aws.Bool(true)
+		cfg.RoleArn = ""
 		handleAwsUserCredentials()
 	})
 
@@ -299,6 +294,7 @@ func TestHandleAwsUserCredentials(t *testing.T) {
 		cfg = emptyConfig
 		cfg.RoleArn = "arn:aws:iam::1234567890:role/Admin"
 		cfg.CredentialsDuration = 1 * time.Minute
+		sesCreds = aws.Bool(false)
 		handleAwsUserCredentials()
 	})
 }
@@ -406,6 +402,91 @@ func Example_printCredentials() {
 	// export AWS_SECRET_ACCESS_KEY='SecretKey'
 }
 
+func TestAwsUser(t *testing.T) {
+	ses = mock.Session
+
+	// This may be tricky, since we can't easily inject an STS mock into our IdentityProvider
+	//t.Run("aws user", func(t *testing.T) {
+	//	cfg = emptyConfig
+	//})
+
+	t.Run("saml user", func(t *testing.T) {
+		u, _ := url.Parse(samlSvr.URL)
+		samlPass = aws.String("")
+		mfaCode = aws.String("")
+
+		cfg = emptyConfig
+		cfg.SamlMetadataUrl = u
+
+		err := awsUser()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if usr.Username != "mock-user" || usr.Provider != "MockSamlProvider" {
+			t.Error("data mismatch")
+		}
+	})
+}
+
+func TestRoleCredCacheName(t *testing.T) {
+	cfg = emptyConfig
+	cfg.RoleArn = "arn:aws:iam::1234567890:role/managed-role/AcctAdmin"
+
+	t.Run("named profile", func(t *testing.T) {
+		profile = aws.String("mock")
+		f := roleCredCacheName()
+
+		if !strings.HasSuffix(f, ".aws_assume_role_mock") {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("arn profile", func(t *testing.T) {
+		profile = aws.String("arn:aws:iam::1234567890:role/managed-role/AcctAdmin")
+		f := roleCredCacheName()
+
+		if !strings.HasSuffix(f, ".aws_assume_role_1234567890-AcctAdmin") {
+			t.Error("data mismatch")
+		}
+	})
+}
+
+func TestSessionCredCacheName(t *testing.T) {
+	cfg = emptyConfig
+
+	t.Run("source profile", func(t *testing.T) {
+		cfg.SourceProfile = "my-source"
+		f := sessionCredCacheName()
+
+		if !strings.HasSuffix(f, ".aws_session_token_my-source") {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("named profile", func(t *testing.T) {
+		cfg.SourceProfile = ""
+		profile = aws.String("my-profile")
+		f := sessionCredCacheName()
+
+		if !strings.HasSuffix(f, ".aws_session_token_my-profile") {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("default", func(t *testing.T) {
+		cfg.SourceProfile = ""
+		profile = aws.String("")
+
+		f := sessionCredCacheName()
+
+		if !strings.HasSuffix(f, ".aws_session_token_default") {
+			t.Error("data mismatch")
+		}
+	})
+}
+
 type mockIdp struct {
 	identity.Provider
 	test string
@@ -413,7 +494,7 @@ type mockIdp struct {
 
 func (p *mockIdp) Roles(user ...string) (identity.Roles, error) {
 	if p.test == "error" {
-		return nil, fmt.Errorf("I'm an error")
+		return nil, fmt.Errorf("this is an error")
 	}
 
 	if p.test == "empty" {
@@ -435,7 +516,7 @@ type mockIam struct {
 
 func (m *mockIam) ListMFADevices(in *iam.ListMFADevicesInput) (*iam.ListMFADevicesOutput, error) {
 	if m.test == "error" {
-		return nil, fmt.Errorf("I'm an error")
+		return nil, fmt.Errorf("this is an error")
 	}
 
 	if m.test == "empty" {
@@ -469,3 +550,25 @@ func (p *mockCredProvider) Retrieve() (credentials.Value, error) {
 	p.Expiry.SetExpiration(time.Now().Add(d), 1*time.Second)
 	return credentials.Value{}, nil
 }
+
+// An STS client we can use for testing to avoid calls out to AWS
+type mockStsClient struct {
+	stsiface.STSAPI
+}
+
+func (c *mockStsClient) GetCallerIdentity(in *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+	return new(sts.GetCallerIdentityOutput).
+		SetAccount("123456789012").
+		SetArn("arn:aws:iam::123456789012:user/bob").
+		SetUserId("AIDAB0B"), nil
+}
+
+var samlSvr = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Headers", "X-MockTest-Only,X-MockTest-NoAuth")
+	fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
+  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
+    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://%s/auth/SSOPOST/metaAlias/realm/saml-idp"/>
+  </IDPSSODescriptor>
+</EntityDescriptor>`, r.Host)
+}))
