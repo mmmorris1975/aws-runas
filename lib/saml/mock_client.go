@@ -31,7 +31,7 @@ func (c *mockSamlClient) Authenticate() error {
 	return fmt.Errorf("invalid authentication")
 }
 
-// Saml returns mock data for the provides spId
+// Saml returns mock data for the provided spId
 func (c *mockSamlClient) Saml(spId string) (string, error) {
 	if spId == AwsUrn {
 		return "><", nil

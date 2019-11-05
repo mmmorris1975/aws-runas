@@ -151,15 +151,9 @@ func TestGetProfileConfig(t *testing.T) {
 	})
 
 	t.Run("bad profile", func(t *testing.T) {
-		// returns default profile
-		c, err := getProfileConfig(strings.NewReader("bad-profile"))
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if len(c.RoleArn) > 0 {
-			t.Error("received a role profile")
+		_, err := getProfileConfig(strings.NewReader("bad-profile"))
+		if err == nil {
+			t.Error("did not receive expected error")
 			return
 		}
 	})

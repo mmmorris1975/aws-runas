@@ -527,14 +527,18 @@ func printRoles() {
 func handleSamlUserCredentials() (*credentials.Credentials, error) {
 	var c *credentials.Credentials
 
+	if samlClient == nil {
+		return c, fmt.Errorf("invalid saml client")
+	}
+
 	samlDoc, err := samlClient.AwsSaml()
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 
 	d, err := samlClient.GetSessionDuration()
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 
 	sc := credlib.NewSamlRoleCredentials(ses, cfg.RoleArn, samlDoc, func(p *credlib.SamlRoleProvider) {

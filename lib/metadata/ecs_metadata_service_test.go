@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -34,6 +35,7 @@ func TestNewEcsMetadataService(t *testing.T) {
 }
 
 func TestEcsHandler(t *testing.T) {
+	log = logger.StdLogger
 	t.Run("good", func(t *testing.T) {
 		cred = credentials.NewStaticCredentials("MockAK", "MockSK", "MockToken")
 

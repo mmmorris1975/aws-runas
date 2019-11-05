@@ -11,6 +11,20 @@ func TestDiscoverLoopback(t *testing.T) {
 	})
 }
 
+func TestDoCommand(t *testing.T) {
+	t.Run("good", func(t *testing.T) {
+		if err := doCommand([]string{"true"}); err != nil {
+			t.Error(err)
+		}
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		if err := doCommand([]string{"not-a-commadn"}); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+}
+
 // These require admin/sudo privileges, so these won't work in automation
 //func TestEndpoint(t *testing.T) {
 //	lo, err := discoverLoopback()

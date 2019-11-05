@@ -45,10 +45,7 @@ func NewEcsMetadataService(opts *EcsMetadataInput) (*ecsMetadataService, error) 
 		return nil, err
 	}
 
-	u, err := url.Parse(fmt.Sprintf("http://%s%s", l.Addr(), ecsCredentialsPath))
-	if err != nil {
-		return nil, err
-	}
+	u, _ := url.Parse(fmt.Sprintf("http://%s%s", l.Addr(), ecsCredentialsPath))
 
 	return &ecsMetadataService{Url: u, lsnr: l}, nil
 }

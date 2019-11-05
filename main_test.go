@@ -6,6 +6,7 @@ import (
 	"aws-runas/lib/saml"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/awstesting/mock"
 	"github.com/aws/aws-sdk-go/service/iam"
@@ -13,6 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/aws/aws-sdk-go/service/sts/stsiface"
 	cfglib "github.com/mmmorris1975/aws-config/config"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -487,6 +489,43 @@ func TestSessionCredCacheName(t *testing.T) {
 	})
 }
 
+func TestHandleSamlUserCredentials(t *testing.T) {
+	t.Run("nil client", func(t *testing.T) {
+		samlClient = nil
+		if _, err := handleSamlUserCredentials(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("error", func(t *testing.T) {
+		samlClient = &mockSamlClient{error: true}
+		if _, err := handleSamlUserCredentials(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		samlClient = new(mockSamlClient)
+		ses = mock.Session
+		log = logger.StdLogger
+		profile = aws.String("mock")
+		usr = &identity.Identity{
+			IdentityType: "user",
+			Provider:     saml.IdentityProviderSaml,
+			Username:     "mock-user",
+		}
+
+		cfg = emptyConfig
+		cfg.RoleArn = "arn:aws:iam::1234567890:role/Admin"
+		cfg.JumpRoleArn, _ = arn.Parse("arn:aws:iam::0987654321:role/Jump")
+		cfg.MfaSerial = "999999"
+
+		if _, err := handleSamlUserCredentials(); err != nil {
+			t.Error(err)
+		}
+	})
+}
+
 type mockIdp struct {
 	identity.Provider
 	test string
@@ -572,3 +611,22 @@ var samlSvr = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r 
   </IDPSSODescriptor>
 </EntityDescriptor>`, r.Host)
 }))
+
+type mockSamlClient struct {
+	saml.AwsSamlClient
+	error bool
+}
+
+func (c *mockSamlClient) AwsSaml() (string, error) {
+	if c.error {
+		return "", fmt.Errorf("this is an error")
+	}
+	return "><", nil
+}
+
+func (c *mockSamlClient) GetSessionDuration() (int64, error) {
+	if c.error {
+		return -1, fmt.Errorf("this is an error")
+	}
+	return 12345, nil
+}
