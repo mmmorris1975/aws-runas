@@ -84,7 +84,7 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 			}
 
 			if u.StatusCode != http.StatusOK {
-				log.Errorf("http status code %d when communicating with SAML metadaurl", err)
+				log.Errorf("http status code %d when communicating with SAML metadaurl", u.StatusCode)
 			}
 		} else {
 			var cfgCreds bool
@@ -93,6 +93,7 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 			if len(c.RoleArn) > 0 {
 				if len(c.SourceProfile) < 1 {
 					log.Errorf("missing source_profile configuration for profile '%s'", p)
+					return
 				} else {
 					// source_profile name must exist in the credentials file when using IAM profiles
 					cfgCreds = checkCredentialProfile(c.SourceProfile)
