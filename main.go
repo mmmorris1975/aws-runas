@@ -332,7 +332,15 @@ func resolveConfig() error {
 	if _, err := arn.Parse(*profile); err == nil {
 		// profile is a well-formed ARN, so it won't be in the config file, set it in our usrCfg
 		usrCfg.RoleArn = *profile
-		resolvedProfile, err = res.Resolve("") // grab default profile
+
+		// check setting of env var to see if we've set a profile name for our credentials
+		if v, ok := os.LookupEnv("AWS_DEFAULT_PROFILE"); ok {
+			usrCfg.SourceProfile = v
+			resolvedProfile, err = res.Resolve(v)
+		} else {
+			resolvedProfile, err = res.Resolve() // grab default profile
+		}
+
 		if err != nil {
 			return err
 		}
@@ -364,6 +372,10 @@ func resolveConfig() error {
 
 	if len(usrCfg.RoleArn) > 0 {
 		mergedCfg.RoleArn = usrCfg.RoleArn
+	}
+
+	if len(usrCfg.SourceProfile) > 0 {
+		mergedCfg.SourceProfile = usrCfg.SourceProfile
 	}
 	log.Debugf("MERGED Config: %+v", mergedCfg)
 
