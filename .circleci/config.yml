@@ -50,6 +50,8 @@ jobs:
       - run:
           command: bundle exec rspec
           when: always
+          environment:
+            AWS_DEFAULT_PROFILE: circleci
 
       - store_test_results:
           path: /var/tmp/rspec
