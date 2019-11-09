@@ -262,6 +262,7 @@ func runEcsSvc(c *credentials.Credentials) {
 
 	os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", s.Url.String())
 	go s.Run()
+	log.Debugf("http credential provider endpoint: %s", s.Url.String())
 }
 
 func wrapCmd(cmd []string) []string {

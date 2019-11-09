@@ -3,6 +3,7 @@ package main
 import (
 	"github.com/alecthomas/kingpin"
 	"net/url"
+	"os"
 	"time"
 )
 
@@ -101,16 +102,16 @@ func init() {
 	// Can not use Command() if you also have top-level Arg()s defined, so wrap "typical" behavior
 	// as the default command so users can continue to use the tool as before
 	exe = kingpin.Command("exec", cmdDesc).Default().Hidden() // to hide or not to hide, that is the question
-	execArgs.profile = exe.Arg("profile", profileArgDesc).Envar("AWS_PROFILE").String()
+	execArgs.profile = profileEnvArg(exe, profileArgDesc)
 	execArgs.cmd = exe.Arg("cmd", "command to execute using configured profile").Strings()
 
 	shell = kingpin.Command("shell", "Start an SSM shell session to the given target")
-	shellArgs.profile = shell.Arg("profile", profileArgDesc).Envar("AWS_PROFILE").String()
+	shellArgs.profile = profileEnvArg(shell, profileArgDesc)
 	shellArgs.target = shell.Arg("target", "The EC2 instance to connect via SSM").String()
 
 	fwd = kingpin.Command("forward", "Start an SSM port-forwarding session to the given target").Alias("fwd")
 	fwdArgs.localPort = fwd.Flag("port", fwdPortDesc).Short('p').Default("0").Uint16()
-	fwdArgs.profile = fwd.Arg("profile", profileArgDesc).Envar("AWS_PROFILE").String()
+	fwdArgs.profile = profileEnvArg(fwd, profileArgDesc)
 	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").String()
 
 	kingpin.Version(Version)
@@ -118,4 +119,15 @@ func init() {
 	kingpin.CommandLine.HelpFlag.Short('h')
 	kingpin.CommandLine.Help = cmdDesc
 	kingpin.CommandLine.Interspersed(false)
+}
+
+// Since the profile name to use can be set as an environment variable, or passed in as the 1st arg in the command
+// We can't simply do cmd.Arg("profile", ...).Envvar("AWS_PROFILE").String(), because set the env var, and specify a
+// command, kingpin assumes that the 1st element of the command will be the profile name, and not part of the command.
+// This feels a bit clumsy, but does work around that situation.
+func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
+	if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
+		return &v
+	}
+	return cmd.Arg("profile", desc).String()
 }
