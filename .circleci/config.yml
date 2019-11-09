@@ -44,6 +44,9 @@ jobs:
       - aws-cli/setup:
           profile-name: circleci
           configure-default-region: false
+      - aws-cli/setup:
+          profile-name: default
+          configure-default-region: false
 
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
       - run: mkdir -p /var/tmp/rspec
@@ -51,7 +54,6 @@ jobs:
           command: bundle exec rspec
           when: always
           environment:
-            AWS_DEFAULT_PROFILE: circleci
 
       - store_test_results:
           path: /var/tmp/rspec
