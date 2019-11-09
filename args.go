@@ -121,9 +121,9 @@ func init() {
 	kingpin.CommandLine.Interspersed(false)
 }
 
-// Since the profile name to use can be set as an environment variable, or passed in as the 1st arg in the command
-// We can't simply do cmd.Arg("profile", ...).Envvar("AWS_PROFILE").String(), because set the env var, and specify a
-// command, kingpin assumes that the 1st element of the command will be the profile name, and not part of the command.
+// Since the profile name to use can be set as an environment variable, or passed in as the 1st arg in the command,
+// we can't simply do cmd.Arg("profile", ...).Envvar("AWS_PROFILE").String(), because if we set the env var, and specify
+// a command, kingpin assumes that the 1st element of the command will be the profile name, and not part of the command.
 // This feels a bit clumsy, but does work around that situation.
 func profileEnvArg(cmd *kingpin.CmdClause, desc string) *string {
 	if v := os.Getenv("AWS_PROFILE"); len(v) > 0 {
