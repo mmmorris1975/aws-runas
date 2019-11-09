@@ -10,7 +10,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: "circleci/golang:1.12"
+      - image: "circleci/golang:1.13"
 
     working_directory: /go/src/github.com/mmmorris1975/aws-runas
 
