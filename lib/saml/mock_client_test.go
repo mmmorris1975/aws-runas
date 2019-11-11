@@ -1,37 +1,27 @@
 package saml
 
 import (
-	"fmt"
-	"net/http"
-	"net/http/httptest"
 	"testing"
 )
 
 func TestNewMockSamlClient(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Headers", "X-MockTest-Only,X-MockTest-NoAuth")
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
-  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="http://%s/auth/saml"/>
-  </IDPSSODescriptor>
-</EntityDescriptor>`, r.Host)
-	}))
-	defer s.Close()
-
-	c, err := NewMockSamlClient(s.URL)
+	c, err := NewMockSamlClient("https://example.com/saml/auth")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	if c.ssoUrl.String() != s.URL+"/auth/saml" {
-		t.Error("data mismatch")
+	if c.httpClient == nil {
+		t.Error("bad HTTP client")
+	}
+
+	if c.CredProvider == nil || c.MfaTokenProvider == nil {
+		t.Error("nil Cred or Mfa Provider")
 	}
 }
 
 func TestMockSamlClient_Authenticate(t *testing.T) {
-	c := &mockSamlClient{SamlClient: new(SamlClient)}
+	c := &mockSamlClient{baseAwsClient: new(baseAwsClient)}
 
 	t.Run("good", func(t *testing.T) {
 		c.Username = "good"

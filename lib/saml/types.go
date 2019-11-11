@@ -6,25 +6,30 @@ import (
 	"net/http"
 )
 
-// AwsUrn is the well known SAML URL for AWS
-const AwsUrn = "urn:amazon:webservices"
+const (
+	// AwsUrn is the well known SAML URL for AWS
+	AwsUrn = "urn:amazon:webservices"
+	// MfaTypeNone indicates that no MFA should be attempted regardless of the state of other MFA configuration
+	MfaTypeNone = "none"
+	// MfaTypeAuto indicates that the MFA type to use should be auto detected (as determined by each concrete provider)
+	MfaTypeAuto = "auto"
+	// MfaTypeCode indicates the use of MFA token/otp codes
+	MfaTypeCode = "code"
+	// MfaTypePush indicates the use of MFA push notifications
+	MfaTypePush = "push"
+	// IdentityProviderSaml is the name which names the the provider which resolved the identity
+	IdentityProviderSaml = "SAMLIdentityProvider"
+)
 
-// Client specifies the interface for conforming basic SAML clients
-type Client interface {
-	Authenticate() error
-	Saml(spId string) (string, error)
-	SetCookieJar(jar http.CookieJar)
-	Client() *SamlClient
-}
-
-// AwsSamlClient specifies the interface for AWS aware SAML clients.
-// In addition to being a basic saml.Client, it is also an identity.Provider so identity information can
-// be retrieved from the SAML endpoint.
-type AwsSamlClient interface {
-	Client
+// AwsClient specifies the interface for AWS aware SAML clients.  Conforming types also implement
+// identity.Provider so identity information can be retrieved from the SAML endpoint.
+type AwsClient interface {
 	identity.Provider
+	Authenticate() error
+	SetCookieJar(jar http.CookieJar)
 	AwsSaml() (string, error)
 	GetSessionDuration() (int64, error)
+	Client() *baseAwsClient
 }
 
 type errAuthFailure struct {

@@ -54,7 +54,7 @@ func TestGetClientForgerock(t *testing.T) {
 	}))
 	defer s.Close()
 
-	c, err := GetClient(s.URL)
+	c, err := GetClient(fmt.Sprintf(`%s/auth/json/realms/mock-test/authenticate`, s.URL))
 	if err != nil {
 		t.Error(err)
 		return
@@ -67,6 +67,16 @@ func TestGetClientForgerock(t *testing.T) {
 
 func TestGetClientKeycloak(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		http.SetCookie(w, &http.Cookie{
+			Name:  "AUTH_SESSION_ID",
+			Value: "xxxxxx",
+		})
+
+		http.SetCookie(w, &http.Cookie{
+			Name:  "KC_RESTART",
+			Value: "yyyyyy",
+		})
+
 		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <EntitiesDescriptor Name="urn:keycloak" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
   <EntityDescriptor entityID="http://%s/auth/realms/master">
@@ -78,7 +88,7 @@ func TestGetClientKeycloak(t *testing.T) {
 	}))
 	defer s.Close()
 
-	c, err := GetClient(s.URL)
+	c, err := GetClient(fmt.Sprintf("%s/auth/realms/master/protocol/saml/clients/aws", s.URL))
 	if err != nil {
 		t.Error(err)
 		return

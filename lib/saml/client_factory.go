@@ -2,39 +2,34 @@ package saml
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"strings"
 )
 
 // GetClient is a factory method for detecting the SAML client to use based on properties of an HTTP request
 // the the provider's metadata endpoint
-func GetClient(mdUrl string, options ...func(s *SamlClient)) (AwsSamlClient, error) {
-	var c AwsSamlClient
+func GetClient(authUrl string, options ...func(s *baseAwsClient)) (AwsClient, error) {
+	var c AwsClient
 
-	r, err := http.Get(mdUrl)
+	r, err := http.Head(authUrl)
 	if err != nil {
 		return nil, err
 	}
 	defer r.Body.Close()
 
-	if r.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("HTTP code: %d", r.StatusCode)
-	}
-
 	switch divineClient(r) {
 	case "forgerock":
-		c, err = NewForgerockSamlClient(mdUrl)
+		c, err = NewForgerockSamlClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
 	case "keycloak":
-		c, err = NewKeycloakSamlClient(mdUrl)
+		c, err = NewKeycloakSamlClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
 	case "mock":
-		c, err = NewMockSamlClient(mdUrl)
+		c, err = NewMockSamlClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -60,13 +55,10 @@ func divineClient(r *http.Response) string {
 		return "mock"
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return err.Error()
-	}
-
-	if strings.Contains(string(body), "urn:keycloak") {
-		return "keycloak"
+	for _, c := range r.Cookies() {
+		if c.Name == "KC_RESTART" {
+			return "keycloak"
+		}
 	}
 
 	return "unknown"

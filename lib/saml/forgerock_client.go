@@ -1,7 +1,6 @@
 package saml
 
 import (
-	"aws-runas/lib/identity"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -33,57 +32,44 @@ type frCallback struct {
 }
 
 type forgerockSamlClient struct {
-	*SamlClient
-	realm             string
-	metaAlias         string
-	baseUrl           *url.URL
-	mfaSvcName        string
-	decodedAwsSamlDoc string
+	*baseAwsClient
+	realm string
 }
 
 // NewForgerockSamlClient creates a Forgerock aware SAML client using information supplied by the provided metadata URL
-func NewForgerockSamlClient(mdUrl string) (*forgerockSamlClient, error) {
-	bsc, err := NewSamlClient(mdUrl)
+func NewForgerockSamlClient(authUrl string) (*forgerockSamlClient, error) {
+	bsc, err := newBaseAwsClient(authUrl)
 	if err != nil {
 		return nil, err
 	}
 	bsc.MfaType = MfaTypeAuto
 
-	b, err := findBaseUrl(bsc.ssoUrl)
-	if err != nil {
-		return nil, err
-	}
+	c := forgerockSamlClient{baseAwsClient: bsc}
+	c.parseBaseUrl()
+	c.parseRealm()
 
-	return &forgerockSamlClient{
-		SamlClient: bsc,
-		realm:      bsc.mdUrl.Query().Get("realm"),
-		metaAlias:  findMetaAlias(bsc.ssoUrl),
-		baseUrl:    b,
-	}, nil
+	return &c, nil
+}
+
+func (c *forgerockSamlClient) parseBaseUrl() {
+	s := strings.Split(c.authUrl.String(), "/json/")
+	u, _ := url.Parse(s[0])
+	c.baseUrl = u
+}
+
+func (c *forgerockSamlClient) parseRealm() {
+	p := strings.Split(c.authUrl.Path, "/realms/")
+	r := strings.Split(p[1], "/")
+	c.realm = r[0]
 }
 
 // Authenticate handles authentication against a Forgerock compatible identity provider
 func (c *forgerockSamlClient) Authenticate() error {
-	if err := c.GatherCredentials(); err != nil {
+	if err := c.gatherCredentials(); err != nil {
 		return err
 	}
 
 	return c.auth()
-}
-
-// Saml performs a request to the Forgerock server's SAML endpoint for the requested Service Provider ID
-func (c *forgerockSamlClient) Saml(spId string) (string, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=%s&spEntityID=%s", c.baseUrl, c.metaAlias, spId))
-	if err != nil {
-		return "", err
-	}
-
-	doc, err := c.SamlRequest(u)
-	if err != nil {
-		return "", err
-	}
-
-	return getSamlResponse(doc), nil
 }
 
 // AwsSaml performs a SAML request using the well known AWS service provider URN.  The result of this request is cached
@@ -93,66 +79,22 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 		return c.rawSamlResponse, nil
 	}
 
-	s, err := c.Saml(AwsUrn)
+	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=%s&spEntityID=%s", c.baseUrl, c.realm, AwsUrn))
 	if err != nil {
 		return "", err
 	}
-	c.rawSamlResponse = s
 
-	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
+	if err := c.samlRequest(u); err != nil {
 		return "", err
 	}
-	c.decodedAwsSamlDoc = string(b)
 
-	return s, nil
-}
-
-// GetIdentity retrieves the RoleSessionName attribute from the data returned by AwsSaml()
-func (c *forgerockSamlClient) GetIdentity() (*identity.Identity, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return nil, err
-	}
-
-	return getAwsSamlIdentity(d)
-}
-
-// Roles retrieves the list of roles available to user from the data returned by AwsSaml()
-func (c *forgerockSamlClient) Roles(user ...string) (identity.Roles, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return nil, err
-	}
-
-	return getAwsSamlRoles(d)
-}
-
-// GetSessionDuration retrieves the SessionDuration attribute from the data returned by AwsSaml()
-func (c *forgerockSamlClient) GetSessionDuration() (int64, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return -1, err
-	}
-
-	return getAwsSessionDuration(d)
-}
-
-func (c *forgerockSamlClient) getDecodedAwsSamlDoc() (string, error) {
-	var err error
-
-	if len(c.decodedAwsSamlDoc) < 1 {
-		if _, err = c.AwsSaml(); err != nil {
-			return "", err
-		}
-	}
-
-	return c.decodedAwsSamlDoc, nil
+	return c.rawSamlResponse, nil
 }
 
 // REF: https://backstage.forgerock.com/docs/am/6.5/authorization-guide/index.html#sec-rest-authentication
 func (c *forgerockSamlClient) auth() error {
-	u := fmt.Sprintf("%s/json/realms%s/authenticate", c.baseUrl, c.realm)
+	//u := fmt.Sprintf("%s/json/realms%s/authenticate", c.baseUrl, c.realm)
+	u := c.authUrl.String()
 
 	switch c.MfaType {
 	case MfaTypeNone:
@@ -349,37 +291,4 @@ func frAuthReq(u string, b io.Reader) (*http.Request, error) {
 	r.Header.Set("Accept-API-Version", "resource=2.0, protocol=1.0")
 
 	return r, nil
-}
-
-func findMetaAlias(u *url.URL) string {
-	var aliasIdx int
-	parts := strings.Split(u.Path, `/`)
-
-	for i, s := range parts {
-		if strings.EqualFold(s, "metaAlias") {
-			aliasIdx = i + 1
-			break
-		}
-	}
-
-	return fmt.Sprintf("/%s", strings.Join(parts[aliasIdx:], `/`))
-}
-
-func findBaseUrl(u *url.URL) (*url.URL, error) {
-	var baseIdx int
-	parts := strings.Split(u.Path, `/`)
-
-	for i, s := range parts {
-		if strings.EqualFold(s, "metaAlias") {
-			baseIdx = i - 1
-			break
-		}
-	}
-
-	r, err := url.ParseRequestURI(strings.Join(parts[:baseIdx], `/`))
-	if err != nil {
-		return nil, err
-	}
-
-	return u.ResolveReference(r), nil
 }

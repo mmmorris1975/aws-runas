@@ -6,18 +6,18 @@ import (
 )
 
 type mockSamlClient struct {
-	*SamlClient
+	*baseAwsClient
 }
 
-// NewMockSamlClient create a mockSamlClient based on the attributes contained in data looked up from mdUrl
-func NewMockSamlClient(mdUrl string) (*mockSamlClient, error) {
+// NewMockSamlClient create a mockSamlClient for testing purposes
+func NewMockSamlClient(authUrl string) (*mockSamlClient, error) {
 	c := new(mockSamlClient)
 
-	sc, err := NewSamlClient(mdUrl)
+	sc, err := newBaseAwsClient(authUrl)
 	if err != nil {
 		return nil, err
 	}
-	c.SamlClient = sc
+	c.baseAwsClient = sc
 
 	return c, nil
 }
@@ -31,17 +31,9 @@ func (c *mockSamlClient) Authenticate() error {
 	return fmt.Errorf("invalid authentication")
 }
 
-// Saml returns mock data for the provided spId
-func (c *mockSamlClient) Saml(spId string) (string, error) {
-	if spId == AwsUrn {
-		return "><", nil
-	}
-	return "", nil
-}
-
 // AwsSaml calls Saml() with the well-known AWS URN
 func (c *mockSamlClient) AwsSaml() (string, error) {
-	return c.Saml(AwsUrn)
+	return "><", nil
 }
 
 // GetIdentity returns a mock Identity type with no error

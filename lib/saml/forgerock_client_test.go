@@ -18,7 +18,7 @@ func TestNewForgerockSamlClient(t *testing.T) {
 	defer s.Close()
 
 	t.Run("good", func(t *testing.T) {
-		u := fmt.Sprintf(`%s/auth/saml2/jsp/exportmetadata.jsp?entityid=%s&realm=/mock-test`, s.URL, s.URL)
+		u := fmt.Sprintf(`%s/auth/json/realms/mock-test/authenticate`, s.URL)
 
 		c, err := NewForgerockSamlClient(u)
 		if err != nil {
@@ -26,7 +26,7 @@ func TestNewForgerockSamlClient(t *testing.T) {
 			return
 		}
 
-		if c.entityId != s.URL || c.realm != "/mock-test" {
+		if c.realm != "mock-test" {
 			t.Error("data mismatch")
 		}
 	})
@@ -45,6 +45,11 @@ func TestForgerockSamlClient_AwsSaml(t *testing.T) {
 
 	c, err := newClient(s)
 	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if _, err := c.AwsSaml(); err != nil {
 		t.Error(err)
 		return
 	}
@@ -182,18 +187,16 @@ func TestForgerockSamlClient_AuthenticatePush(t *testing.T) {
 }
 
 func newClient(s *httptest.Server) (*forgerockSamlClient, error) {
-	base, err := url.Parse(s.URL + "/auth")
+	u, err := url.Parse(fmt.Sprintf(`%s/auth/json/realms/mock-test/authenticate`, s.URL))
 	if err != nil {
 		return nil, err
 	}
 
-	c := &forgerockSamlClient{
-		SamlClient: new(SamlClient),
-		realm:      "/mock-test",
-		metaAlias:  "someta",
-		baseUrl:    base,
-	}
+	c := &forgerockSamlClient{baseAwsClient: new(baseAwsClient)}
+	c.authUrl = u
 	c.httpClient = s.Client()
+	c.parseBaseUrl()
+	c.parseRealm()
 
 	return c, nil
 }
@@ -277,20 +280,6 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusUnauthorized)
 			return
 		}
-	} else if r.URL.Path == "/auth/saml2/jsp/exportmetadata.jsp" {
-		e := q.Get("entityid")
-		realm := q.Get("realm")
-
-		body := fmt.Sprintf(`
-<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<EntityDescriptor entityID="%s" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
-  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="http://%s/auth/SSOPOST/metaAlias/%s/saml-idp"/>
-  </IDPSSODescriptor>
-</EntityDescriptor>
-`, e, r.Host, realm)
-
-		fmt.Fprint(w, body)
 	} else if r.URL.Path == "/auth/idpssoinit" && q.Get("spEntityID") == AwsUrn {
 		body := `
 <html>

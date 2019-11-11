@@ -1,8 +1,6 @@
 package saml
 
 import (
-	"aws-runas/lib/identity"
-	"encoding/base64"
 	"fmt"
 	"golang.org/x/net/html"
 	"io"
@@ -12,58 +10,55 @@ import (
 )
 
 type keycloakSamlClient struct {
-	*SamlClient
-	realm             string
-	baseUrl           *url.URL
-	clientId          string
-	decodedAwsSamlDoc string
+	*baseAwsClient
+	realm    string
+	clientId string
 }
 
 // NewKeycloakSamlClient creates a Keycloak aware SAML client using information supplied by the provided metadata URL
-func NewKeycloakSamlClient(mdUrl string) (*keycloakSamlClient, error) {
-	bsc, err := NewSamlClient(mdUrl)
+func NewKeycloakSamlClient(authUrl string) (*keycloakSamlClient, error) {
+	bsc, err := newBaseAwsClient(authUrl)
 	if err != nil {
 		return nil, err
 	}
 	bsc.MfaType = MfaTypeAuto
 
-	u, err := url.Parse(bsc.entityId)
-	if err != nil {
-		return nil, err
-	}
-
-	c := &keycloakSamlClient{
-		SamlClient: bsc,
-		realm:      parseRealm(u),
-		baseUrl:    u,
-		clientId:   "account", // fixme possibly replace with AWS URN
-	}
+	c := &keycloakSamlClient{baseAwsClient: bsc}
+	c.parseBaseUrl()
+	c.parseRealm()
+	c.parseClientId()
 
 	return c, nil
 }
 
+func (c *keycloakSamlClient) parseBaseUrl() {
+	s := strings.Split(c.authUrl.String(), "/protocol/")
+	u, _ := url.Parse(s[0])
+	c.baseUrl = u
+}
+
+func (c *keycloakSamlClient) parseRealm() {
+	p := strings.Split(c.authUrl.Path, "/realms/")
+	s := strings.Split(p[1], "/")
+	c.realm = s[0]
+}
+
+func (c *keycloakSamlClient) parseClientId() {
+	q := c.authUrl.Query().Get("client_id")
+	if len(q) < 1 {
+		s := strings.Split(c.authUrl.Path, "/clients/")
+		q = s[1]
+	}
+	c.clientId = q
+}
+
 // Authenticate handles authentication against a Keycloak compatible identity provider
 func (c *keycloakSamlClient) Authenticate() error {
-	if err := c.GatherCredentials(); err != nil {
+	if err := c.gatherCredentials(); err != nil {
 		return nil
 	}
 
 	return c.auth()
-}
-
-// Saml performs a request to the Keycloak server's SAML endpoint for the requested Service Provider ID
-func (c *keycloakSamlClient) Saml(spId string) (string, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/protocol/saml", c.baseUrl))
-	if err != nil {
-		return "", err
-	}
-
-	doc, err := c.SamlRequest(u)
-	if err != nil {
-		return "", err
-	}
-
-	return getSamlResponse(doc), nil
 }
 
 // AwsSaml performs a SAML request using the well known AWS service provider URN.  The result of this request is cached
@@ -73,49 +68,16 @@ func (c *keycloakSamlClient) AwsSaml() (string, error) {
 		return c.rawSamlResponse, nil
 	}
 
-	s, err := c.Saml(AwsUrn)
+	u, err := url.Parse(fmt.Sprintf("%s/protocol/saml/clients/%s", c.baseUrl, c.clientId))
 	if err != nil {
 		return "", err
 	}
-	c.rawSamlResponse = s
 
-	b, err := base64.StdEncoding.DecodeString(s)
-	if err != nil {
+	if err := c.samlRequest(u); err != nil {
 		return "", err
 	}
-	c.decodedAwsSamlDoc = string(b)
 
-	return s, nil
-}
-
-// GetIdentity retrieves the RoleSessionName attribute from the data returned by AwsSaml()
-func (c *keycloakSamlClient) GetIdentity() (*identity.Identity, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return nil, err
-	}
-
-	return getAwsSamlIdentity(d)
-}
-
-// Roles retrieves the list of roles available to user from the data returned by AwsSaml()
-func (c *keycloakSamlClient) Roles(user ...string) (identity.Roles, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return nil, err
-	}
-
-	return getAwsSamlRoles(d)
-}
-
-// GetSessionDuration retrieves the SessionDuration attribute from the data returned by AwsSaml()
-func (c *keycloakSamlClient) GetSessionDuration() (int64, error) {
-	d, err := c.getDecodedAwsSamlDoc()
-	if err != nil {
-		return -1, err
-	}
-
-	return getAwsSessionDuration(d)
+	return c.rawSamlResponse, nil
 }
 
 func (c *keycloakSamlClient) auth() error {
@@ -151,8 +113,7 @@ func (c *keycloakSamlClient) auth() error {
 }
 
 func (c *keycloakSamlClient) getAuthUrl() (*url.URL, error) {
-	u := fmt.Sprintf("%s/protocol/openid-connect/auth?client_id=%s&response_type=none", c.baseUrl, c.clientId)
-	res, err := c.httpClient.Get(u)
+	res, err := c.httpClient.Get(c.authUrl.String())
 	if err != nil {
 		return nil, err
 	}
@@ -268,21 +229,4 @@ func (c *keycloakSamlClient) doMfa(authUrl string) error {
 	c.MfaToken = ""
 	fmt.Println("invalid mfa code ... try again")
 	return c.handle200(res.Body)
-}
-
-func (c *keycloakSamlClient) getDecodedAwsSamlDoc() (string, error) {
-	var err error
-
-	if len(c.decodedAwsSamlDoc) < 1 {
-		if _, err = c.AwsSaml(); err != nil {
-			return "", err
-		}
-	}
-
-	return c.decodedAwsSamlDoc, nil
-}
-
-func parseRealm(u *url.URL) string {
-	p := strings.Split(u.Path, "/")
-	return p[len(p)-1]
 }
