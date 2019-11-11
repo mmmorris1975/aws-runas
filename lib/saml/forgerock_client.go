@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/html"
 	"io"
 	"net/http"
 	"net/url"
@@ -39,7 +38,6 @@ type forgerockSamlClient struct {
 	metaAlias         string
 	baseUrl           *url.URL
 	mfaSvcName        string
-	rawAwsSamlDoc     string
 	decodedAwsSamlDoc string
 }
 
@@ -85,44 +83,21 @@ func (c *forgerockSamlClient) Saml(spId string) (string, error) {
 		return "", err
 	}
 
-	inputs := make(map[string]string)
-
-	var f func(n *html.Node)
-	f = func(n *html.Node) {
-		if n.Type == html.ElementNode && n.Data == "input" {
-			name := ""
-			for _, a := range n.Attr {
-				if a.Key == "name" {
-					name = a.Val
-				}
-
-				if a.Key == "value" {
-					inputs[name] = a.Val
-				}
-			}
-		}
-
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			f(c)
-		}
-	}
-	f(doc)
-
-	return inputs["SAMLResponse"], nil
+	return getSamlResponse(doc), nil
 }
 
 // AwsSaml performs a SAML request using the well known AWS service provider URN.  The result of this request is cached
 // in memory to avoid repeated requests to the Forgerock endpoint.
 func (c *forgerockSamlClient) AwsSaml() (string, error) {
-	if len(c.rawAwsSamlDoc) > 0 {
-		return c.rawAwsSamlDoc, nil
+	if len(c.rawSamlResponse) > 0 {
+		return c.rawSamlResponse, nil
 	}
 
 	s, err := c.Saml(AwsUrn)
 	if err != nil {
 		return "", err
 	}
-	c.rawAwsSamlDoc = s
+	c.rawSamlResponse = s
 
 	b, err := base64.StdEncoding.DecodeString(s)
 	if err != nil {
@@ -133,7 +108,7 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 	return s, nil
 }
 
-// GetIdentity retrieves the RoleSessionName attribute from the data returned from AwsSaml()
+// GetIdentity retrieves the RoleSessionName attribute from the data returned by AwsSaml()
 func (c *forgerockSamlClient) GetIdentity() (*identity.Identity, error) {
 	d, err := c.getDecodedAwsSamlDoc()
 	if err != nil {
@@ -143,7 +118,7 @@ func (c *forgerockSamlClient) GetIdentity() (*identity.Identity, error) {
 	return getAwsSamlIdentity(d)
 }
 
-// Roles retrieves the list of roles available to use user from the data returned from AwsSaml()
+// Roles retrieves the list of roles available to user from the data returned by AwsSaml()
 func (c *forgerockSamlClient) Roles(user ...string) (identity.Roles, error) {
 	d, err := c.getDecodedAwsSamlDoc()
 	if err != nil {
@@ -153,7 +128,7 @@ func (c *forgerockSamlClient) Roles(user ...string) (identity.Roles, error) {
 	return getAwsSamlRoles(d)
 }
 
-// GetSessionDuration retrieves the SessionDuration attribute from the data returned from AwsSaml()
+// GetSessionDuration retrieves the SessionDuration attribute from the data returned by AwsSaml()
 func (c *forgerockSamlClient) GetSessionDuration() (int64, error) {
 	d, err := c.getDecodedAwsSamlDoc()
 	if err != nil {
@@ -166,10 +141,8 @@ func (c *forgerockSamlClient) GetSessionDuration() (int64, error) {
 func (c *forgerockSamlClient) getDecodedAwsSamlDoc() (string, error) {
 	var err error
 
-	d := c.decodedAwsSamlDoc
-	if len(d) < 1 {
-		d, err = c.AwsSaml()
-		if err != nil {
+	if len(c.decodedAwsSamlDoc) < 1 {
+		if _, err = c.AwsSaml(); err != nil {
 			return "", err
 		}
 	}
@@ -256,7 +229,7 @@ func (c *forgerockSamlClient) authOtpMfa(u string) error {
 				}
 				c.MfaToken = t
 			} else {
-				return fmt.Errorf("MFA token is empty, and no token provider configured")
+				return new(errMfaNotConfigured)
 			}
 		}
 

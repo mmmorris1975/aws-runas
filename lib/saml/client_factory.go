@@ -2,6 +2,7 @@ package saml
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 func GetClient(mdUrl string, options ...func(s *SamlClient)) (AwsSamlClient, error) {
 	var c AwsSamlClient
 
-	r, err := http.Head(mdUrl)
+	r, err := http.Get(mdUrl)
 	if err != nil {
 		return nil, err
 	}
@@ -24,6 +25,11 @@ func GetClient(mdUrl string, options ...func(s *SamlClient)) (AwsSamlClient, err
 	switch divineClient(r) {
 	case "forgerock":
 		c, err = NewForgerockSamlClient(mdUrl)
+		if err != nil {
+			return nil, err
+		}
+	case "keycloak":
+		c, err = NewKeycloakSamlClient(mdUrl)
 		if err != nil {
 			return nil, err
 		}
@@ -52,6 +58,15 @@ func divineClient(r *http.Response) string {
 
 	if strings.Contains(h, "X-MockTest-") {
 		return "mock"
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return err.Error()
+	}
+
+	if strings.Contains(string(body), "urn:keycloak") {
+		return "keycloak"
 	}
 
 	return "unknown"

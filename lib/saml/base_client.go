@@ -32,6 +32,7 @@ type SamlClient struct {
 	ssoUrl           *url.URL
 	entityId         string
 	httpClient       *http.Client
+	rawSamlResponse  string
 	Username         string
 	Password         string
 	CredProvider     func(string, string) (string, string, error)
@@ -192,6 +193,33 @@ func getAwsSessionDuration(d string) (int64, error) {
 	return strconv.ParseInt(m[1], 0, 64)
 }
 
+func getSamlResponse(doc *html.Node) string {
+	inputs := make(map[string]string)
+
+	var f func(n *html.Node)
+	f = func(n *html.Node) {
+		if n.Type == html.ElementNode && n.Data == "input" {
+			name := ""
+			for _, a := range n.Attr {
+				if a.Key == "name" {
+					name = a.Val
+				}
+
+				if a.Key == "value" {
+					inputs[name] = a.Val
+				}
+			}
+		}
+
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			f(c)
+		}
+	}
+	f(doc)
+
+	return inputs["SAMLResponse"]
+}
+
 func fetchIdpMetadata(u string) (*types.EntityDescriptor, error) {
 	res, err := http.Get(u)
 	if err != nil {
@@ -208,10 +236,22 @@ func fetchIdpMetadata(u string) (*types.EntityDescriptor, error) {
 		return nil, err
 	}
 
-	md := new(types.EntityDescriptor)
+	md := new(EntitiesDescriptor)
 	if err := xml.Unmarshal(b, md); err != nil {
-		return nil, err
+		// not an <EntitiesDescriptor>, try just <EntityDescriptor> before failing
+		ed := new(types.EntityDescriptor)
+		if err := xml.Unmarshal(b, ed); err != nil {
+			return nil, err
+		}
+		return ed, nil
 	}
 
-	return md, nil
+	return md.EntityIDs[0], nil
+}
+
+// EntitiesDescriptor is an XML container element for 1 or more EntityDescriptor. Not used for Forgerock, but seen on Keycloak
+type EntitiesDescriptor struct {
+	XMLName   xml.Name                  `xml:"urn:oasis:names:tc:SAML:2.0:metadata EntitiesDescriptor"`
+	Name      string                    `xml:"Name,attr"`
+	EntityIDs []*types.EntityDescriptor `xml:"EntityDescriptor"`
 }

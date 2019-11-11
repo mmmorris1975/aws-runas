@@ -54,3 +54,11 @@ func (e *errMfaFailure) WithCode(code int) *errMfaFailure {
 func (e errMfaFailure) Error() string {
 	return fmt.Sprintf("mfa status code %d", e.code)
 }
+
+type errMfaNotConfigured struct {
+	error
+}
+
+func (e errMfaNotConfigured) Error() string {
+	return "MFA token is empty, and no token provider configured"
+}

@@ -14,7 +14,7 @@ import (
 )
 
 func TestNewForgerockSamlClient(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(mockHttpHandler))
+	s := httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
 	defer s.Close()
 
 	t.Run("good", func(t *testing.T) {
@@ -40,7 +40,7 @@ func TestNewForgerockSamlClient(t *testing.T) {
 }
 
 func TestForgerockSamlClient_AwsSaml(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(mockHttpHandler))
+	s := httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
 	defer s.Close()
 
 	c, err := newClient(s)
@@ -90,7 +90,7 @@ func TestForgerockSamlClient_AwsSaml(t *testing.T) {
 }
 
 func TestForgerockSamlClient_AuthenticateNone(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(mockHttpHandler))
+	s := httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
 	defer s.Close()
 
 	c, err := newClient(s)
@@ -122,7 +122,7 @@ func TestForgerockSamlClient_AuthenticateNone(t *testing.T) {
 }
 
 func TestForgerockSamlClient_AuthenticateToken(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(mockHttpHandler))
+	s := httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
 	defer s.Close()
 
 	c, err := newClient(s)
@@ -160,7 +160,7 @@ func TestForgerockSamlClient_AuthenticateToken(t *testing.T) {
 }
 
 func TestForgerockSamlClient_AuthenticatePush(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(mockHttpHandler))
+	s := httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
 	defer s.Close()
 
 	c, err := newClient(s)
@@ -198,8 +198,8 @@ func newClient(s *httptest.Server) (*forgerockSamlClient, error) {
 	return c, nil
 }
 
-// httptest.NewServer(http.HandlerFunc(mockHttpHandler))
-func mockHttpHandler(w http.ResponseWriter, r *http.Request) {
+// httptest.NewServer(http.HandlerFunc(mockForgerockHttpHandler))
+func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	q := r.URL.Query()
 	frm := new(frMfaForm)
@@ -229,7 +229,7 @@ func mockHttpHandler(w http.ResponseWriter, r *http.Request) {
 					}
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				} else if c.Type == "ConfirmationCallback" {
-					if time.Now().Unix()%5 == 0 {
+					if time.Now().Unix()%3 == 0 {
 						time.Sleep(200 * time.Millisecond)
 						http.Error(w, `{"status": "success"}`, http.StatusBadRequest)
 						return
