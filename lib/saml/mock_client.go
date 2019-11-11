@@ -6,7 +6,7 @@ import (
 )
 
 type mockSamlClient struct {
-	*baseAwsClient
+	*BaseAwsClient
 }
 
 // NewMockSamlClient create a mockSamlClient for testing purposes
@@ -17,7 +17,7 @@ func NewMockSamlClient(authUrl string) (*mockSamlClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	c.baseAwsClient = sc
+	c.BaseAwsClient = sc
 
 	return c, nil
 }

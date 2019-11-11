@@ -155,7 +155,7 @@ func newKeycloakClient(s *httptest.Server) (*keycloakSamlClient, error) {
 		return nil, err
 	}
 
-	c := keycloakSamlClient{baseAwsClient: new(baseAwsClient)}
+	c := keycloakSamlClient{BaseAwsClient: new(BaseAwsClient)}
 	c.authUrl = u
 	c.httpClient = s.Client()
 	c.httpClient.CheckRedirect = func(req *http.Request, via []*http.Request) error {

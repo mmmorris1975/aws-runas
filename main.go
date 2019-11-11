@@ -43,7 +43,7 @@ var (
 	profile    *string
 	cfg        *config.AwsConfig
 	ses        *session.Session
-	samlClient saml.AwsSamlClient
+	samlClient saml.AwsClient
 	idp        identity.Provider
 	usr        *identity.Identity
 
@@ -472,13 +472,13 @@ func awsUser() error {
 	return nil
 }
 
-func samlClientWithReauth() (saml.AwsSamlClient, error) {
+func samlClientWithReauth() (saml.AwsClient, error) {
 	jar, err := cache.NewCookieJarFile(cookieFile)
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := saml.GetClient(cfg.SamlMetadataUrl.String(), func(s *saml.SamlClient) {
+	c, err := saml.GetClient(cfg.SamlMetadataUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
 		s.MfaToken = *mfaCode

@@ -32,7 +32,7 @@ type frCallback struct {
 }
 
 type forgerockSamlClient struct {
-	*baseAwsClient
+	*BaseAwsClient
 	realm string
 }
 
@@ -44,7 +44,7 @@ func NewForgerockSamlClient(authUrl string) (*forgerockSamlClient, error) {
 	}
 	bsc.MfaType = MfaTypeAuto
 
-	c := forgerockSamlClient{baseAwsClient: bsc}
+	c := forgerockSamlClient{BaseAwsClient: bsc}
 	c.parseBaseUrl()
 	c.parseRealm()
 

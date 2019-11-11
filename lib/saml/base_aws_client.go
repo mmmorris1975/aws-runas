@@ -13,7 +13,8 @@ import (
 	"strings"
 )
 
-type baseAwsClient struct {
+// BaseAwsClient is the base AwsClient type which can handle much of the SAML interaction, once a client is authenticated
+type BaseAwsClient struct {
 	authUrl          *url.URL
 	baseUrl          *url.URL
 	httpClient       *http.Client
@@ -27,7 +28,7 @@ type baseAwsClient struct {
 	MfaToken         string
 }
 
-func newBaseAwsClient(authUrl string) (*baseAwsClient, error) {
+func newBaseAwsClient(authUrl string) (*BaseAwsClient, error) {
 	u, err := url.Parse(authUrl)
 	if err != nil {
 		return nil, err
@@ -37,7 +38,7 @@ func newBaseAwsClient(authUrl string) (*baseAwsClient, error) {
 		return nil, fmt.Errorf("not a valid URL")
 	}
 
-	c := baseAwsClient{
+	c := BaseAwsClient{
 		authUrl:          u,
 		CredProvider:     credentials.StdinCredProvider,
 		MfaTokenProvider: credentials.StdinMfaTokenProvider,
@@ -49,33 +50,33 @@ func newBaseAwsClient(authUrl string) (*baseAwsClient, error) {
 }
 
 // Client returns the concrete AwsClient type to allow attributes to be exposed through the Client interface
-func (c *baseAwsClient) Client() *baseAwsClient {
+func (c *BaseAwsClient) Client() *BaseAwsClient {
 	return c
 }
 
 // SetCookieJar configures the HTTP client's cookie jar so that cookies used during the SAML http requests are persisted.
 // If not set, the default Golang cookie jar is used to store the values in memory.
-func (c *baseAwsClient) SetCookieJar(jar http.CookieJar) {
+func (c *BaseAwsClient) SetCookieJar(jar http.CookieJar) {
 	c.setHttpClient()
 	c.httpClient.Jar = jar
 }
 
 // GetIdentity retrieves the RoleSessionName attribute from the data returned by AwsSaml()
-func (c *baseAwsClient) GetIdentity() (*identity.Identity, error) {
+func (c *BaseAwsClient) GetIdentity() (*identity.Identity, error) {
 	return c.getIdentity()
 }
 
 // Roles retrieves the list of roles available to user from the data returned by AwsSaml()
-func (c *baseAwsClient) Roles(user ...string) (identity.Roles, error) {
+func (c *BaseAwsClient) Roles(user ...string) (identity.Roles, error) {
 	return c.roles()
 }
 
 // GetSessionDuration retrieves the SessionDuration attribute from the data returned by AwsSaml()
-func (c *baseAwsClient) GetSessionDuration() (int64, error) {
+func (c *BaseAwsClient) GetSessionDuration() (int64, error) {
 	return c.getSessionDuration()
 }
 
-func (c *baseAwsClient) setHttpClient() {
+func (c *BaseAwsClient) setHttpClient() {
 	if c.httpClient == nil {
 		hc := new(http.Client)
 		hc.CheckRedirect = func(req *http.Request, via []*http.Request) error {
@@ -87,7 +88,7 @@ func (c *baseAwsClient) setHttpClient() {
 	}
 }
 
-func (c *baseAwsClient) getIdentity() (*identity.Identity, error) {
+func (c *BaseAwsClient) getIdentity() (*identity.Identity, error) {
 	if err := c.decodeSaml(); err != nil {
 		return nil, err
 	}
@@ -109,7 +110,7 @@ func (c *baseAwsClient) getIdentity() (*identity.Identity, error) {
 	}, nil
 }
 
-func (c *baseAwsClient) roles(user ...string) (identity.Roles, error) {
+func (c *BaseAwsClient) roles(user ...string) (identity.Roles, error) {
 	if err := c.decodeSaml(); err != nil {
 		return nil, err
 	}
@@ -131,7 +132,7 @@ func (c *baseAwsClient) roles(user ...string) (identity.Roles, error) {
 	return roles, nil
 }
 
-func (c *baseAwsClient) getSessionDuration() (int64, error) {
+func (c *BaseAwsClient) getSessionDuration() (int64, error) {
 	if err := c.decodeSaml(); err != nil {
 		return -1, err
 	}
@@ -149,7 +150,7 @@ func (c *baseAwsClient) getSessionDuration() (int64, error) {
 	return strconv.ParseInt(m[1], 0, 64)
 }
 
-func (c *baseAwsClient) decodeSaml() error {
+func (c *BaseAwsClient) decodeSaml() error {
 	if len(c.decodedSaml) < 1 && len(c.rawSamlResponse) > 0 {
 		b, err := base64.StdEncoding.DecodeString(c.rawSamlResponse)
 		if err != nil {
@@ -160,7 +161,7 @@ func (c *baseAwsClient) decodeSaml() error {
 	return nil
 }
 
-func (c *baseAwsClient) samlRequest(u *url.URL) error {
+func (c *BaseAwsClient) samlRequest(u *url.URL) error {
 	r, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return err
@@ -189,7 +190,7 @@ func (c *baseAwsClient) samlRequest(u *url.URL) error {
 	return c.decodeSaml()
 }
 
-func (c *baseAwsClient) handleSamlResponse(doc *html.Node) string {
+func (c *BaseAwsClient) handleSamlResponse(doc *html.Node) string {
 	inputs := make(map[string]string)
 
 	var f func(n *html.Node)
@@ -216,7 +217,7 @@ func (c *baseAwsClient) handleSamlResponse(doc *html.Node) string {
 	return inputs["SAMLResponse"]
 }
 
-func (c *baseAwsClient) gatherCredentials() error {
+func (c *BaseAwsClient) gatherCredentials() error {
 	var err error
 
 	u := c.Username

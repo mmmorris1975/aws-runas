@@ -8,7 +8,7 @@ import (
 
 // GetClient is a factory method for detecting the SAML client to use based on properties of an HTTP request
 // the the provider's metadata endpoint
-func GetClient(authUrl string, options ...func(s *baseAwsClient)) (AwsClient, error) {
+func GetClient(authUrl string, options ...func(s *BaseAwsClient)) (AwsClient, error) {
 	var c AwsClient
 
 	r, err := http.Head(authUrl)

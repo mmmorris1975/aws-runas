@@ -21,7 +21,7 @@ func TestNewMockSamlClient(t *testing.T) {
 }
 
 func TestMockSamlClient_Authenticate(t *testing.T) {
-	c := &mockSamlClient{baseAwsClient: new(baseAwsClient)}
+	c := &mockSamlClient{BaseAwsClient: new(BaseAwsClient)}
 
 	t.Run("good", func(t *testing.T) {
 		c.Username = "good"

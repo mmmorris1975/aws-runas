@@ -617,7 +617,7 @@ var samlSvr = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r 
 }))
 
 type mockSamlClient struct {
-	saml.AwsSamlClient
+	saml.AwsClient
 	error bool
 }
 

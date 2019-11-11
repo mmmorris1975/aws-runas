@@ -10,7 +10,7 @@ import (
 )
 
 type keycloakSamlClient struct {
-	*baseAwsClient
+	*BaseAwsClient
 	realm    string
 	clientId string
 }
@@ -23,7 +23,7 @@ func NewKeycloakSamlClient(authUrl string) (*keycloakSamlClient, error) {
 	}
 	bsc.MfaType = MfaTypeAuto
 
-	c := &keycloakSamlClient{baseAwsClient: bsc}
+	c := &keycloakSamlClient{BaseAwsClient: bsc}
 	c.parseBaseUrl()
 	c.parseRealm()
 	c.parseClientId()

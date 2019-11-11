@@ -192,7 +192,7 @@ func newClient(s *httptest.Server) (*forgerockSamlClient, error) {
 		return nil, err
 	}
 
-	c := &forgerockSamlClient{baseAwsClient: new(baseAwsClient)}
+	c := &forgerockSamlClient{BaseAwsClient: new(BaseAwsClient)}
 	c.authUrl = u
 	c.httpClient = s.Client()
 	c.parseBaseUrl()

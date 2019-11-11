@@ -29,7 +29,7 @@ type AwsClient interface {
 	SetCookieJar(jar http.CookieJar)
 	AwsSaml() (string, error)
 	GetSessionDuration() (int64, error)
-	Client() *baseAwsClient
+	Client() *BaseAwsClient
 }
 
 type errAuthFailure struct {
