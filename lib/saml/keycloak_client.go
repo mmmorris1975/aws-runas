@@ -107,8 +107,8 @@ func (c *keycloakSamlClient) auth() error {
 		return new(errAuthFailure).WithCode(res.StatusCode)
 	}
 
-	// HTTP 200 could either mean we're being prompted for MFA, or the authentication failed
-	// Keycloak only supports code-based MFA, so don't test for configured MfaType
+	// HTTP 200 could either mean we've received a SAMLResponse, we're being prompted for MFA, or the authentication
+	// failed. Keycloak only supports code-based MFA, so don't test for configured MfaType
 	return c.handle200(res.Body)
 }
 
@@ -156,6 +156,11 @@ func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
 	doc, err := html.Parse(body)
 	if err != nil {
 		return err
+	}
+
+	c.rawSamlResponse = c.handleSamlResponse(doc)
+	if len(c.rawSamlResponse) > 0 {
+		return nil
 	}
 
 	var authUrl string
