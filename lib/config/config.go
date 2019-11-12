@@ -13,7 +13,7 @@ type AwsConfig struct {
 	CredentialsDuration  time.Duration
 	SessionTokenDuration time.Duration
 	JumpRoleArn          arn.ARN
-	SamlMetadataUrl      *url.URL
+	SamlAuthUrl          *url.URL
 	SamlUsername         string
 }
 
@@ -48,13 +48,13 @@ func Wrap(c *config.AwsConfig) (*AwsConfig, error) {
 		t.JumpRoleArn = a
 	}
 
-	sm := c.Get("saml_metadata_url")
+	sm := c.Get("saml_auth_url")
 	if len(sm) > 0 {
-		u, err := url.Parse(c.Get("saml_metadata_url"))
+		u, err := url.Parse(c.Get("saml_auth_url"))
 		if err != nil {
 			return nil, err
 		}
-		t.SamlMetadataUrl = u
+		t.SamlAuthUrl = u
 	}
 
 	return &t, nil

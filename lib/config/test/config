@@ -22,4 +22,4 @@ mfa_serial = arn:aws:iam::1234567890:mfa/987654
 region = eu-west-1
 source_profile = simple
 jump_role_arn = arn:aws:iam::1234567890:role/Admin
-saml_metadata_url = https://example.org/saml/metadata
+saml_auth_url = https://example.org/saml/auth

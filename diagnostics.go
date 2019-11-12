@@ -72,13 +72,13 @@ func checkProfile(p *string) string {
 
 func checkProfileCfg(p string, c *config.AwsConfig) {
 	if len(p) > 0 {
-		if c.SamlMetadataUrl != nil && len(c.SamlMetadataUrl.String()) > 0 {
+		if c.SamlAuthUrl != nil && len(c.SamlAuthUrl.String()) > 0 {
 			// do saml specific things
 			if len(c.RoleArn) < 1 {
 				log.Error("role_arn is a required parameter when using SAML integration")
 			}
 
-			u, err := http.Head(c.SamlMetadataUrl.String())
+			u, err := http.Head(c.SamlAuthUrl.String())
 			if err != nil {
 				log.Errorf("error communicating with SAML metadata url: %v", err)
 			}
@@ -176,8 +176,8 @@ func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalId)
 	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.CredentialsDuration)
 
-	if c.SamlMetadataUrl != nil && len(c.SamlMetadataUrl.String()) > 0 {
-		fmt.Printf("SAML METADATA URL: %s\n", c.SamlMetadataUrl.String())
+	if c.SamlAuthUrl != nil && len(c.SamlAuthUrl.String()) > 0 {
+		fmt.Printf("SAML METADATA URL: %s\n", c.SamlAuthUrl.String())
 		fmt.Printf("SAML USERNAME: %s\n", c.SamlUsername)
 		fmt.Printf("JUMP ROLE ARN: %s\n", c.JumpRoleArn.String())
 	}

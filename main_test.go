@@ -219,7 +219,7 @@ func TestSamlClientWithReauth(t *testing.T) {
 	u, _ := url.Parse(samlSvr.URL)
 	cfg = emptyConfig
 	cfg.SamlUsername = "good"
-	cfg.SamlMetadataUrl = u
+	cfg.SamlAuthUrl = u
 
 	cookieFile = os.DevNull
 	samlPass = aws.String("bad")
@@ -418,7 +418,7 @@ func TestAwsUser(t *testing.T) {
 		mfaCode = aws.String("")
 
 		cfg = emptyConfig
-		cfg.SamlMetadataUrl = u
+		cfg.SamlAuthUrl = u
 
 		err := awsUser()
 		if err != nil {

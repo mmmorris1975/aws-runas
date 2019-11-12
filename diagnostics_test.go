@@ -92,7 +92,7 @@ func Example_printConfigSaml() {
 	c.CredentialsDuration = 20 * time.Minute
 	c.MfaSerial = "my-mfa"
 	c.ExternalId = "abcde"
-	c.SamlMetadataUrl, _ = url.Parse("http://localhost/saml")
+	c.SamlAuthUrl, _ = url.Parse("http://localhost/saml")
 	c.SamlUsername = "mock-user"
 
 	printConfig("p", c)
@@ -240,21 +240,21 @@ func TestCheckProfileCfg(t *testing.T) {
 
 		t.Run("no role", func(t *testing.T) {
 			cfg = emptyConfig
-			cfg.SamlMetadataUrl, _ = url.Parse(s.URL)
+			cfg.SamlAuthUrl, _ = url.Parse(s.URL)
 			checkProfileCfg("x", cfg)
 		})
 
 		t.Run("bad status", func(t *testing.T) {
 			cfg = emptyConfig
 			cfg.RoleArn = "role"
-			cfg.SamlMetadataUrl, _ = url.Parse(s.URL + "/bad")
+			cfg.SamlAuthUrl, _ = url.Parse(s.URL + "/bad")
 			checkProfileCfg("x", cfg)
 		})
 
 		t.Run("good", func(t *testing.T) {
 			cfg = emptyConfig
 			cfg.RoleArn = "role"
-			cfg.SamlMetadataUrl, _ = url.Parse(s.URL)
+			cfg.SamlAuthUrl, _ = url.Parse(s.URL)
 			checkProfileCfg("x", cfg)
 		})
 	})

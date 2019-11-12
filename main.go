@@ -408,7 +408,7 @@ func finalConfig(cfg *cfglib.AwsConfig) (*config.AwsConfig, error) {
 	}
 
 	if samlUrl != nil && *samlUrl != nil && len((*samlUrl).String()) > 0 {
-		newCfg.SamlMetadataUrl = *samlUrl
+		newCfg.SamlAuthUrl = *samlUrl
 	}
 
 	if samlUser != nil && len(*samlUser) > 0 {
@@ -449,9 +449,9 @@ func awsSession() {
 func awsUser() error {
 	var err error
 
-	// default to AWS IAM identity, switch to SAML identity if SamlMetadataUrl config attribute is set
+	// default to AWS IAM identity, switch to SAML identity if SamlAuthUrl config attribute is set
 	idp = identity.NewAwsIdentityProvider(ses)
-	if cfg.SamlMetadataUrl != nil && len(cfg.SamlMetadataUrl.String()) > 0 {
+	if cfg.SamlAuthUrl != nil && len(cfg.SamlAuthUrl.String()) > 0 {
 		log.Debug("Using SAML Identity")
 		samlClient, err = samlClientWithReauth()
 		if err != nil {
@@ -478,7 +478,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 		return nil, err
 	}
 
-	c, err := saml.GetClient(cfg.SamlMetadataUrl.String(), func(s *saml.BaseAwsClient) {
+	c, err := saml.GetClient(cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
 		s.MfaToken = *mfaCode
