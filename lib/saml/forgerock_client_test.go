@@ -49,6 +49,11 @@ func TestForgerockSamlClient_AwsSaml(t *testing.T) {
 		return
 	}
 
+	if len(c.rawSamlResponse) > 0 || len(c.decodedSaml) > 0 {
+		t.Error("found unexpected saml response")
+		return
+	}
+
 	if _, err := c.AwsSaml(); err != nil {
 		t.Error(err)
 		return
@@ -90,6 +95,24 @@ func TestForgerockSamlClient_AwsSaml(t *testing.T) {
 		if len(r) < 5 {
 			t.Error("data mismatch")
 			return
+		}
+	})
+
+	t.Run("with saml", func(t *testing.T) {
+		k, err := newClient(s)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		k.rawSamlResponse = "123456"
+
+		if _, err := c.AwsSaml(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if k.rawSamlResponse != "123456" {
+			t.Error("data mismatch")
 		}
 	})
 }
@@ -136,10 +159,11 @@ func TestForgerockSamlClient_AuthenticateToken(t *testing.T) {
 		return
 	}
 
+	c.Username = "mfauser"
+	c.Password = "mfapassword"
+	c.MfaType = MfaTypeCode
+
 	t.Run("mfa", func(t *testing.T) {
-		c.Username = "mfauser"
-		c.Password = "mfapassword"
-		c.MfaType = MfaTypeCode
 		c.MfaToken = "54321"
 
 		if err := c.Authenticate(); err != nil {
@@ -149,9 +173,6 @@ func TestForgerockSamlClient_AuthenticateToken(t *testing.T) {
 	})
 
 	t.Run("mfa retry", func(t *testing.T) {
-		c.Username = "mfauser"
-		c.Password = "mfapassword"
-		c.MfaType = MfaTypeCode
 		c.MfaToken = "12345"
 		c.MfaTokenProvider = func() (s string, e error) {
 			return "54321", nil
@@ -160,6 +181,15 @@ func TestForgerockSamlClient_AuthenticateToken(t *testing.T) {
 		if err := c.Authenticate(); err != nil {
 			t.Error(err)
 			return
+		}
+	})
+
+	t.Run("no provider", func(t *testing.T) {
+		c.MfaToken = ""
+		c.MfaTokenProvider = nil
+
+		if err := c.Authenticate(); err == nil {
+			t.Error("did not receive expected error")
 		}
 	})
 }

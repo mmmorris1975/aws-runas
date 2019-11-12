@@ -169,6 +169,15 @@ func TestKeycloakSamlClient_AuthenticateMfa(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	t.Run("no provider", func(t *testing.T) {
+		c.MfaToken = ""
+		c.MfaTokenProvider = nil
+
+		if err := c.Authenticate(); err == nil {
+			t.Error("did not receive the expected error")
+		}
+	})
 }
 
 func newKeycloakClient(s *httptest.Server) (*keycloakSamlClient, error) {

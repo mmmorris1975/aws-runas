@@ -232,7 +232,7 @@ func (c *BaseAwsClient) gatherCredentials() error {
 	}
 
 	m := c.MfaToken
-	if c.MfaType == MfaTypeCode && len(m) < 1 {
+	if c.MfaType == MfaTypeCode && len(m) < 1 && c.MfaTokenProvider != nil {
 		m, err = c.MfaTokenProvider()
 		if err != nil {
 			return err
