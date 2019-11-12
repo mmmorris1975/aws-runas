@@ -49,6 +49,11 @@ func TestKeycloakSamlClient_AwsSaml(t *testing.T) {
 		return
 	}
 
+	if len(c.rawSamlResponse) < 1 || len(c.decodedSaml) < 1 {
+		t.Error("invalid SAML response")
+		return
+	}
+
 	t.Run("GetIdentity", func(t *testing.T) {
 		id, err := c.GetIdentity()
 		if err != nil {
@@ -74,7 +79,6 @@ func TestKeycloakSamlClient_AwsSaml(t *testing.T) {
 	})
 
 	t.Run("Roles", func(t *testing.T) {
-
 		r, err := c.Roles()
 		if err != nil {
 			t.Error(err)
@@ -82,6 +86,24 @@ func TestKeycloakSamlClient_AwsSaml(t *testing.T) {
 		}
 
 		if r == nil || len(r) < 3 {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("populated saml", func(t *testing.T) {
+		k, err := newKeycloakClient(s)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		k.rawSamlResponse = "abc123"
+
+		if _, err := k.AwsSaml(); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if k.rawSamlResponse != "abc123" || len(k.decodedSaml) > 0 {
 			t.Error("data mismatch")
 		}
 	})
@@ -201,9 +223,9 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </html>
 `
 			fmt.Fprintf(w, body, r.Host)
-		}
-		// return the MFA form
-		body := `
+		} else if r.PostForm.Get("username") == "mfauser" || len(r.PostForm.Get("totp")) > 0 {
+			// return the MFA form
+			body := `
 <html>
 <head></head>
 <body>
@@ -213,8 +235,12 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		fmt.Fprintf(w, body, r.Host)
-		return
+			fmt.Fprintf(w, body, r.Host)
+			return
+		} else {
+			w.Write([]byte("whachutalkinbout"))
+			return
+		}
 	} else {
 		http.NotFound(w, r)
 	}
