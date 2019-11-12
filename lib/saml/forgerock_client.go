@@ -79,7 +79,7 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 		return c.rawSamlResponse, nil
 	}
 
-	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=%s&spEntityID=%s", c.baseUrl, c.realm, AwsUrn))
+	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=/%s/saml-idp&spEntityID=%s", c.baseUrl, c.realm, AwsUrn))
 	if err != nil {
 		return "", err
 	}
@@ -93,7 +93,6 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 
 // REF: https://backstage.forgerock.com/docs/am/6.5/authorization-guide/index.html#sec-rest-authentication
 func (c *forgerockSamlClient) auth() error {
-	//u := fmt.Sprintf("%s/json/realms%s/authenticate", c.baseUrl, c.realm)
 	u := c.authUrl.String()
 
 	switch c.MfaType {
