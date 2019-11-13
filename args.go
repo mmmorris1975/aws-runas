@@ -50,11 +50,11 @@ func init() {
 		updateArgDesc       = "Check for updates to aws-runas"
 		diagArgDesc         = "Run diagnostics to gather info to troubleshoot issues"
 		listRoleArgDesc     = "List role ARNs you are able to assume"
-		listMfaArgDesc      = "List the ARN of the MFA device associated with your account"
-		ec2ArgDesc          = "Run as mock EC2 metadata service to provide role credentials"
+		listMfaArgDesc      = "List the ARN of the MFA device associated with your IAM account"
+		ec2ArgDesc          = "Run a mock EC2 metadata service to provide role credentials"
 		verboseArgDesc      = "Print verbose/debug messages"
 		envArgDesc          = "Pass credentials to program as environment variables"
-		showExpArgDesc      = "Show token expiration time"
+		showExpArgDesc      = "Show credential expiration time"
 		refreshArgDesc      = "Force a refresh of the cached credentials"
 		sesCredArgDesc      = "Print eval()-able session token info, or run command using session token credentials"
 		durationArgDesc     = "Duration of the retrieved session token"
@@ -63,7 +63,7 @@ func init() {
 		mfaArnDesc          = "ARN of MFA device needed to perform Assume Role operation"
 		extnIdDesc          = "External ID to use to Assume the Role"
 		jumpArnDesc         = "ARN of the 'jump role' to use with SAML integration"
-		samlUrlDesc         = "URL of the SAML metadata endpoint for authentication"
+		samlUrlDesc         = "URL of the SAML authentication endpoint"
 		samlUserDesc        = "Username for SAML authentication"
 		samlPassDesc        = "Password for SAML authentication"
 		profileArgDesc      = "name of profile, or role ARN"
@@ -79,8 +79,8 @@ func init() {
 	// flags which don't actually do any credential stuff
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
-	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool() // must consider profile vs SAML
-	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool()      // only relevant for non-SAML profiles
+	listRoles = kingpin.Flag("list-roles", listRoleArgDesc).Short('l').Bool()
+	listMfa = kingpin.Flag("list-mfa", listMfaArgDesc).Short('m').Bool() // only relevant for non-SAML profiles
 
 	// flags which affect the configuration used for fetching credentials of any flavor
 	refresh = kingpin.Flag("refresh", refreshArgDesc).Short('r').Bool()
@@ -95,7 +95,7 @@ func init() {
 
 	// flags which are only valid for SAML profiles
 	jumpArn = kingpin.Flag("jump-role", jumpArnDesc).Short('J').Envar("JUMP_ROLE_ARN").String()
-	samlUrl = kingpin.Flag("saml-ghUrl", samlUrlDesc).Short('S').Envar("SAML_METADATA_URL").URL()
+	samlUrl = kingpin.Flag("saml-url", samlUrlDesc).Short('S').Envar("SAML_AUTH_URL").URL()
 	samlUser = kingpin.Flag("saml-user", samlUserDesc).Short('U').Envar("SAML_USERNAME").String()
 	samlPass = kingpin.Flag("saml-password", samlPassDesc).Short('P').Envar("SAML_PASSWORD").String()
 
