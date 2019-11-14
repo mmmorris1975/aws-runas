@@ -490,15 +490,17 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 
 	// If our cookies are still valid, the first AwsSaml() call should succeed.
 	// Assume any failure necessitates a re-auth.  Retry AwsSaml() to validate
-	if _, err := c.AwsSaml(); err != nil {
-		if err := c.Authenticate(); err != nil {
+	var s string
+	if s, err = c.AwsSaml(); err != nil {
+		if err = c.Authenticate(); err != nil {
 			return nil, err
 		}
 
-		if _, err := c.AwsSaml(); err != nil {
+		if s, err = c.AwsSaml(); err != nil {
 			return nil, err
 		}
 	}
+	log.Debugf("SAMLResponse:\n%s", s)
 
 	return c, nil
 }

@@ -36,7 +36,8 @@ type forgerockSamlClient struct {
 	realm string
 }
 
-// NewForgerockSamlClient creates a Forgerock aware SAML client using information supplied by the provided metadata URL
+// NewForgerockSamlClient creates a Forgerock aware SAML client using authUrl as the authentication endpoint
+// Forgerock convention for this is along the lines of __base-url__/json/realms/__realm-name__/authenticate
 func NewForgerockSamlClient(authUrl string) (*forgerockSamlClient, error) {
 	bsc, err := newBaseAwsClient(authUrl)
 	if err != nil {

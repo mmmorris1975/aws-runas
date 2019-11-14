@@ -15,7 +15,9 @@ type keycloakSamlClient struct {
 	clientId string
 }
 
-// NewKeycloakSamlClient creates a Keycloak aware SAML client using information supplied by the provided metadata URL
+// NewKeycloakSamlClient creates a Keycloak aware SAML client using authUrl as the authentication endpoint
+// Keycloak convention for this is along the lines of __base-url__/realms/__realm-name__/protocol/saml/clients/__client-id__
+// This is the same URL which is used to "do the SAML" between Keycloak and AWS
 func NewKeycloakSamlClient(authUrl string) (*keycloakSamlClient, error) {
 	bsc, err := newBaseAwsClient(authUrl)
 	if err != nil {
