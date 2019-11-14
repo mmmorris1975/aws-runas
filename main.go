@@ -549,22 +549,19 @@ func handleSamlUserCredentials() (*credentials.Credentials, error) {
 		return c, err
 	}
 
-	d, err := samlClient.GetSessionDuration()
-	if err != nil {
-		return c, err
-	}
-
 	sc := credlib.NewSamlRoleCredentials(ses, cfg.RoleArn, samlDoc, func(p *credlib.SamlRoleProvider) {
 		p.Log = log
 		p.RoleSessionName = usr.Username
-		p.Duration = time.Duration(d) * time.Second
-		p.ExpiryWindow = time.Duration(d) * time.Second / 10
+		p.Duration = cfg.CredentialsDuration
 		p.Cache = cache.NewFileCredentialCache(roleCredCacheName())
 
 		if len(cfg.JumpRoleArn.Resource) > 0 {
 			p.RoleARN = cfg.JumpRoleArn.String()
 			p.Cache = cache.NewFileCredentialCache(jumpRoleCredCacheName())
+			p.Duration = cfg.SessionTokenDuration
 		}
+
+		p.ExpiryWindow = p.Duration / 10
 	})
 
 	if len(cfg.JumpRoleArn.Resource) > 0 {
