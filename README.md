@@ -75,3 +75,8 @@ libraries and make the executable for your platform (or platform of choice if th
 
 The usual github model for forking the repo and creating a pull request is the preferred way to
 contribute to this tool.  Bug fixes, enhancements, doc updates, translations are always welcomed.
+
+The documentation at the [doc site](https://mmmorris1975.github.io/aws-runas/) all lives under the docs directory in
+this repository. It uses [Markdown](https://guides.github.com/features/mastering-markdown/) for the documentation format.
+Everyone is welcome to submit pull requests with documentation updates to help correct or clarify the documentation for
+this tool.
