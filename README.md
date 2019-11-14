@@ -40,7 +40,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -a, --role-duration=ROLE-DURATION  
                                      Duration of the assume role credentials
       -o, --otp=OTP                  MFA token code
-      -M, --mfa-arn=MFA-ARN          ARN of MFA device needed to perform Assume Role operation
+      -M, --mfa-serial=MFA-SERIAL    Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation
       -X, --external-id=EXTERNAL-ID  External ID to use to Assume the Role
       -J, --jump-role=JUMP-ROLE      ARN of the 'jump role' to use with SAML integration
       -S, --saml-url=SAML-URL        URL of the SAML authentication endpoint

@@ -14,6 +14,8 @@ file appropriate for the system you are running the tool on.
   * For MacOS the name will look like `aws-runas-X.Y.Z-darwin-amd64`
   * For Linux the name will look like `aws-runas-X.Y.Z-linux-amd64`
 
+For Linux platforms, RPM and DEB packages are also provided for each release
+
 If you do not see a download for your system, create a new issue <a href="{{ site.github.issues_url }}" target="_blank">here</a>,
 and we'll work on getting the appropriate build created for you.
 
@@ -22,12 +24,14 @@ After downloading the tool, it'll make life easier if you rename the downloaded 
 simply `aws-runas`
 
 #### MacOS and Linux
-On MacOS and Linux, you'll need to take the additional step of making the downloaded file executable.  Using the command
-line, run `chmod +x /path/to/aws-runas` (replacing /path/to/aws-runas with the actual path to the file).  It would also
-be advisable to move the file to a directory that is in your PATH, so you can simply execute the command without having
-to provide the full path to the file.  Many people will simply create a bin directory inside their home directory
-`mkdir ~/bin`, and add that to their shell's PATH, so they have a locally-controlled directory to contain their individual
-tooling.
+If using the DEB or RPM package for Linux, no additional work is required other than installing the package.
+
+When using the unpackaged binary for MacOS and Linux, you'll need to take the additional step of making the downloaded file
+executable.  Using the command line, run `chmod +x /path/to/aws-runas` (replacing /path/to/aws-runas with the actual path
+to the file).  It would also be advisable to move the file to a directory that is in your PATH, so you can simply execute
+the command without having to provide the full path to the file.  Many people will simply create a bin directory inside
+their home directory `mkdir ~/bin`, and add that to their shell's PATH, so they have a locally-controlled directory to
+contain their individual tooling.
 
 #### Windows
 After downloading and renaming the file, you'll want to move the file to a new location.  Place it in a location which is
@@ -37,6 +41,38 @@ easily accessible, like on the desktop, or in your home directory.
 Both the AWS credentials and configuration files live in a directory named `.aws` in your user's home directory.  On
 Windows, this is `%USERPROFILE%\.aws` and on MacOS and Linux, this would be `$HOME/.aws`.  Create this directory if it
 does not already exist.
+
+### SAML SSO Configuration
+If enabled for your AWS account(s), you can configure aws-runas to leverage SAML single sign-on to authenticate against
+your organizations identity provider and perform the necessary handshaking with AWS to do the assume role operation based
+on the authorizations granted by your identity provider.  To configure a profile for SAML, you will only need to define
+the profile parameters in the `config` file in the .aws folder in your home directory.
+
+Every SAML identity provider has their own process for handling authentication of a user, and integrating with multi-factor
+authentication.  This means that aws-runas can't magically support every SAML provider.  If you find a case where your
+identity provider is not yet supported by the tool, open a Github issue, and we'll look at adding support for the provider.
+
+To set up a simple SAML-integrated profile, you should be able to copy and paste the snippet below while editing the
+config file:
+
+```text
+[profile saml]
+saml_auth_url = https://example.org/saml/auth
+saml_username = my-user-name
+role_arn = arn:aws:iam::1234567890:role/MyRole
+```
+
+You'll need to modify all of the values to the right of the `=` character with the values specific to your organization.
+The `saml_auth_url` parameter is the URL to the authentication endpoint for yor specific identity provider.  The `role_arn`
+parameter is the AWS ARN of the IAM role you will assume after the SAML authentication is complete.  You should be able to
+get the necessary values for both of these parameters from the person or team responsible for managing your AWS accounts.
+The `saml_username` parameter is optional, but is a handy shortcut to supply your username to the SAML provider, instead
+of getting prompted for it when you need to re-authenticate to your SAML identity provider.
+
+### IAM Configuration
+When using an AWS IAM user to assume a role, the sections below are the minimal setup required to configure a profile for
+a role in the configuration file. The first thing you'll want to do is configure your IAM user credentials in the appropriate
+file so the tools can call the necessary AWS APIs.
 
 #### Credentials File
 Using the text editor of your choice, create a file named `credentials` in the .aws folder in your home directory.  In

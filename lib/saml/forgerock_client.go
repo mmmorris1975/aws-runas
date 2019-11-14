@@ -79,6 +79,8 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 		return c.rawSamlResponse, nil
 	}
 
+	// todo rumor has it that we can pass the query parameter 'SessionDuration'
+	// in this request to customize the value placed in the SAML response
 	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=/%s/saml-idp&spEntityID=%s", c.baseUrl, c.realm, AwsUrn))
 	if err != nil {
 		return "", err

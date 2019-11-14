@@ -6,7 +6,7 @@ title: IAM Permissions
 
 ### Required AWS Permissions
 
-The user's credentials used by this program will need access to call the following AWS APIs to function:
+The user's IAM credentials used by this program will need access to call the following AWS APIs to function:
 
   * AssumeRole (to get the credentials for running under an assumed role)
   * GetSessionToken (to get the session token credentials for running a command or calling AssumeRole)
