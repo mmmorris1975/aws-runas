@@ -39,7 +39,7 @@ func TestArgHandling(t *testing.T) {
 			t.Error("unexpected duration values")
 		}
 
-		if len(*mfaCode) > 0 || len(*mfaArn) > 0 || len(*extnId) > 0 {
+		if len(*mfaCode) > 0 || len(*mfaSerial) > 0 || len(*extnId) > 0 {
 			t.Error("unexpected mfa or external id")
 		}
 
@@ -73,7 +73,7 @@ func TestArgHandling(t *testing.T) {
 			t.Error("unexpected duration values")
 		}
 
-		if *mfaCode != ev["MFA_CODE"] || *mfaArn != ev["MFA_SERIAL"] || *extnId != ev["EXTERNAL_ID"] {
+		if *mfaCode != ev["MFA_CODE"] || *mfaSerial != ev["MFA_SERIAL"] || *extnId != ev["EXTERNAL_ID"] {
 			t.Error("unexpected mfa or external id")
 		}
 

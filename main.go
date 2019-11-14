@@ -326,7 +326,7 @@ func resolveConfig() error {
 	// user-supplied config
 	usrCfg := &cfglib.AwsConfig{
 		ExternalId: *extnId,
-		MfaSerial:  *mfaArn,
+		MfaSerial:  *mfaSerial,
 		Profile:    *profile,
 	}
 
