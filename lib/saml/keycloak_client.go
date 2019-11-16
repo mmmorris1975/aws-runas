@@ -1,7 +1,6 @@
 package saml
 
 import (
-	"fmt"
 	"golang.org/x/net/html"
 	"io"
 	"net/http"
@@ -63,19 +62,14 @@ func (c *keycloakSamlClient) Authenticate() error {
 	return c.auth()
 }
 
-// AwsSaml performs a SAML request using the well known AWS service provider URN.  The result of this request is cached
+// AwsSaml performs a SAML request using the auth URL provided at the start.  The result of this request is cached
 // in memory to avoid repeated requests to the Keycloak endpoint.
 func (c *keycloakSamlClient) AwsSaml() (string, error) {
 	if len(c.rawSamlResponse) > 0 {
 		return c.rawSamlResponse, nil
 	}
 
-	u, err := url.Parse(fmt.Sprintf("%s/protocol/saml/clients/%s", c.baseUrl, c.clientId))
-	if err != nil {
-		return "", err
-	}
-
-	if err := c.samlRequest(u); err != nil {
+	if err := c.samlRequest(c.authUrl); err != nil {
 		return "", err
 	}
 
