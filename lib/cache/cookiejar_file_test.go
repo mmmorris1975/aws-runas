@@ -51,7 +51,7 @@ func TestCookieJarFile_SetCookiesErrors(t *testing.T) {
 			return
 		}
 
-		c.SetCookies(nil, []*http.Cookie{&http.Cookie{
+		c.SetCookies(nil, []*http.Cookie{{
 			Name:   "nil-url",
 			Value:  "aCookie",
 			Path:   "/",
@@ -71,7 +71,7 @@ func TestCookieJarFile_SetCookiesErrors(t *testing.T) {
 			return
 		}
 
-		c.SetCookies(new(url.URL), []*http.Cookie{&http.Cookie{
+		c.SetCookies(new(url.URL), []*http.Cookie{{
 			Name:   "empty-url",
 			Value:  "aCookie",
 			Path:   "/",
@@ -127,7 +127,7 @@ func TestCookieJarFile_SetCookiesErrors(t *testing.T) {
 			return
 		}
 
-		c.SetCookies(u, []*http.Cookie{&http.Cookie{
+		c.SetCookies(u, []*http.Cookie{{
 			Name:   "bad-scheme",
 			Value:  "aCookie",
 			Path:   "/",
@@ -146,13 +146,13 @@ func TestCookieJarFile_SetCookies(t *testing.T) {
 	u, _ := url.Parse("https://example.org")
 
 	cookies := []*http.Cookie{
-		&http.Cookie{
+		{
 			Name:   "cookie1",
 			Value:  "value1",
 			Path:   "/",
 			Domain: u.Host,
 		},
-		&http.Cookie{
+		{
 			Name:   "cookie2",
 			Value:  "value2",
 			Path:   "/",
@@ -179,7 +179,7 @@ func TestCookieJarFile_SetCookies(t *testing.T) {
 
 		// set new cookie
 		c.SetCookies(u, []*http.Cookie{
-			&http.Cookie{
+			{
 				Name:   "cookie3",
 				Value:  "value3",
 				Path:   "/",
@@ -198,7 +198,7 @@ func TestCookieJarFile_SetCookies(t *testing.T) {
 
 		u2, _ := url.Parse("http://example.com")
 		c.SetCookies(u2, []*http.Cookie{
-			&http.Cookie{
+			{
 				Name:   "other-cookie",
 				Value:  "xx",
 				Path:   "/",
@@ -226,7 +226,7 @@ func TestCookieJarFile_LoadFile(t *testing.T) {
 	defer os.Remove(f)
 
 	c.SetCookies(u1, []*http.Cookie{
-		&http.Cookie{
+		{
 			Name:   u1.String() + "-cookie1",
 			Value:  "value1",
 			Path:   "/",
@@ -235,13 +235,13 @@ func TestCookieJarFile_LoadFile(t *testing.T) {
 	})
 
 	c.SetCookies(u2, []*http.Cookie{
-		&http.Cookie{
+		{
 			Name:   u2.String() + "-cookie1",
 			Value:  "value1",
 			Path:   "/",
 			Domain: u2.Host,
 		},
-		&http.Cookie{
+		{
 			Name:   u2.String() + "-cookie2",
 			Value:  "value2",
 			Path:   "/",
@@ -250,19 +250,19 @@ func TestCookieJarFile_LoadFile(t *testing.T) {
 	})
 
 	c.SetCookies(u3, []*http.Cookie{
-		&http.Cookie{
+		{
 			Name:   u3.String() + "-cookie1",
 			Value:  "value1",
 			Path:   "/",
 			Domain: u3.Host,
 		},
-		&http.Cookie{
+		{
 			Name:   u3.String() + "-cookie2",
 			Value:  "value2",
 			Path:   "/",
 			Domain: u3.Host,
 		},
-		&http.Cookie{
+		{
 			Name:   u3.String() + "-cookie3",
 			Value:  "value3",
 			Path:   "/",

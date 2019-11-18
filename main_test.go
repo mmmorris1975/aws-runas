@@ -249,7 +249,7 @@ func TestCheckRefresh(t *testing.T) {
 
 	t.Run("iam user", func(t *testing.T) {
 		refresh = aws.Bool(true)
-		usr = &identity.Identity{IdentityType: "user", Provider: identity.IdentityProviderAws}
+		usr = &identity.Identity{IdentityType: "user", Provider: identity.ProviderAws}
 		checkRefresh()
 	})
 
@@ -568,7 +568,7 @@ func (m *mockIam) ListMFADevices(in *iam.ListMFADevicesInput) (*iam.ListMFADevic
 
 	return &iam.ListMFADevicesOutput{
 		IsTruncated: aws.Bool(false),
-		MFADevices:  []*iam.MFADevice{&iam.MFADevice{SerialNumber: aws.String("123456")}},
+		MFADevices:  []*iam.MFADevice{{SerialNumber: aws.String("123456")}},
 	}, nil
 }
 
