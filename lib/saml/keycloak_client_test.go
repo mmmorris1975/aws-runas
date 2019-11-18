@@ -26,7 +26,7 @@ func TestNewKeycloakSamlClient(t *testing.T) {
 		}
 	})
 
-	t.Run("not a url", func(t *testing.T) {
+	t.Run("bad url", func(t *testing.T) {
 		_, err := NewKeycloakSamlClient("not-a-url")
 		if err == nil {
 			t.Error("did not receive expected error")

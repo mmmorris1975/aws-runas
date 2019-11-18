@@ -296,7 +296,7 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 		} else if user == "pushuser" && pass == "pushpassword" && q.Get("authIndexValue") == frPushSvcName {
 			cb := frCallback{
 				Type:  "ConfirmationCallback",
-				Input: []map[string]interface{}{map[string]interface{}{"name": "WaitTime"}},
+				Input: []map[string]interface{}{{"name": "WaitTime"}},
 			}
 
 			b, err := json.Marshal(&frMfaForm{Callbacks: []frCallback{cb}})

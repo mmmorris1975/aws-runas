@@ -20,21 +20,18 @@ func GetClient(authUrl string, options ...func(s *BaseAwsClient)) (AwsClient, er
 	switch divineClient(r) {
 	case "forgerock":
 		c, err = NewForgerockSamlClient(authUrl)
-		if err != nil {
-			return nil, err
-		}
 	case "keycloak":
 		c, err = NewKeycloakSamlClient(authUrl)
-		if err != nil {
-			return nil, err
-		}
+	case "onelogin":
+		c, err = NewOneLoginSamlClient(authUrl)
 	case "mock":
 		c, err = NewMockSamlClient(authUrl)
-		if err != nil {
-			return nil, err
-		}
 	default:
-		return nil, fmt.Errorf("unable to determine SAML client from metadata")
+		return nil, fmt.Errorf("unable to determine SAML client from url")
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	for _, f := range options {
@@ -45,6 +42,10 @@ func GetClient(authUrl string, options ...func(s *BaseAwsClient)) (AwsClient, er
 }
 
 func divineClient(r *http.Response) string {
+	if strings.Contains(r.Request.URL.Host, ".onelogin.com") {
+		return "onelogin"
+	}
+
 	h := r.Header.Get("Access-Control-Allow-Headers")
 
 	if strings.Contains(h, "X-OpenAM-") || strings.Contains(h, "MFA-FR-Token") {

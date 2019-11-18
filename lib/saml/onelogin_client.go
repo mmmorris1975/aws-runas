@@ -2,20 +2,27 @@ package saml
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type oneloginSamlClient struct {
 	*BaseAwsClient
 	appId           string
 	subdomain       string
+	mdBaseUrl       string
+	apiBaseUrl      string
 	apiClientId     string
 	apiClientSecret string
+	apiToken        *apiToken
 }
 
 // NewOneLoginSamlClient creates a OneLogin aware SAML client using authUrl as the authentication endpoint
@@ -31,16 +38,58 @@ func NewOneLoginSamlClient(authUrl string) (*oneloginSamlClient, error) {
 	c := oneloginSamlClient{BaseAwsClient: bsc}
 	c.subdomain = strings.Split(bsc.authUrl.Host, ".")[0]
 
-	if err := c.parseAppId(); err != nil {
+	if err := c.apiClient(); err != nil {
+		return nil, err
+	}
+
+	// helps make this testable, real OL urls do the real thing, otherwise use the host provided in the authUrl
+	if strings.Contains(c.authUrl.Host, `.onelogin.com`) {
+		c.mdBaseUrl = fmt.Sprintf("%s://app.onelogin.com/saml/metadata", c.authUrl.Scheme)
+		c.apiBaseUrl = fmt.Sprintf("%s://api.us.onelogin.com", c.authUrl.Scheme) // fixme we may need to deal with regional endpoints (us vs eu vs others)
+	} else {
+		c.apiBaseUrl = fmt.Sprintf("%s://%s", c.authUrl.Scheme, c.authUrl.Host)
+		c.mdBaseUrl = fmt.Sprintf("%s/saml/metadata", c.apiBaseUrl)
+	}
+
+	if err = c.parseAppId(); err != nil {
+		return nil, err
+	}
+
+	// we need this in a few places, so fetch it early
+	c.apiToken, err = c.apiAccessToken()
+	if err != nil {
 		return nil, err
 	}
 
 	return &c, nil
 }
 
+func (c *oneloginSamlClient) apiClient() error {
+	t := c.authUrl.Query().Get("token")
+	if len(t) < 1 {
+		return fmt.Errorf("missing token query parameter")
+	}
+	// erase any notion of a query string from authUrl, since we only use it internally
+	c.authUrl.RawQuery = ""
+
+	b, err := base64.StdEncoding.DecodeString(t)
+	if err != nil {
+		return err
+	}
+
+	s := strings.Split(string(b), `:`)
+	if len(s) < 2 {
+		return fmt.Errorf("invalid token parameter format")
+	}
+	c.apiClientId = s[0]
+	c.apiClientSecret = s[1]
+
+	return nil
+}
+
 func (c *oneloginSamlClient) parseAppId() error {
 	s := strings.Split(c.authUrl.Path, "/")
-	u := fmt.Sprintf("https://app.onelogin.com/saml/metadata/%s", s[len(s)-1])
+	u := fmt.Sprintf("%s/%s", c.mdBaseUrl, s[len(s)-1])
 
 	res, err := http.Get(u)
 	if err != nil {
@@ -109,54 +158,255 @@ func (c *oneloginSamlClient) auth() error {
 		return err
 	}
 
-	res, err := c.httpClient.Do(req)
+	ar, err := c.doAuthRequest(req)
 	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return new(errAuthFailure).WithCode(res.StatusCode)
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusUnauthorized {
-			fmt.Printf("%s\n", data)
-			s := new(authStatus)
-			if err = json.Unmarshal(data, s); err != nil {
-				return new(errAuthFailure).WithCode(res.StatusCode)
-			}
-
-			return fmt.Errorf(s.Message)
-		}
-
-		return new(errAuthFailure).WithCode(res.StatusCode)
-	}
-
-	ar := new(authReply)
-	if err := json.Unmarshal(data, ar); err != nil {
 		return err
 	}
 
 	if ar.Status.Code == http.StatusOK {
 		if strings.EqualFold("success", ar.Status.Message) {
-			c.rawSamlResponse = ar.Data
+			c.rawSamlResponse = ar.Data.(string)
 			return nil
 		} else {
-			// todo this should be some kind of MFA handling requirement
+			// This is likely some prompt for MFA handling
+			switch t := ar.Data.(type) {
+			case []interface{}:
+				return c.handleMfa(t)
+			default:
+				return fmt.Errorf("unsupported multi-factor authentication type")
+			}
 		}
 	}
 
 	return nil
 }
 
-func (c *oneloginSamlClient) authRequest() (*http.Request, error) {
-	t, err := c.apiAccessToken()
+func (c *oneloginSamlClient) doAuthRequest(r *http.Request) (*authReply, error) {
+	res, err := c.httpClient.Do(r)
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+	}
+
+	if res.StatusCode != http.StatusOK {
+		if res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusUnauthorized {
+			s := new(authReply)
+			if err = json.Unmarshal(data, s); err != nil {
+				return nil, new(errAuthFailure).WithCode(res.StatusCode)
+			}
+
+			return nil, fmt.Errorf(s.Status.Message)
+		}
+
+		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+	}
+
+	ar := new(authReply)
+	if err = json.Unmarshal(data, ar); err != nil {
+		return nil, err
+	}
+
+	return ar, nil
+}
+
+func (c *oneloginSamlClient) handleMfa(data []interface{}) error {
+	// assume that data is always a map[string]interface{} from the json unmarshal
+	for _, i := range data {
+		m := parseEntry(i.(map[string]interface{}))
+
+		defaultMfa, err := c.defaultMfaDevice(m.User.Id)
+		if err != nil {
+			return err
+		}
+
+		for _, d := range m.Devices {
+			if d.Id == defaultMfa {
+				mfaReq := &verifyMfaRequest{
+					AppId:       c.appId,
+					DeviceId:    strconv.Itoa(d.Id),
+					StateToken:  m.StateToken,
+					DoNotNotify: true,
+				}
+
+				u := fmt.Sprintf("%s/api/1/saml_assertion/verify_factor", c.apiBaseUrl)
+
+				if d.Type == "OneLogin Protect" {
+					mfaReq.DoNotNotify = false
+					return c.handlePushMfa(u, mfaReq)
+				} else {
+					// assume all others require prompting for the code
+					return c.handleCodeMfa(u, mfaReq)
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *oneloginSamlClient) handlePushMfa(u string, r *verifyMfaRequest) error {
+	req, err := c.apiPost(u, r)
+	if err != nil {
+		return err
+	}
+
+	ar, err := c.doAuthRequest(req)
+	if err != nil {
+		return err
+	}
+
+	if ar.Status.Code == http.StatusOK {
+		if ar.Status.Type == "pending" {
+			fmt.Println("Waiting for Push MFA confirmation...")
+			time.Sleep(1 * time.Second)
+			r.DoNotNotify = true
+			return c.handlePushMfa(u, r)
+		} else if strings.EqualFold(ar.Status.Message, "success") {
+			c.rawSamlResponse = ar.Data.(string)
+			return nil
+		}
+	}
+
+	return fmt.Errorf(ar.Status.Message)
+}
+
+func (c *oneloginSamlClient) handleCodeMfa(u string, r *verifyMfaRequest) error {
+	if len(c.MfaToken) < 1 {
+		if c.MfaTokenProvider != nil {
+			t, err := c.MfaTokenProvider()
+			if err != nil {
+				return err
+			}
+			c.MfaToken = t
+		} else {
+			return new(errMfaNotConfigured)
+		}
+	}
+	r.OtpToken = c.MfaToken
+
+	req, err := c.apiPost(u, r)
+	if err != nil {
+		return err
+	}
+
+	ar, err := c.doAuthRequest(req)
+	if err != nil {
+		if strings.EqualFold(err.Error(), "Failed authentication with this factor") {
+			fmt.Println("Invalid MFA Code ... try again")
+			c.MfaToken = ""
+			return c.handleCodeMfa(u, r)
+		} else {
+			return err
+		}
+	}
+
+	if ar.Status.Code == http.StatusOK {
+		if strings.EqualFold(ar.Status.Message, "success") {
+			c.rawSamlResponse = ar.Data.(string)
+			return nil
+		}
+	}
+
+	c.MfaToken = ""
+	return c.handleCodeMfa(u, r)
+}
+
+func (c *oneloginSamlClient) defaultMfaDevice(userId int) (int, error) {
+	u := fmt.Sprintf("%s/api/1/users/%d/otp_devices", c.apiBaseUrl, userId)
+	req, err := http.NewRequest(http.MethodGet, u, http.NoBody)
+	if err != nil {
+		return -1, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return -1, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return -1, fmt.Errorf("http code %d", res.StatusCode)
+	}
+
+	ar := new(authReply)
+	b, err := ioutil.ReadAll(res.Body)
+	if err = json.Unmarshal(b, ar); err != nil {
+		return -1, err
+	}
+
+	for _, i := range ar.Data.(map[string]interface{})["otp_devices"].([]interface{}) {
+		for k, v := range i.(map[string]interface{}) {
+			if k == "default" && v.(bool) {
+				return mfaId(i.(map[string]interface{})), nil
+			}
+		}
+	}
+
+	return -1, fmt.Errorf("default MFA device not found")
+}
+
+func mfaId(data map[string]interface{}) int {
+	for k, v := range data {
+		if k == "id" {
+			return int(v.(float64))
+		}
+	}
+	return -1
+}
+
+func parseEntry(data map[string]interface{}) *mfaEntry {
+	m := new(mfaEntry)
+
+	for k, v := range data {
+		if k == "state_token" {
+			m.StateToken = v.(string)
+		} else if k == "callback_url" {
+			m.CallbackUrl = v.(string)
+		} else if k == "devices" {
+			// array of maps
+			devs := make([]*mfaDevice, 0)
+
+			for _, di := range v.([]interface{}) {
+				d := new(mfaDevice)
+				for dk, dv := range di.(map[string]interface{}) {
+					if dk == "device_id" {
+						d.Id = int(dv.(float64))
+					} else if dk == "device_type" {
+						d.Type = dv.(string)
+					}
+				}
+				devs = append(devs, d)
+			}
+			m.Devices = devs
+		} else if k == "user" {
+			u := new(user)
+			for uk, uv := range v.(map[string]interface{}) {
+				if uk == "id" {
+					u.Id = int(uv.(float64))
+				} else if uk == "firstname" {
+					u.Firstname = uv.(string)
+				} else if uk == "lastname" {
+					u.Lastname = uv.(string)
+				} else if uk == "username" {
+					u.Username = uv.(string)
+				} else if uk == "email" {
+					u.Email = uv.(string)
+				}
+			}
+			m.User = u
+		}
+	}
+
+	return m
+}
+
+func (c *oneloginSamlClient) authRequest() (*http.Request, error) {
 	// Dont' set IPAddress until we find a requirement to do so.  I'm guessing this will involve finding the public IP
 	// of our client, which likely means calling out to some Internet endpoint capable of reflecting that back to us
 	// whatsmyip.org, icanhazip.com, etc...
@@ -167,24 +417,33 @@ func (c *oneloginSamlClient) authRequest() (*http.Request, error) {
 		Subdomain: c.subdomain,
 	}
 
-	j, err := json.Marshal(&b)
-	if err != nil {
-		return nil, err
+	return c.apiPost(fmt.Sprintf("%s/api/1/saml_assertion", c.apiBaseUrl), &b)
+}
+
+func (c *oneloginSamlClient) apiPost(u string, body interface{}) (*http.Request, error) {
+	var r io.Reader
+	r = http.NoBody
+
+	if body != nil {
+		j, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		r = bytes.NewReader(j)
 	}
 
-	u := "https://api.us.onelogin.com/api/1/saml_assertion" // fixme we may need to deal with regional endpoints (us vs eu vs others)
-	req, err := http.NewRequest(http.MethodPost, u, bytes.NewReader(j))
+	req, err := http.NewRequest(http.MethodPost, u, r)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", t.AccessToken))
+	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
 
 	return req, nil
 }
 
-func (c *oneloginSamlClient) apiAccessToken() (*authToken, error) {
-	u := "https://api.us.onelogin.com/auth/oauth2/v2/token" // fixme we may need to deal with regional endpoints (us vs eu vs others)
+func (c *oneloginSamlClient) apiAccessToken() (*apiToken, error) {
+	u := fmt.Sprintf("%s/auth/oauth2/v2/token", c.apiBaseUrl)
 	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(`{"grant_type": "client_credentials"}`))
 	if err != nil {
 		return nil, err
@@ -207,7 +466,7 @@ func (c *oneloginSamlClient) apiAccessToken() (*authToken, error) {
 		return nil, err
 	}
 
-	t := new(authToken)
+	t := new(apiToken)
 	if err = json.Unmarshal(b, t); err != nil {
 		return nil, err
 	}
@@ -215,7 +474,7 @@ func (c *oneloginSamlClient) apiAccessToken() (*authToken, error) {
 	return t, nil
 }
 
-type authToken struct {
+type apiToken struct {
 	AccessToken  string `json:"access_token"`
 	AccountId    int    `json:"account_id"`
 	CreatedAt    string `json:"created_at"`
@@ -229,7 +488,7 @@ type authBody struct {
 	Password  string `json:"password"`
 	AppId     string `json:"app_id"`
 	Subdomain string `json:"subdomain"`
-	//IpAddress string `json:"ip_address,omitempty"`
+	IpAddress string `json:"ip_address,omitempty"`
 }
 
 type authStatus struct {
@@ -241,5 +500,33 @@ type authStatus struct {
 
 type authReply struct {
 	Status *authStatus `json:"status"`
-	Data   string      `json:"data"`
+	Data   interface{} `json:"data"`
+}
+
+type mfaEntry struct {
+	StateToken  string       `json:"state_token"`
+	Devices     []*mfaDevice `json:"devices"`
+	CallbackUrl string       `json:"callback_url"`
+	User        *user        `json:"user"`
+}
+
+type mfaDevice struct {
+	Id   int    `json:"device_id"`
+	Type string `json:"device_type"`
+}
+
+type user struct {
+	Id        int    `json:"id"`
+	Email     string `json:"email"`
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
+	Username  string `json:"username"`
+}
+
+type verifyMfaRequest struct {
+	AppId       string `json:"app_id"`
+	DeviceId    string `json:"device_id"`
+	StateToken  string `json:"state_token"`
+	OtpToken    string `json:"otp_token"`
+	DoNotNotify bool   `json:"do_not_notify"`
 }
