@@ -81,7 +81,7 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *AssumeRoleProvider) retrieve() (*cache.CacheableCredentials, error) {
-	if p.Duration == 0 {
+	if p.Duration < 1 {
 		p.Duration = AssumeRoleDefaultDuration
 	}
 

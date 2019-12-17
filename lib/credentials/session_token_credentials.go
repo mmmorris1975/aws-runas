@@ -76,7 +76,7 @@ func (p *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *SessionTokenProvider) retrieve() (*cache.CacheableCredentials, error) {
-	if p.Duration == 0 {
+	if p.Duration < 1 {
 		p.Duration = SessionTokenDefaultDuration
 	}
 

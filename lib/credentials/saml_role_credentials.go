@@ -80,6 +80,10 @@ func (p *SamlRoleProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *SamlRoleProvider) retrieve() (*cache.CacheableCredentials, error) {
+	if p.Duration < 1 {
+		p.Duration = AssumeRoleDefaultDuration
+	}
+
 	i := new(sts.AssumeRoleWithSAMLInput).SetDurationSeconds(p.validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
 		SetPrincipalArn(p.principalArn).SetSAMLAssertion(p.SAMLAssertion)
 
