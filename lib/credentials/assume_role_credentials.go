@@ -81,6 +81,10 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *AssumeRoleProvider) retrieve() (*cache.CacheableCredentials, error) {
+	if p.Duration == 0 {
+		p.Duration = AssumeRoleDefaultDuration
+	}
+
 	i := new(sts.AssumeRoleInput).SetDurationSeconds(p.validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
 		SetRoleSessionName(p.RoleSessionName)
 

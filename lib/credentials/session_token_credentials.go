@@ -76,6 +76,10 @@ func (p *SessionTokenProvider) Retrieve() (credentials.Value, error) {
 }
 
 func (p *SessionTokenProvider) retrieve() (*cache.CacheableCredentials, error) {
+	if p.Duration == 0 {
+		p.Duration = SessionTokenDefaultDuration
+	}
+
 	i := new(sts.GetSessionTokenInput).SetDurationSeconds(p.validateSessionDuration(p.Duration))
 
 	t, err := p.handleMfa()
