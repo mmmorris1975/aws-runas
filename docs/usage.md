@@ -17,6 +17,7 @@ Flags:
   -v, --verbose                  Print verbose/debug messages
   -E, --env                      Pass credentials to program as environment variables
   -e, --expiration               Show credential expiration time
+  -O, --output=env               Credential output format, valid values: env (default) or json
   -u, --update                   Check for updates to aws-runas
   -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
   -l, --list-roles               List role ARNs you are able to assume
@@ -46,6 +47,25 @@ Commands:
   forward [<flags>] [<profile>] [<target>]
     Start an SSM port-forwarding session to the given target
 ```
+
+### Environment Variables
+In addition to the ["standard" AWS environment variables](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Environment_Variables), the following environment variables can be used in lieu of
+command line arguments, or config file properties, to affect the behavior of aws-runas:
+
+  * RUNAS_VERBOSE (boolean) - Set to any "truth-y" value to enable verbose output, like the `-v` flag
+  * RUNAS_ENV_CREDENTIALS (boolean) - Set to any "truth-y" value to use environment variables, instead of the container credential endpoint, like the `-E` flag
+  * RUNAS_OUTPUT_FORMAT (env or json) - If set to "json" print the credentials as a json object compatible with the aws credential_process configuration setting, otherwise output environment variable statements, like the `-O` flag
+  * RUNAS_SESSION_CREDENTIALS (boolean) - Set to any "truth-y" value to use session token credentials, instead of role credentials, like the `-s` flag
+  * SESSION_TOKEN_DURATION ([duration](https://golang.org/pkg/time/#ParseDuration)) - A golang time.Duration string to set the lifetime of the session token credentials (12 hour default), like the `-d` flag
+  * CREDENTIALS_DURATION ([duration](https://golang.org/pkg/time/#ParseDuration)) - A golang time.Duration string to set the lifetime of the role credentials (1 hour default), like the `-a` flag
+  * MFA_CODE (string) - The MFA token code to use for credentials requiring MFA, like the `-o` flag
+  * MFA_SERIAL (string) - The MFA device serial number of the IAM user, like the `-m` flag
+  * EXTERNAL_ID (string) - The External ID value to pass in the AssumeRole operation, like the `-X` flag
+  * JUMP_ROLE_ARN (string) - The ARN of the role to initially assume using SAML credentials, before assuming the actual role for the operation, like the `-J` flag
+  * SAML_AUTH_URL (URL) - The URL of the SAML authentication endpoint to authenticate against, like the `-S` flag
+  * SAML_USERNAME (string) - The username of the SAML user to use for authentication, like the `-U` flag
+  * SAML_PASSWORD (string) - The password of the SAML user to use for authentication, like the `-P` flag
+
 
 ### Diagnostics
 Use the `-D` option to perform some rudimentary sanity checking of the configuration for the given profile, and print
