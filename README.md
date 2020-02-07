@@ -30,6 +30,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -v, --verbose                  Print verbose/debug messages
       -E, --env                      Pass credentials to program as environment variables
       -e, --expiration               Show credential expiration time
+      -O, --output=env               Credential output format, valid values: env (default) or json
       -u, --update                   Check for updates to aws-runas
       -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
       -l, --list-roles               List role ARNs you are able to assume
@@ -63,7 +64,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.25.11  
+Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.28.12  
 *NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
 
 ### Build Steps
