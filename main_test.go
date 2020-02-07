@@ -385,6 +385,13 @@ func TestWrapCmd(t *testing.T) {
 	})
 }
 
+func Example_printJsonCredentials() {
+	c := credentials.NewStaticCredentials("AKIAEXAMPLE", "Secret", "Session.Token")
+	printJsonCredentials(c)
+	// Output:
+	// {"AccessKeyId":"AKIAEXAMPLE","SecretAccessKey":"Secret","SessionToken":"Session.Token","Expiration":"0001-01-01T00:00:00Z","Version":1}
+}
+
 func Example_printCredentials() {
 	env := make(map[string]string)
 	env["AWS_ACCESS_KEY_ID"] = "AKIAMOCK"

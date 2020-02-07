@@ -27,6 +27,7 @@ var (
 	samlUrl      **url.URL
 	samlUser     *string
 	samlPass     *string
+	outputFmt    *string
 
 	exe   *kingpin.CmdClause
 	shell *kingpin.CmdClause
@@ -68,6 +69,7 @@ func init() {
 		samlPassDesc        = "Password for SAML authentication"
 		profileArgDesc      = "name of profile, or role ARN"
 		fwdPortDesc         = "The local port for the forwarded connection"
+		outputArgDesc       = "Credential output format, valid values: env (default) or json"
 	)
 
 	// special flags
@@ -75,6 +77,7 @@ func init() {
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Envar("RUNAS_VERBOSE").Bool()
 	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Envar("RUNAS_ENV_CREDENTIALS").Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
+	outputFmt = kingpin.Flag("output", outputArgDesc).Short('O').Envar("RUNAS_OUTPUT_FORMAT").Default("env").Enum("env", "json")
 
 	// flags which don't actually do any credential stuff
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()

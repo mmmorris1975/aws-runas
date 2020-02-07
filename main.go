@@ -8,6 +8,7 @@ import (
 	"aws-runas/lib/metadata"
 	"aws-runas/lib/saml"
 	"aws-runas/lib/ssm"
+	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
@@ -115,7 +116,11 @@ func main() {
 			}
 
 			if *showExpire {
-				printCredExpire(c)
+				if *outputFmt == "json" {
+
+				} else {
+					printCredExpire(c)
+				}
 			}
 		} else {
 			// possibly on EC2 ... do AssumeRole directly
@@ -211,6 +216,46 @@ func updateEnv(creds credentials.Value) {
 		os.Unsetenv("AWS_SESSION_TOKEN")
 		os.Unsetenv("AWS_SECURITY_TOKEN")
 	}
+}
+
+// See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html for definition of
+// the format of the json data output from this function
+func printJsonCredentials(c *credentials.Credentials) {
+	type jsonCreds struct {
+		AccessKeyId     string
+		SecretAccessKey string
+		SessionToken    string
+		Expiration      time.Time
+		Version         int
+	}
+
+	v, err := c.Get()
+	if err != nil {
+		log.Fatal("error getting credentials: %v", err)
+	}
+
+	jc := jsonCreds{
+		AccessKeyId:     v.AccessKeyID,
+		SecretAccessKey: v.SecretAccessKey,
+		SessionToken:    v.SessionToken,
+		Version:         1,
+	}
+
+	// per the AWS docs, if this field isn't set, the credentials are treated as non-expiring.  We'll treat this as a
+	//non-fatal error.  Don't set the field in the jsonCreds, but log the fact that we couldn't set the expiration.
+	exp, err := c.ExpiresAt()
+	if err != nil {
+		log.Warnf("error getting credential expiration: %v", err)
+	} else {
+		jc.Expiration = exp
+	}
+
+	j, err := json.Marshal(jc)
+	if err != nil {
+		log.Fatal("error marshaling credentials: %v", err)
+	}
+
+	fmt.Printf("%s", j)
 }
 
 func printCredentials() {
