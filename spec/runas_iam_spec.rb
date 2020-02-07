@@ -81,6 +81,11 @@ describe 'tests using a profile without a role' do
       its(:stderr) { should match /\s+unknown unit d in duration 1d/ }
     end
 
+    describe command ('aws-runas -O json') do
+      its(:exit_status) { should eq 0 }
+      its (:stdout) { should match /{"AccessKeyId":"ASIA.*","SecretAccessKey":".*"/}
+    end
+
     describe 'and setting duration with too short env var' do
       before(:each) do
         ENV['SESSION_TOKEN_DURATION'] = '10m'

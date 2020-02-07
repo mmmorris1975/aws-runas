@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
@@ -49,6 +50,7 @@ var (
 	profile      *string
 	mfaArn       *string
 	mfaCode      *string
+	outputFmt    *string
 	duration     *time.Duration
 	roleDuration *time.Duration
 	ses          *session.Session
@@ -95,6 +97,7 @@ func init() {
 		envArgDesc          = "Pass credentials to program as environment variables"
 		mfaCodeDesc         = "MFA token code"
 		fwdPortDesc         = "The local port for the forwarded connection"
+		outputArgDesc       = "Credential output format, valid values: env (default) or json"
 	)
 
 	// top-level flags
@@ -113,6 +116,7 @@ func init() {
 	diagFlag = kingpin.Flag("diagnose", diagArgDesc).Short('D').Bool()
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
 	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Bool()
+	outputFmt = kingpin.Flag("output", outputArgDesc).Short('O').Default("env").Enum("env", "json")
 
 	// Can not use Command() if you also have top-level Arg()s defined, so wrap "typical" behavior as the default command
 	// so users can continue to use the tool as before
@@ -248,7 +252,11 @@ func main() {
 				}
 				os.Exit(0)
 			} else {
-				printCredentials()
+				if *outputFmt == "json" {
+					printJsonCredentials(c)
+				} else {
+					printCredentials()
+				}
 			}
 		}
 	}
@@ -324,6 +332,45 @@ func wrapCmd(cmd *[]string) *[]string {
 	}
 
 	return &newCmd
+}
+
+// See https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html for definition of
+// the format of the json data output from this function
+func printJsonCredentials(c *credentials.Credentials) {
+	type jsonCreds struct {
+		AccessKeyId     string
+		SecretAccessKey string
+		SessionToken    string
+		Expiration      time.Time
+		Version         int
+	}
+
+	v, err := c.Get()
+	if err != nil {
+		log.Fatal("error getting credentials: %v", err)
+	}
+
+	jc := jsonCreds{
+		AccessKeyId:     v.AccessKeyID,
+		SecretAccessKey: v.SecretAccessKey,
+		SessionToken:    v.SessionToken,
+		Version:         1,
+	}
+
+	// per the AWS docs, if this field isn't set, the credentials are treated as non-expiring.  We'll treat this as a
+	// non-fatal error.  Don't set the field in the jsonCreds, but log the fact that we couldn't set the expiration.
+	exp, err := c.ExpiresAt()
+	if err != nil {
+		log.Warnf("error getting credential expiration: %v", err)
+	} else {
+		jc.Expiration = exp
+	}
+
+	j, err := json.Marshal(jc)
+	if err != nil {
+		log.Fatal("error marshaling credentials: %v", err)
+	}
+	fmt.Printf("%s", j)
 }
 
 func printCredentials() {
