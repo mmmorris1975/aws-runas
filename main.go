@@ -180,7 +180,11 @@ func main() {
 				}
 				os.Exit(0)
 			} else {
-				printCredentials()
+				if *outputFmt == "json" {
+					printJsonCredentials(c)
+				} else {
+					printCredentials()
+				}
 			}
 		}
 	}
