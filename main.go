@@ -89,12 +89,10 @@ func main() {
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {
 			opts := &metadata.EC2MetadataInput{
-				Config:          cfg,
-				InitialProfile:  cfg.Profile,
-				Logger:          log,
-				Session:         ses,
-				SessionCacheDir: filepath.Dir(sessionCredCacheName()),
-				User:            usr,
+				Config:   cfg,
+				Logger:   log,
+				Session:  ses,
+				CacheDir: filepath.Dir(sessionCredCacheName()),
 			}
 
 			log.Fatal(metadata.NewEC2MetadataService(opts))
@@ -117,7 +115,7 @@ func main() {
 
 			if *showExpire {
 				if *outputFmt == "json" {
-
+					// todo
 				} else {
 					printCredExpire(c)
 				}
@@ -558,7 +556,7 @@ func printMfa(c iamiface.IAMAPI) {
 	// By passing in the iamiface.IAMAPI interface type we can make this function testable with a mock IAM client
 	//
 	// MFA retrieval only supported for AWS IAM users (not roles).  If a non-nil samlClient is detected
-	// we assume that SAML is being used instead of IAM, so we'll bail
+	// we assume that SAML is being used instead of IAM, and we'll bail
 	if usr.IdentityType == "user" && samlClient == nil {
 		res, err := c.ListMFADevices(new(iam.ListMFADevicesInput))
 		if err != nil {
