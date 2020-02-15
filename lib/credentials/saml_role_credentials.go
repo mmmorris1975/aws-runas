@@ -24,7 +24,7 @@ type SamlRoleProvider struct {
 	SAMLAssertion string
 }
 
-// NewSAMLRoleCredentials configures a default SamlRoleProvider, and wraps it in an AWS credentials.Credentials object
+// NewSamlRoleCredentials configures a default SamlRoleProvider, and wraps it in an AWS credentials.Credentials object
 // to allow Assume Role with SAML credential fetching.  The default provider uses the specified client.ConfigProvider to
 // create a new sts.STS client, and the provided roleArn as the role to assume; The credential duration is set to
 // AssumeRoleDefaultDuration, and the ExpiryWindow is set to 10% of the duration value.  A list of options can be provided

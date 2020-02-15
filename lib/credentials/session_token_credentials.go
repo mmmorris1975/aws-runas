@@ -25,7 +25,7 @@ type SessionTokenProvider struct {
 	*stsCredentialProvider
 }
 
-// NewSessionCredentials configures a default SessionTokenProvider, and wraps it in an AWS credentials.Credentials object
+// NewSessionTokenCredentials configures a default SessionTokenProvider, and wraps it in an AWS credentials.Credentials object
 // to allow Session Token credential fetching.  The default SessionTokenProvider uses the specified client.ConfigProvider to
 // create a new sts.STS client, with the credential duration is set to SessionTokenDefaultDuration, and the ExpiryWindow
 // is set to 10% of the duration value.  A list of options can be provided to add configuration to the SessionTokenProvider,

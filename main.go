@@ -691,8 +691,6 @@ func assumeRoleCredentials(c client.ConfigProvider) *credentials.Credentials {
 }
 
 func sessionCredCacheName() string {
-	f := os.DevNull
-
 	p := cfg.SourceProfile
 	if len(p) < 1 {
 		if len(*profile) > 0 {
@@ -702,14 +700,12 @@ func sessionCredCacheName() string {
 		}
 	}
 
-	f = cacheFile(fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p))
+	f := cacheFile(fmt.Sprintf("%s_%s", sessionTokenCachePrefix, p))
 	log.Debugf("SessionToken CACHE PATH: %s", f)
 	return f
 }
 
 func roleCredCacheName() string {
-	f := os.DevNull
-
 	p := *profile
 	if *profile == cfg.RoleArn {
 		a, _ := arn.Parse(*profile) // if we get this far, it's assumed the ARN will parse
@@ -717,18 +713,16 @@ func roleCredCacheName() string {
 		p = fmt.Sprintf("%s-%s", a.AccountID, r[len(r)-1])
 	}
 
-	f = cacheFile(fmt.Sprintf("%s_%s", assumeRoleCachePrefix, p))
+	f := cacheFile(fmt.Sprintf("%s_%s", assumeRoleCachePrefix, p))
 	log.Debugf("AssumeRole CACHE PATH: %s", f)
 	return f
 }
 
 func jumpRoleCredCacheName() string {
-	f := os.DevNull
-
 	r := strings.Split(cfg.JumpRoleArn.Resource, "/")
 	p := fmt.Sprintf("%s-%s", cfg.JumpRoleArn.AccountID, r[len(r)-1])
 
-	f = cacheFile(fmt.Sprintf("%s_%s", jumpRoleCachePrefix, p))
+	f := cacheFile(fmt.Sprintf("%s_%s", jumpRoleCachePrefix, p))
 	log.Debugf("SAML JumpRole CACHE PATH: %s", f)
 	return f
 }

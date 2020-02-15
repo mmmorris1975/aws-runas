@@ -94,10 +94,9 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 				if len(c.SourceProfile) < 1 {
 					log.Errorf("missing source_profile configuration for profile '%s'", p)
 					return
-				} else {
-					// source_profile name must exist in the credentials file when using IAM profiles
-					cfgCreds = checkCredentialProfile(c.SourceProfile)
 				}
+				// source_profile name must exist in the credentials file when using IAM profiles
+				cfgCreds = checkCredentialProfile(c.SourceProfile)
 			} else {
 				// not a profile with a role, must have matching section in creds file
 				cfgCreds = checkCredentialProfile(p)

@@ -141,9 +141,9 @@ func (m *stsMock) validateMfa(serial *string, code *string) error {
 			} else {
 				return fmt.Errorf("missing MFA code")
 			}
-		} else {
-			return fmt.Errorf("missing MFA code")
 		}
+
+		return fmt.Errorf("missing MFA code")
 	}
 	return nil
 }

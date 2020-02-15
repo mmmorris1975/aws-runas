@@ -528,7 +528,12 @@ func authHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err = samlClient.AwsSaml()
+		if _, err = samlClient.AwsSaml(); err != nil {
+			log.Errorf("error getting AWS SAML: %v", err)
+			writeResponse(w, r, "Error getting AWS SAML", http.StatusInternalServerError)
+			return
+		}
+
 		idp = samlClient
 	} else {
 		cred = createSessionCredentials(*auth.MfaCode)

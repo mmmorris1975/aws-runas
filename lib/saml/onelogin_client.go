@@ -167,14 +167,14 @@ func (c *oneloginSamlClient) auth() error {
 		if strings.EqualFold("success", ar.Status.Message) {
 			c.rawSamlResponse = ar.Data.(string)
 			return nil
-		} else {
-			// This is likely some prompt for MFA handling
-			switch t := ar.Data.(type) {
-			case []interface{}:
-				return c.handleMfa(t)
-			default:
-				return fmt.Errorf("unsupported multi-factor authentication type")
-			}
+		}
+
+		// This is likely some prompt for MFA handling
+		switch t := ar.Data.(type) {
+		case []interface{}:
+			return c.handleMfa(t)
+		default:
+			return fmt.Errorf("unsupported multi-factor authentication type")
 		}
 	}
 
@@ -238,10 +238,10 @@ func (c *oneloginSamlClient) handleMfa(data []interface{}) error {
 				if d.Type == "OneLogin Protect" {
 					mfaReq.DoNotNotify = false
 					return c.handlePushMfa(u, mfaReq)
-				} else {
-					// assume all others require prompting for the code
-					return c.handleCodeMfa(u, mfaReq)
 				}
+
+				// assume all others require prompting for the code
+				return c.handleCodeMfa(u, mfaReq)
 			}
 		}
 	}
@@ -300,9 +300,9 @@ func (c *oneloginSamlClient) handleCodeMfa(u string, r *verifyMfaRequest) error 
 			fmt.Println("Invalid MFA Code ... try again")
 			c.MfaToken = ""
 			return c.handleCodeMfa(u, r)
-		} else {
-			return err
 		}
+
+		return err
 	}
 
 	if ar.Status.Code == http.StatusOK {
@@ -335,7 +335,7 @@ func (c *oneloginSamlClient) defaultMfaDevice(userId int) (int, error) {
 	}
 
 	ar := new(authReply)
-	b, err := ioutil.ReadAll(res.Body)
+	b, _ := ioutil.ReadAll(res.Body)
 	if err = json.Unmarshal(b, ar); err != nil {
 		return -1, err
 	}

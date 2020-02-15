@@ -11,6 +11,7 @@ import (
 	"time"
 )
 
+// ErrMfaRequired is an error used to signal that the credential verification process requires multi-factor authentication
 type ErrMfaRequired uint8
 
 func (e *ErrMfaRequired) Error() string {
