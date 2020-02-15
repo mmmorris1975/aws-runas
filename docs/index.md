@@ -5,8 +5,9 @@ title: Home
 # aws-runas Documentation
 
 aws-runas is a command line tool which provides a friendly way to do the AWS STS AssumeRole operation so you can perform
-AWS API actions using a particular set of permissions. Includes integration with roles requiring MFA authentication!
-Works with profile names configured in the AWS SDK configuration file, or can use a role ARN value directly.
+AWS API actions using a particular set of permissions. Includes integration with roles requiring multi-factor authentication
+(MFA) and SAML single sign-on! Works with profile names configured in the AWS SDK configuration file, or can use a role
+ARN value directly.
 
 Using the default credential lifetime values, aws-runas will call the GetSessionToken API to retrieve a set of
 temporary credentials. If the profile specified on the command line is configured to use MFA, then the user will be

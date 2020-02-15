@@ -28,13 +28,11 @@ describe 'tests using a profile without a role' do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^Available role ARNs for circleci/ }
       its(:stdout) { should match /^\s+arn:aws:iam::\d+:role\/circleci-role$/ }
-      its(:stderr) { should match /\s+List Roles/ }
     end
 
     describe command ('aws-runas -vm') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^arn:aws:iam::\d+:mfa\/circleci$/ }
-      its(:stderr) { should match /\s+List MFA/ }
     end
 
     describe command ('aws-runas -vs') do
@@ -50,7 +48,6 @@ describe 'tests using a profile without a role' do
     describe command ('aws-runas -vse') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
-      its(:stderr) { should match /\s+Found cached session token credentials/ }
       its(:stderr) { should match /^Credentials will expire on/ }
     end
 

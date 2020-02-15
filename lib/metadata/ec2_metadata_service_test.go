@@ -1,9 +1,11 @@
 package metadata
 
 import (
+	cfglib "aws-runas/lib/config"
 	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/mmmorris1975/aws-runas/lib/config"
-	"github.com/mmmorris1975/simple-logger"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/mmmorris1975/aws-config/config"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -15,14 +17,25 @@ import (
 
 func TestMain(m *testing.M) {
 	os.Setenv("AWS_CONFIG_FILE", "../../.aws/config")
-	profile = "circle-role"
-	log = simple_logger.StdLogger
+	log = logger.StdLogger
+	s = session.Must(session.NewSession())
 
 	var err error
-	cfg, err = config.NewConfigResolver(nil)
+	cr, err = config.NewAwsConfigResolver(nil)
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	p, err := cr.Resolve("circle-role")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	profile, err = cfglib.Wrap(p)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	os.Exit(m.Run())
 }
 
@@ -126,6 +139,30 @@ func TestHomeHandler(t *testing.T) {
 	}
 }
 
+func TestJsHandler(t *testing.T) {
+	r := httptest.NewRequest(http.MethodGet, "/site.js", nil)
+	w := httptest.NewRecorder()
+	jsHandler(w, r)
+
+	res := w.Result()
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		t.Error("bad status code")
+		return
+	}
+
+	if res.ContentLength < 1 {
+		t.Error("bad content length")
+		return
+	}
+
+	if res.Header.Get("Content-Type") != "text/javascript" {
+		t.Error("bad content type")
+		return
+	}
+}
+
 func TestGetProfileConfig(t *testing.T) {
 	t.Run("empty reader", func(t *testing.T) {
 		// returns default profile
@@ -150,15 +187,9 @@ func TestGetProfileConfig(t *testing.T) {
 	})
 
 	t.Run("bad profile", func(t *testing.T) {
-		// returns default profile
-		c, err := getProfileConfig(strings.NewReader("bad-profile"))
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if len(c.RoleArn) > 0 {
-			t.Error("received a role profile")
+		_, err := getProfileConfig(strings.NewReader("bad-profile"))
+		if err == nil {
+			t.Error("did not receive expected error")
 			return
 		}
 	})
@@ -201,15 +232,15 @@ func TestSendProfile(t *testing.T) {
 		return
 	}
 
-	if string(b) != profile {
+	if string(b) != profile.Profile {
 		t.Error("unexpected profile")
 		return
 	}
 }
 
-func TestGetMfa(t *testing.T) {
+func TestGetAuth(t *testing.T) {
 	t.Run("nil reader", func(t *testing.T) {
-		_, err := getMfa(nil)
+		_, err := getAuth(nil)
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -222,62 +253,32 @@ func TestGetMfa(t *testing.T) {
 	})
 
 	t.Run("empty reader", func(t *testing.T) {
-		_, err := getMfa(strings.NewReader(""))
+		_, err := getAuth(ioutil.NopCloser(strings.NewReader("")))
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
 		}
 
-		if err.code != http.StatusUnauthorized {
+		// json parsing error
+		if err.code != http.StatusInternalServerError {
 			t.Error("bad response code")
-			return
-		}
-	})
-
-	t.Run("short mfa", func(t *testing.T) {
-		_, err := getMfa(strings.NewReader("123"))
-		if err == nil {
-			t.Error("did not receive expected error")
-			return
-		}
-
-		if err.code != http.StatusUnauthorized {
-			t.Error("bad response code")
-			return
-		}
-	})
-
-	t.Run("long mfa", func(t *testing.T) {
-		c, err := getMfa(strings.NewReader("1234567890"))
-		if err != nil {
-			t.Error(err)
-			return
-		}
-
-		if len(c) != 6 {
-			t.Error("bad mfa code returned")
-			return
-		}
-
-		if c != "123456" {
-			t.Error("unexpected mfa code returned")
 			return
 		}
 	})
 
 	t.Run("good", func(t *testing.T) {
-		c, err := getMfa(strings.NewReader("654321"))
+		c, err := getAuth(ioutil.NopCloser(strings.NewReader(`{"mfa_code": "654321"}`)))
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if len(c) != 6 {
+		if len(*c.MfaCode) != 6 {
 			t.Error("bad mfa code returned")
 			return
 		}
 
-		if c != "654321" {
+		if *c.MfaCode != "654321" {
 			t.Error("unexpected mfa code returned")
 			return
 		}
@@ -286,7 +287,7 @@ func TestGetMfa(t *testing.T) {
 
 func TestCredHandler(t *testing.T) {
 	// can only test the bare-path request, otherwise we're calling out to AWS
-	r := httptest.NewRequest(http.MethodGet, EC2MetadataCredentialPath, nil)
+	r := httptest.NewRequest(http.MethodGet, ec2MdSvcCredPath, nil)
 	w := httptest.NewRecorder()
 	credHandler(w, r)
 
@@ -304,7 +305,7 @@ func TestCredHandler(t *testing.T) {
 		return
 	}
 
-	if string(b) != profile {
+	if string(b) != profile.Profile {
 		t.Error("unexpected profile name")
 		return
 	}
@@ -314,7 +315,7 @@ func TestRefreshHandler(t *testing.T) {
 	cred = credentials.NewCredentials(new(mockProvider))
 
 	t.Run("nil role", func(t *testing.T) {
-		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		r := httptest.NewRequest(http.MethodPost, refreshPath, nil)
 		w := httptest.NewRecorder()
 		refreshHandler(w, r)
 
@@ -328,14 +329,14 @@ func TestRefreshHandler(t *testing.T) {
 	})
 
 	t.Run("with role", func(t *testing.T) {
-		role = &config.AwsConfig{SourceProfile: "some-profile"}
+		profile = &cfglib.AwsConfig{AwsConfig: &config.AwsConfig{SourceProfile: "some-profile"}}
 		cacheDir = os.TempDir()
 		defer func() {
-			role = nil
+			profile = nil
 			cacheDir = ""
 		}()
 
-		r := httptest.NewRequest(http.MethodPost, RefreshPath, nil)
+		r := httptest.NewRequest(http.MethodPost, refreshPath, nil)
 		w := httptest.NewRecorder()
 		refreshHandler(w, r)
 
@@ -350,7 +351,7 @@ func TestRefreshHandler(t *testing.T) {
 }
 
 func TestListRolesHandler(t *testing.T) {
-	r := httptest.NewRequest(http.MethodGet, ListRolesPath, nil)
+	r := httptest.NewRequest(http.MethodGet, listRolesPath, nil)
 	w := httptest.NewRecorder()
 	listRoleHandler(w, r)
 
@@ -384,7 +385,7 @@ func TestCacheFile(t *testing.T) {
 	})
 
 	t.Run("good", func(t *testing.T) {
-		p := cacheFile("test")
+		p := cacheFile("mock_test")
 		if len(p) < 1 {
 			t.Errorf("bad cache file name")
 			return
@@ -407,7 +408,10 @@ func TestCacheFile(t *testing.T) {
 }
 
 func TestHandleOptions(t *testing.T) {
-	err := handleOptions(new(EC2MetadataInput))
+	md := &EC2MetadataInput{
+		Session: s,
+	}
+	err := handleOptions(md)
 	if err != nil {
 		t.Error(err)
 		return
@@ -426,7 +430,7 @@ func TestHandleOptions(t *testing.T) {
 	})
 
 	t.Run("nil config resolver", func(t *testing.T) {
-		if cfg == nil {
+		if cr == nil {
 			t.Error("nil config resolver")
 		}
 	})

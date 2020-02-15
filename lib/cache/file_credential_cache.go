@@ -3,44 +3,27 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"sync"
+	"time"
 )
 
-// FileCredentialCache is a CredentialCacher implementation which will cache credentials in a local file
-type FileCredentialCache struct {
-	Path string
+type fileCredentialCache struct {
+	path string
 	lock sync.Mutex
 }
 
-// Store the provided credentials to the file as a serialized JSON representation
-func (c *FileCredentialCache) Store(cred *CacheableCredentials) error {
-	// If we don't test for nil, this code will happily store "null" in the cache file, seems kind of useless
-	if cred == nil {
-		return fmt.Errorf("nil credentials")
-	}
-
-	if err := os.MkdirAll(filepath.Dir(c.Path), 0755); err != nil {
-		return err
-	}
-
-	j, err := json.Marshal(cred)
-	if err != nil {
-		return err
-	}
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-	return ioutil.WriteFile(c.Path, j, 0600|os.ModeExclusive)
+// NewFileCredentialCache creates a file-backed credential cache at the specified path
+func NewFileCredentialCache(p string) *fileCredentialCache {
+	return &fileCredentialCache{path: p}
 }
 
-// Fetch the cached credentials from the file
-func (c *FileCredentialCache) Fetch() (*CacheableCredentials, error) {
-	cred := new(CacheableCredentials)
+// Load the cached credentials from the file, if no cached credentials are found an expired set of credentials is returned
+func (c *fileCredentialCache) Load() (*CacheableCredentials, error) {
+	cred := &CacheableCredentials{Expiration: aws.Time(time.Now())}
 
-	data, err := ioutil.ReadFile(c.Path)
+	data, err := ioutil.ReadFile(c.path)
 	if err != nil {
 		return nil, err
 	}
@@ -50,4 +33,21 @@ func (c *FileCredentialCache) Fetch() (*CacheableCredentials, error) {
 	}
 
 	return cred, nil
+}
+
+// Store the provided credentials to the file as a serialized JSON representation
+func (c *fileCredentialCache) Store(cred *CacheableCredentials) error {
+	// If we don't test for nil, this code will happily store "null" in the cache file, seems kind of useless
+	if cred == nil {
+		return fmt.Errorf("nil credentials")
+	}
+
+	j, err := json.Marshal(cred)
+	if err != nil {
+		return err
+	}
+
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	return writeFile(c.path, j)
 }

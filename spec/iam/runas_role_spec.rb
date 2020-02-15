@@ -26,21 +26,21 @@ describe 'tests using a profile with a role' do
     describe command ('aws-runas -ve') do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
-      its(:stderr) { should match /\s+Found cached assume role credentials/ }
       its(:stderr) { should match /^Credentials will expire on/ }
       its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS:/ }
     end
 
+    # This should honor the AWS_PROFILE env var being set, and use 'true' as the command to run
     describe command ('aws-runas -v true') do
       its(:exit_status) { should eq 0 }
-      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
+      its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
       its(:stderr) { should match /\s+DEBUG http credential provider endpoint: http:\/\/127\.0.0.1:\d{4,5}/ }
       its(:stderr) { should match /\s+DEBUG WRAPPED CMD:\s+/ }
     end
 
     describe command ('aws-runas -Ev true') do
       its(:exit_status) { should eq 0 }
-      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
+      its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
       its(:stderr) { should_not match /\s+DEBUG found loopback interface:\s+/ }
       its(:stderr) { should_not match /\s+DEBUG http credential provider endpoint: http:\/\/127\.0.0.1:\d{4,5}/ }
       its(:stderr) { should match /\s+DEBUG WRAPPED CMD:\s+/ }
@@ -71,8 +71,8 @@ describe 'tests using a profile with a role' do
     end
 
     describe command ('aws-runas -O json') do
-        its(:exit_status) { should eq 0 }
-        its (:stdout) { should match /{"AccessKeyId":"ASIA.*","SecretAccessKey":".*"/}
+      its(:exit_status) { should eq 0 }
+      its (:stdout) { should match /{"AccessKeyId":"ASIA.*","SecretAccessKey":".*"/}
     end
 
     describe 'and setting duration with too short env var' do

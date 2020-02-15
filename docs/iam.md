@@ -1,10 +1,10 @@
 ---
 layout: page
-title: Configuration Guide
+title: IAM Configuration Guide
 ---
-# Configuration Guide
-This page provides a more in-depth look at the credentials and config file used by aws-runas, and some of the
-custom parameters you can use to configure the tool.
+# IAM Configuration Guide
+This page provides a more in-depth look at the credentials and config file used by aws-runas with IAM user credentials,
+and some of the custom parameters you can use to configure the tool.
 
 
 ### Credentials File
@@ -63,8 +63,8 @@ A simple default section could look something like:
 region = us-east-1
 ```
 
-However, only having a default section won't make aws-runas a very useful tool, read the section about configuring profiles
-to learn how to configure a profile for assuming a role.
+However, only having a default section won't make aws-runas a very useful tool, read the section below about configuring
+profiles to learn how to configure a profile for assuming a role.
 
 #### Profile Sections
 Profile sections in the configuration file are what is used to provide the settings used to assume a role with aws-runas,
@@ -84,7 +84,7 @@ the word 'profile' before the actual profile name in the section heading (the st
 oddity of the logic AWS uses to process the config file, and is necessary for any non-default profile you'll configure.
 
 If the role requires that you use MFA, then you will need to configure an attribute named `mfa_serial` in the profile,
-which contains the ARN value of the MFA token you configured for your IAM account. If you have a properly configured
+which contains the ARN value of the MFA device you configured for your IAM account. If you have a properly configured
 .aws/credentials file, you can find this value by running `aws-runas -m`, or under your IAM user's configuration in the
 AWS console.  The [Quick Start Guide]({{ "quick-start.html#configuration" | relative_url }}) provides an example of what
 a profile configured to use MFA would look like.
@@ -148,7 +148,9 @@ Standard AWS SDK environment variables are supported by this program. (See the `
 [https://docs.aws.amazon.com/sdk-for-go/api/aws/session/](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/))
 Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable which will be explicitly
 unset before aws-runas executes the program supplied as an argument to aws-runas. (It only affects the environment
-variable for the execution of aws-runas, the setting in the original environment is unaffected)
+variable for the execution of aws-runas, the setting in the original environment is unaffected)  If your code relies on
+the value of that `AWS_PROFILE` environment variable, it will be reflected to the program under a new environment
+variable called `AWSRUNAS_PROFILE`
 
 If the `AWS_PROFILE` environment variable is set, it will be used in place of the 'profile' argument to the command. In
 this example, the 'aws s3 ls' command will be executed using the profile 'my_profile'

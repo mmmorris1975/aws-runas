@@ -1,12 +1,14 @@
 package main
 
 import (
+	"aws-runas/lib/config"
 	"encoding/binary"
 	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
 	cfglib "github.com/mmmorris1975/aws-config/config"
-	"github.com/mmmorris1975/aws-runas/lib/config"
 	"math"
 	"net"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -18,7 +20,7 @@ func runDiagnostics(c *config.AwsConfig) error {
 
 	checkEnv()
 	checkRegion(c)
-	p := checkProfile(*profile)
+	p := checkProfile(profile)
 
 	if p == c.RoleArn {
 		// profile was a Role ARN, config will be whatever was explicitly passed + env var config,
@@ -60,43 +62,60 @@ func checkRegion(c *config.AwsConfig) {
 	}
 }
 
-func checkProfile(p string) string {
-	if len(p) < 1 {
+func checkProfile(p *string) string {
+	if p == nil || len(*p) < 1 {
 		log.Warn("No profile specified, will only check default section. Provide a profile name for more validation")
-		p = "default"
+		p = aws.String("default")
 	}
-	return p
+	return *p
 }
 
 func checkProfileCfg(p string, c *config.AwsConfig) {
 	if len(p) > 0 {
-		var cfgCreds bool
+		if c.SamlAuthUrl != nil && len(c.SamlAuthUrl.String()) > 0 {
+			// do saml specific things
+			if len(c.RoleArn) < 1 {
+				log.Error("role_arn is a required parameter when using SAML integration")
+			}
 
-		if len(c.RoleArn) > 0 {
-			// provided profile uses a role, so it must have a valid source_profile attribute
-			if len(c.SourceProfile) < 1 {
-				log.Errorf("missing source_profile configuration for profile '%s'", p)
-			} else {
-				// source_profile name must exist in the credentials file
-				cfgCreds = checkCredentialProfile(c.SourceProfile)
+			u, err := http.Head(c.SamlAuthUrl.String())
+			if err != nil {
+				log.Errorf("error communicating with SAML metadata url: %v", err)
+			}
+
+			if u.StatusCode != http.StatusOK {
+				log.Errorf("http status code %d when communicating with SAML metadaurl", u.StatusCode)
 			}
 		} else {
-			// not a profile with a role, must have matching section in creds file
-			cfgCreds = checkCredentialProfile(p)
-		}
+			var cfgCreds bool
 
-		// check for profile creds and env var creds at the same time
-		envAk := os.Getenv("AWS_ACCESS_KEY_ID")
-		if cfgCreds && len(envAk) > 0 {
-			log.Error("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
-		} else {
-			log.Info("credentials appear sane")
+			// do iam specific things
+			if len(c.RoleArn) > 0 {
+				if len(c.SourceProfile) < 1 {
+					log.Errorf("missing source_profile configuration for profile '%s'", p)
+					return
+				} else {
+					// source_profile name must exist in the credentials file when using IAM profiles
+					cfgCreds = checkCredentialProfile(c.SourceProfile)
+				}
+			} else {
+				// not a profile with a role, must have matching section in creds file
+				cfgCreds = checkCredentialProfile(p)
+			}
+
+			// check for profile creds and env var creds at the same time
+			envAk := os.Getenv("AWS_ACCESS_KEY_ID")
+			if cfgCreds && len(envAk) > 0 {
+				log.Error("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+			} else {
+				log.Info("credentials appear sane")
+			}
 		}
 	}
 }
 
 func checkCredentialProfile(profile string) bool {
-	cfg, err := cfglib.NewAwsCredentialsFile(nil)
+	cfg, err := cfglib.NewIniCredentialProvider(nil)
 	if err != nil {
 		log.Errorf("error loading credentials file: %v", err)
 		return false
@@ -151,11 +170,17 @@ func printConfig(p string, c *config.AwsConfig) {
 	fmt.Printf("PROFILE: %s\n", p)
 	fmt.Printf("REGION: %s\n", c.Region)
 	fmt.Printf("SOURCE PROFILE: %s\n", c.SourceProfile)
-	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionDuration)
+	fmt.Printf("SESSION TOKEN DURATION: %s\n", c.SessionTokenDuration)
 	fmt.Printf("MFA SERIAL: %s\n", c.MfaSerial)
 	fmt.Printf("ROLE ARN: %s\n", c.RoleArn)
-	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalID)
-	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.RoleDuration)
+	fmt.Printf("EXTERNAL ID: %s\n", c.ExternalId)
+	fmt.Printf("ASSUME ROLE CREDENTIAL DURATION: %s\n", c.CredentialsDuration)
+
+	if c.SamlAuthUrl != nil && len(c.SamlAuthUrl.String()) > 0 {
+		fmt.Printf("SAML METADATA URL: %s\n", c.SamlAuthUrl.String())
+		fmt.Printf("SAML USERNAME: %s\n", c.SamlUsername)
+		fmt.Printf("JUMP ROLE ARN: %s\n", c.JumpRoleArn.String())
+	}
 }
 
 // NTP client bits below

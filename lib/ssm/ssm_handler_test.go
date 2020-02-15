@@ -6,7 +6,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ssm"
 	"github.com/aws/aws-sdk-go/service/ssm/ssmiface"
-	logger "github.com/mmmorris1975/simple-logger"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"testing"
 )
 
@@ -63,6 +63,36 @@ func TestNewSsmHandler(t *testing.T) {
 			t.Error("nil logger")
 		}
 	})
+}
+
+func TestSessionHandler_StartSession(t *testing.T) {
+	h := &sessionHandler{
+		client:   new(mockSsmClient),
+		log:      aws.NewDefaultLogger(),
+		region:   "us-east-1",
+		endpoint: "ep-mock",
+		testing:  true,
+	}
+
+	if err := h.StartSession("i-deadbeef"); err != nil {
+		t.Error(err)
+		return
+	}
+}
+
+func TestSessionHandler_ForwardPort(t *testing.T) {
+	h := &sessionHandler{
+		client:   new(mockSsmClient),
+		log:      aws.NewDefaultLogger(),
+		region:   "us-east-1",
+		endpoint: "ep-mock",
+		testing:  true,
+	}
+
+	if err := h.ForwardPort("i-deadbeef", "1234", "22"); err != nil {
+		t.Error(err)
+		return
+	}
 }
 
 func TestCmd(t *testing.T) {

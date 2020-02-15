@@ -7,40 +7,71 @@ How to use aws-runas to perform various functions
 
 #### Program Options
 ```text
-usage: aws-runas [<flags>] [<profile>] [<cmd>...]
+usage: aws-runas [<flags>] <command> [<args> ...]
 
 Create an environment for interacting with the AWS API using an assumed role
 
 Flags:
-  -h, --help               Show context-sensitive help (also try --help-long and --help-man).
-  -d, --duration=DURATION  duration of the retrieved session token
+  -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
+      --ec2                      Run a mock EC2 metadata service to provide role credentials
+  -v, --verbose                  Print verbose/debug messages
+  -E, --env                      Pass credentials to program as environment variables
+  -e, --expiration               Show credential expiration time
+  -O, --output=env               Credential output format, valid values: env (default) or json
+  -u, --update                   Check for updates to aws-runas
+  -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
+  -l, --list-roles               List role ARNs you are able to assume
+  -m, --list-mfa                 List the ARN of the MFA device associated with your IAM account
+  -r, --refresh                  Force a refresh of the cached credentials
+  -s, --session                  Print eval()-able session token info, or run command using session token credentials
+  -d, --duration=DURATION        Duration of the retrieved session token
   -a, --role-duration=ROLE-DURATION  
-                           duration of the assume role credentials
-  -l, --list-roles         list role ARNs you are able to assume
-  -m, --list-mfa           list the ARN of the MFA device associated with your account
-  -e, --expiration         Show token expiration time
-  -c, --make-conf          Build an AWS extended switch-role plugin configuration for all available roles
-  -s, --session            print eval()-able session token info, or run command using session token credentials
-  -r, --refresh            force a refresh of the cached credentials
-  -v, --verbose            print verbose/debug messages
-  -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
-  -o, --otp=OTP            MFA token code
-  -u, --update             Check for updates to aws-runas
-  -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
-      --ec2                Run as mock EC2 metadata service to provide role credentials
-  -E, --env                Pass credentials to program as environment variables
-  -V, --version            Show application version.
+                                 Duration of the assume role credentials
+  -o, --otp=OTP                  MFA token code
+  -M, --mfa-serial=MFA-SERIAL    Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation
+  -X, --external-id=EXTERNAL-ID  External ID to use to Assume the Role
+  -J, --jump-role=JUMP-ROLE      ARN of the 'jump role' to use with SAML integration
+  -S, --saml-url=SAML-URL        URL of the SAML authentication endpoint
+  -U, --saml-user=SAML-USER      Username for SAML authentication
+  -P, --saml-password=SAML-PASSWORD  
+                                 Password for SAML authentication
+  -V, --version                  Show application version.
 
-Args:
-  [<profile>]  name of profile, or role ARN
-  [<cmd>]      command to execute using configured profile
+Commands:
+  help [<command>...]
+    Show help.
+
+  shell [<profile>] [<target>]
+    Start an SSM shell session to the given target
+
+  forward [<flags>] [<profile>] [<target>]
+    Start an SSM port-forwarding session to the given target
 ```
+
+### Environment Variables
+In addition to the ["standard" AWS environment variables](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/#hdr-Environment_Variables), the following environment variables can be used in lieu of
+command line arguments, or config file properties, to affect the behavior of aws-runas:
+
+  * RUNAS_VERBOSE (boolean) - Set to any "truth-y" value to enable verbose output, like the `-v` flag
+  * RUNAS_ENV_CREDENTIALS (boolean) - Set to any "truth-y" value to use environment variables, instead of the container credential endpoint, like the `-E` flag
+  * RUNAS_OUTPUT_FORMAT (env or json) - If set to "json" print the credentials as a json object compatible with the aws credential_process configuration setting, otherwise output environment variable statements, like the `-O` flag
+  * RUNAS_SESSION_CREDENTIALS (boolean) - Set to any "truth-y" value to use session token credentials, instead of role credentials, like the `-s` flag
+  * SESSION_TOKEN_DURATION ([duration](https://golang.org/pkg/time/#ParseDuration)) - A golang time.Duration string to set the lifetime of the session token credentials (12 hour default), like the `-d` flag
+  * CREDENTIALS_DURATION ([duration](https://golang.org/pkg/time/#ParseDuration)) - A golang time.Duration string to set the lifetime of the role credentials (1 hour default), like the `-a` flag
+  * MFA_CODE (string) - The MFA token code to use for credentials requiring MFA, like the `-o` flag
+  * MFA_SERIAL (string) - The MFA device serial number of the IAM user, like the `-m` flag
+  * EXTERNAL_ID (string) - The External ID value to pass in the AssumeRole operation, like the `-X` flag
+  * JUMP_ROLE_ARN (string) - The ARN of the role to initially assume using SAML credentials, before assuming the actual role for the operation, like the `-J` flag
+  * SAML_AUTH_URL (URL) - The URL of the SAML authentication endpoint to authenticate against, like the `-S` flag
+  * SAML_USERNAME (string) - The username of the SAML user to use for authentication, like the `-U` flag
+  * SAML_PASSWORD (string) - The password of the SAML user to use for authentication, like the `-P` flag
+
 
 ### Diagnostics
 Use the `-D` option to perform some rudimentary sanity checking of the configuration for the given profile, and print
 the resolved profile data. Some of the items checked are:
 
-  * Detecting static AWS credentials set as environment variables
+  * Detecting static AWS credentials set as environment variables along with file-based credentials
   * Verifying that the region is set in the config file, or via the `AWS_REGION` environment variable
   * Checking that the profile sets the `source_profile` attribute if the `role_arn` attribute is detected
   * Mis-matched or conflicting AWS credential settings
@@ -59,15 +90,17 @@ Use the `-l` option to see the list of role ARNs your IAM account is authorized 
 your AWS config file. If `profile` arg is specified, list roles available for the given profile, or the default profile
 if not specified. May be useful if you have multiple profiles configured each with their own IAM role configurations.
 
-This option will only return roles which are explicitly specified in the IAM policies assigned to the user, or any groups
-they belong to.  It will not return roles containing wildcard characters, since that value can not be explicitly configured
-in the .aws/config file for the role_arn attribute.
+This option will only return roles which are explicitly specified in the SAML authorizations or IAM policies assigned to
+the user, or any groups they belong to.  It will not return roles containing wildcard characters, since that value can
+not be explicitly configured in the .aws/config file for the role_arn attribute.
 
 
 ### Listing MFA Device
 Use the `-m` option to list the ARNs of any MFA devices associated with your IAM account. May be helpful for setting up
 your AWS config file. If `profile` arg is specified, list MFA devices available for the given profile, or the default
-profile if not specified. May be useful if you have multiple profiles configured, each with their own MFA device
+profile if not specified. May be useful if you have multiple profiles configured, each with their own MFA device.
+
+This command-line option is not supported for profiles using SAML single-signon.
 
 
 ### Showing Credential Expiration
@@ -183,7 +216,8 @@ Or simply `eval $(aws-runas -s)` to add these env vars in the current session. W
 it is certainly not the optimal way to use aws-runas, since you lose the ability to track when these credentials will
 expire and have aws-runas handle refreshing them.
 
-### Using MFA
+### Using Multi-factor Authentication (MFA)
 For roles or API calls requiring successful MFA, the tool will prompt you to enter the current MFA code if the profile
-is configured with the `mfa_serial` attribute. Alternatively, you can supply the MFA token using the `-o` command line
+is configured with the `mfa_serial` attribute, or the authentication path for the SAML identity provider indicates that
+performing multi-factor authentication is required. Alternatively, you can supply the MFA token using the `-o` command line
 option (requires version 1.3.4 or higher)

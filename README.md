@@ -4,7 +4,8 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/mmmorris1975/aws-runas)](https://goreportcard.com/report/github.com/mmmorris1975/aws-runas)
 
 A friendly way to do AWS STS AssumeRole operations so you can perform AWS API actions using a particular set of permissions.
-Includes integration with roles requiring MFA authentication!  Works off of profile names configured in the AWS SDK configuration file.
+Includes support for IAM user credentials and SAML SSO, including MFA for both!  Works off of profile names configured
+in the AWS SDK configuration file.
 
 The tool will cache the credentials retrieved from AWS in order to minimize API calls to AWS, as well as minimize the entry
 of MFA codes (for roles requiring MFA).
@@ -14,45 +15,56 @@ Full documentation for downloading, configuring and running aws-runas can be fou
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just download the
 compiled executable and "go".
 
-
 ## Installing
 
 Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/aws-runas/releases/latest)
 
 ## Usage
-    usage: aws-runas [<flags>] [<profile>] [<cmd>...]
+    usage: aws-runas [<flags>] <command> [<args> ...]
     
     Create an environment for interacting with the AWS API using an assumed role
     
     Flags:
-      -h, --help               Show context-sensitive help (also try --help-long and --help-man).
-      -d, --duration=DURATION  duration of the retrieved session token
+      -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
+          --ec2                      Run a mock EC2 metadata service to provide role credentials
+      -v, --verbose                  Print verbose/debug messages
+      -E, --env                      Pass credentials to program as environment variables
+      -e, --expiration               Show credential expiration time
+      -O, --output=env               Credential output format, valid values: env (default) or json
+      -u, --update                   Check for updates to aws-runas
+      -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
+      -l, --list-roles               List role ARNs you are able to assume
+      -m, --list-mfa                 List the ARN of the MFA device associated with your IAM account
+      -r, --refresh                  Force a refresh of the cached credentials
+      -s, --session                  Print eval()-able session token info, or run command using session token credentials
+      -d, --duration=DURATION        Duration of the retrieved session token
       -a, --role-duration=ROLE-DURATION  
-                               duration of the assume role credentials
-      -l, --list-roles         list role ARNs you are able to assume
-      -m, --list-mfa           list the ARN of the MFA device associated with your account
-      -e, --expiration         Show token expiration time
-      -c, --make-conf          Build an AWS extended switch-role plugin configuration for all available roles
-      -s, --session            print eval()-able session token info, or run command using session token credentials
-      -r, --refresh            force a refresh of the cached credentials
-      -v, --verbose            print verbose/debug messages
-      -M, --mfa-arn=MFA-ARN    ARN of MFA device needed to perform Assume Role operation
-      -o, --otp=OTP            MFA token code
-      -u, --update             Check for updates to aws-runas
-      -D, --diagnose           Run diagnostics to gather info to troubleshoot issues
-          --ec2                Run as mock EC2 metadata service to provide role credentials
-      -E, --env                Pass credentials to program as environment variables
-      -V, --version            Show application version.
+                                     Duration of the assume role credentials
+      -o, --otp=OTP                  MFA token code
+      -M, --mfa-serial=MFA-SERIAL    Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation
+      -X, --external-id=EXTERNAL-ID  External ID to use to Assume the Role
+      -J, --jump-role=JUMP-ROLE      ARN of the 'jump role' to use with SAML integration
+      -S, --saml-url=SAML-URL        URL of the SAML authentication endpoint
+      -U, --saml-user=SAML-USER      Username for SAML authentication
+      -P, --saml-password=SAML-PASSWORD  
+                                     Password for SAML authentication
+      -V, --version                  Show application version.
     
-    Args:
-      [<profile>]  name of profile, or role ARN
-      [<cmd>]      command to execute using configured profile
+    Commands:
+      help [<command>...]
+        Show help.
+    
+      shell [<profile>] [<target>]
+        Start an SSM shell session to the given target
+    
+      forward [<flags>] [<profile>] [<target>]
+        Start an SSM port-forwarding session to the given target
 
 ## Building
 
 ### Build Requirements
 
-Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.25.11  
+Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.28.12  
 *NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
 
 ### Build Steps
@@ -64,3 +76,8 @@ libraries and make the executable for your platform (or platform of choice if th
 
 The usual github model for forking the repo and creating a pull request is the preferred way to
 contribute to this tool.  Bug fixes, enhancements, doc updates, translations are always welcomed.
+
+The documentation at the [doc site](https://mmmorris1975.github.io/aws-runas/) all lives under the docs directory in
+this repository. It uses [Markdown](https://guides.github.com/features/mastering-markdown/) for the documentation format.
+Everyone is welcome to submit pull requests with documentation updates to help correct or clarify the documentation for
+this tool.

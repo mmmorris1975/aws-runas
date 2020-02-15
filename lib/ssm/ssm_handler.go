@@ -2,6 +2,7 @@ package ssm
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/service/ssm"
@@ -12,17 +13,17 @@ import (
 
 type sessionHandler struct {
 	client   ssmiface.SSMAPI
+	cfg      aws.Config
 	log      aws.Logger
 	region   string
 	endpoint string
+	testing  bool
 }
 
 // NewSsmHandler creates the handler type needed to create shell and port-forwarding sessions
 func NewSsmHandler(c client.ConfigProvider) *sessionHandler {
 	s := ssm.New(c)
-	r := s.SigningRegion
-	ep := s.Endpoint
-	return &sessionHandler{client: s, region: r, endpoint: ep}
+	return &sessionHandler{client: s, cfg: s.Config, region: s.SigningRegion, endpoint: s.Endpoint, log: aws.NewDefaultLogger()}
 }
 
 // WithLogger is a fluent method used with NewSsmHandler to configure a conforming logging type
@@ -38,6 +39,10 @@ func (h *sessionHandler) StartSession(target string) error {
 	c, err := h.cmd(&in)
 	if err != nil {
 		return err
+	}
+
+	if h.testing {
+		return nil
 	}
 	return c.Run()
 }
@@ -59,6 +64,10 @@ func (h *sessionHandler) ForwardPort(target, lp, rp string) error {
 	c, err := h.cmd(&in)
 	if err != nil {
 		return err
+	}
+
+	if h.testing {
+		return nil
 	}
 	return c.Run()
 }
@@ -84,5 +93,12 @@ func (h *sessionHandler) cmd(input *ssm.StartSessionInput) (*exec.Cmd, error) {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
+	h.debug("COMMAND: %s", c.String())
 	return c, nil
+}
+
+func (h *sessionHandler) debug(f string, msg ...interface{}) {
+	if h.log != nil && h.cfg.LogLevel.AtLeast(aws.LogDebug) {
+		h.log.Log(fmt.Sprintf(f, msg...))
+	}
 }

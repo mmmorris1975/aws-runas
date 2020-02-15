@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/mmmorris1975/simple-logger/logger"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -31,13 +32,27 @@ func TestNewEcsMetadataService(t *testing.T) {
 			t.Errorf("unexpected url scheme: %s", ecs.Url.Scheme)
 		}
 	})
+
+	t.Run("with opts", func(t *testing.T) {
+		ecs, err := NewEcsMetadataService(&EcsMetadataInput{Logger: logger.StdLogger})
+
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if ecs.Url.Scheme != "http" {
+			t.Errorf("unexpected url scheme: %s", ecs.Url.Scheme)
+		}
+	})
 }
 
 func TestEcsHandler(t *testing.T) {
+	log = logger.StdLogger
 	t.Run("good", func(t *testing.T) {
 		cred = credentials.NewStaticCredentials("MockAK", "MockSK", "MockToken")
 
-		r := httptest.NewRequest(http.MethodGet, EcsCredentialsPath, nil)
+		r := httptest.NewRequest(http.MethodGet, ecsCredentialsPath, nil)
 		w := httptest.NewRecorder()
 
 		ecsHandler(w, r)
@@ -70,7 +85,7 @@ func TestEcsHandler(t *testing.T) {
 		p := credentials.ErrorProvider{Err: fmt.Errorf("bad times"), ProviderName: "Error Provider"}
 		cred = credentials.NewCredentials(&p)
 
-		r := httptest.NewRequest(http.MethodGet, EcsCredentialsPath, nil)
+		r := httptest.NewRequest(http.MethodGet, ecsCredentialsPath, nil)
 		w := httptest.NewRecorder()
 
 		ecsHandler(w, r)

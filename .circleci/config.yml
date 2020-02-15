@@ -10,7 +10,7 @@ jobs:
   build:
     docker:
       # specify the version
-      - image: "circleci/golang:1.12"
+      - image: "circleci/golang:1.13"
 
     working_directory: /go/src/github.com/mmmorris1975/aws-runas
 
@@ -42,6 +42,9 @@ jobs:
 
       - aws-cli/install
       - aws-cli/setup:
+          profile-name: circleci
+          configure-default-region: false
+      - aws-cli/setup:
           profile-name: default
           configure-default-region: false
 
@@ -50,6 +53,7 @@ jobs:
       - run:
           command: bundle exec rspec
           when: always
+          environment:
 
       - store_test_results:
           path: /var/tmp/rspec
