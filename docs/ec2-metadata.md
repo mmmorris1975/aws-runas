@@ -12,7 +12,7 @@ execution environment to use aws-runas in the traditional "wrapper" mode.
 
 
 ## Important Notes
-In order to run aws-runas using the EC2 metadata service mode, you will need to execute it with administrative access to
+In order to run aws-runas using the EC2 metadata service feature, you will need to execute it with administrative access to
 configure a network interface, and setup the HTTP listening port. This means that you will need to execute the aws-runas
 using `sudo` on Linux or MacOS, or with Administrator privileges on Windows. While not ideal, it is the most portable way
 to configure a system to listen on the AWS hard-coded endpoint of http://169.254.169.254 for serving the metadata.  On
@@ -26,28 +26,26 @@ run the command:
 ```text
 sudo setcap "cap_net_admin,cap_net_bind_service,cap_setgid,cap_setuid=p" aws-runas
 ```
-This should only be required a single time when a new version is installed.  If support is added in the future to
-distribute Linux binaries as distro-specific packages, this will be done automatically as part of the post-installation
-steps.
+This should only be required a single time when a new version is installed.  If installing aws-runas using the RPM or DEB
+packages, the _setcap_ command is executed as part of the package post-install scripts.
 
 Also be aware that this is not a full-blown implementation of the EC2 metadata service, it only exposes the paths
-used to obtain IAM role credentials from an EC2 instance profile. It also exposes some paths which are not part of the
-EC2 metadata service so we can adjust the configuration of the service while it is running.
+used to obtain IAM role credentials from an EC2 instance profile, and does not support the IMDSv2 method of retrieving
+instance credentials. It also exposes some paths which are not part of the EC2 metadata service so we can adjust the
+configuration of the service while it is running.
 
 ## Running
 To execute aws-runas using the EC2 Metadata Service feature, use the `--ec2` flag when running the command. For example,
 on a MacOS or Linux system:
 
 ```text
-$ sudo ./aws-runas --ec2 my-role
+$ sudo ./aws-runas --ec2
 ```
 
-If you are required to use MFA for the role, and it is unable to find any valid cached credentials, you will be prompted
-to enter the MFA code on the command line. Once all of that out of the way, you should see messages similar to:
+Assuming there are not startup errors, you should see messages similar to:
 
 ```text
-2019/04/01 12:34:56 INFO POST /profile HTTP/1.1 200 29
-2019/04/01 12:34:56 INFO EC2 Metadata Service ready on http://169.254.169.254:80 using initial profile 'my-role'
+2020/02/15 20:39:27 INFO EC2 Metadata Service ready on http://169.254.169.254:80
 ```
 
 The program will continue to run in the foreground and log messages about the HTTP calls made to the service in a quasi
@@ -87,11 +85,20 @@ Below is a screenshot of the metadata service interface, and is the only screen 
 The 'Roles' drop down will contain a list of roles available in the .aws/config file to select from. Selecting a role from
 the list will automatically switch the active role in the service, there is no requirement to submit or refresh after
 selecting a role from the drop down list. Once a role is selected, if a valid set of credentials is available from the
-cache, it will display the local date and time the credentials will expire. If the selected role requires a fresh set of
-credentials, and requires using MFA, then you will receive a popup dialog for you to enter your MFA code. The dialog will
-appear similar to the following screen shot...
+cache, it will display the local date and time the credentials will expire.
+
+If the selected role uses IAM, and requires using MFA, then you will receive a popup dialog for you to enter your MFA code.
+The dialog will appear similar to the following screen shot...
 
 ![Metadata Service Browser Interface MFA Dialog](/assets/images/metadata-web-mfa.png)
+
+For roles using SAML authentication, you may be prompted to enter your SAML credentials if a valid login session can't
+be found.  The dialog will appear similar to the following screen shot...
+
+![Metadata Service Browser Interface SAML Dialog](/assets/images/metadata-web-saml.png)
+
+If your SAML identity provider requires using MFA, you will be prompted to perform the MFA steps required, based on the
+MFA mechanisms supported by the aws-runas saml clients.
 
 The 'Refresh Now' button is not used as part of the normal workflow in the browser interface. It is provided as a way to
 force a refresh of the credentials used for the role. After clicking this button, you will be required to re-submit the current
@@ -104,7 +111,7 @@ Below is a breakdown the endpoints available in the aws-runas EC2 Metadata Servi
 
 #### AWS standard endpoints
 `/latest/meta-data/iam/security-credentials/` - Performing an HTTP GET against this path will return the name of the currently
-active profile name which will be used to retrieve the credentials.  This is part of the flow the AWS SDKs use for retrieving
+active profile which will be used to retrieve the credentials.  This is part of the flow the AWS SDKs use for retrieving
 credentials from the actual EC2 metadata service. Accessing this path on a real EC2 instance with an instance profile
 configured will return the name of the instance profile set on the instance.
 
@@ -157,16 +164,21 @@ $ curl -d my-other-role http://169.254.169.254/profile
 2019-01-02 03:04:56 -0500 CDT
 ```
 
-`/mfa` - An HTTP POST to this path, providing the MFA code in the request body, will update the session credential
-provider used by the service and obtain a fresh set of session token credentials for the currently configured profile.
-Making a call to this endpoint is typically done in response to an HTTP 401 status code returned from the /profile path
-of the service so that a new set of credentials with a valid MFA code can be obtained.  A successful call will return an
-HTTP 200 status, and the response body will contain the system local time when the credentials will expire.
+`/auth` - An HTTP POST to this path will perform authentication for the active profile.  For roles using IAM credentials,
+this would be used to submit the MFA code for assuming the role.  For SAML credentials, this would be used to submit the
+SAML credentials used to authenticate to the identity provider.  The request body is a JSON object containing the various
+credential data, and type of credentials being submitted.  It will return an HTTP 200 if successful, HTTP 401 if the
+authentication failed due to invalid credentials or mfa code, or HTTP 500 for other errors not related to the authentication
+process.
 
-Example:
+Example for submitting MFA code:
 ```text
-$ curl -d 123456 http://169.254.169.254/mfa
-2019-01-02 03:04:56 -0500 CDT
+$ curl -d '{"mfa_code": "654321", "type": "session"}' http://169.254.169.254/auth
+```
+
+Example for submitting SAML credentials:
+```text
+$ curl -d '{"username": "me", "password": "secret", "type": "saml"}' http://169.254.169.254/auth
 ```
 
 `/refresh` - An HTTP post to this path will force a refresh of the credentials used by the currently active profile, any
@@ -188,9 +200,9 @@ success
 
 # This call to /profile is optional and only demonstrates the data returned from a call where new MFA is required
 $ curl -d my-profile http://169.254.169.254/profile
-MFA code required
+{"mfa_code":"","type":"session"}
 
-$ curl -d 123456 http://169.254.169.254/mfa
+$ curl -d '{"mfa_code": "654321","type: "session"}' http://169.254.169.254/auth
 2019-01-02 12:34:56 -0500 CDT
 
 $ curl -d my-profile http://169.254.169.254/profile
