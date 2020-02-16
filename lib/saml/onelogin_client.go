@@ -370,40 +370,48 @@ func parseEntry(data map[string]interface{}) *mfaEntry {
 			m.CallbackUrl = v.(string)
 		} else if k == "devices" {
 			// array of maps
-			devs := make([]*mfaDevice, 0)
-
-			for _, di := range v.([]interface{}) {
-				d := new(mfaDevice)
-				for dk, dv := range di.(map[string]interface{}) {
-					if dk == "device_id" {
-						d.Id = int(dv.(float64))
-					} else if dk == "device_type" {
-						d.Type = dv.(string)
-					}
-				}
-				devs = append(devs, d)
-			}
-			m.Devices = devs
+			m.Devices = parseDevices(v.([]interface{}))
 		} else if k == "user" {
-			u := new(user)
-			for uk, uv := range v.(map[string]interface{}) {
-				if uk == "id" {
-					u.Id = int(uv.(float64))
-				} else if uk == "firstname" {
-					u.Firstname = uv.(string)
-				} else if uk == "lastname" {
-					u.Lastname = uv.(string)
-				} else if uk == "username" {
-					u.Username = uv.(string)
-				} else if uk == "email" {
-					u.Email = uv.(string)
-				}
-			}
-			m.User = u
+			m.User = parseUser(v.(map[string]interface{}))
 		}
 	}
 
 	return m
+}
+
+func parseDevices(v []interface{}) []*mfaDevice {
+	devs := make([]*mfaDevice, 0)
+
+	for _, di := range v {
+		d := new(mfaDevice)
+		for dk, dv := range di.(map[string]interface{}) {
+			if dk == "device_id" {
+				d.Id = int(dv.(float64))
+			} else if dk == "device_type" {
+				d.Type = dv.(string)
+			}
+		}
+		devs = append(devs, d)
+	}
+	return devs
+}
+
+func parseUser(v map[string]interface{}) *user {
+	u := new(user)
+	for uk, uv := range v {
+		if uk == "id" {
+			u.Id = int(uv.(float64))
+		} else if uk == "firstname" {
+			u.Firstname = uv.(string)
+		} else if uk == "lastname" {
+			u.Lastname = uv.(string)
+		} else if uk == "username" {
+			u.Username = uv.(string)
+		} else if uk == "email" {
+			u.Email = uv.(string)
+		}
+	}
+	return u
 }
 
 func (c *oneloginSamlClient) authRequest() (*http.Request, error) {

@@ -315,18 +315,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			_, err = samlClient.AwsSaml()
 			if err != nil {
 				// assume any error indicates the need to do SAML authentication
-				pr := credentialPrompt{
-					Username: aws.String(profile.SamlUsername),
-					Password: aws.String(""),
-					Type:     "saml",
-				}
-
-				if samlClient.Client().MfaType == saml.MfaTypeCode {
-					pr.MfaCode = aws.String("")
-				}
-				body, _ := json.Marshal(pr)
-
-				writeResponse(w, r, string(body), http.StatusUnauthorized)
+				samlProfileAuthError(w, r)
 				return
 			}
 
@@ -336,22 +325,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			log.Debugf("CREDS: %+v", cred)
 
 			if _, err = cred.Get(); err != nil {
-				pr := credentialPrompt{MfaCode: aws.String(""), Type: "session"}
-				body, _ := json.Marshal(pr)
-
-				switch t := err.(type) {
-				case *credlib.ErrMfaRequired:
-					writeResponse(w, r, string(body), http.StatusUnauthorized)
-					return
-				case awserr.Error:
-					if t.Code() == "AccessDenied" && strings.HasPrefix(t.Message(), "MultiFactorAuthentication failed") {
-						writeResponse(w, r, string(body), http.StatusUnauthorized)
-						return
-					}
-				}
-
-				log.Error(err)
-				writeResponse(w, r, "Error getting session credentials", http.StatusInternalServerError)
+				iamProfileAuthError(w, r, err)
 				return
 			}
 
@@ -368,6 +342,40 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		sendProfile(w, r)
 	}
+}
+
+func samlProfileAuthError(w http.ResponseWriter, r *http.Request) {
+	pr := credentialPrompt{
+		Username: aws.String(profile.SamlUsername),
+		Password: aws.String(""),
+		Type:     "saml",
+	}
+
+	if samlClient.Client().MfaType == saml.MfaTypeCode {
+		pr.MfaCode = aws.String("")
+	}
+	body, _ := json.Marshal(pr)
+
+	writeResponse(w, r, string(body), http.StatusUnauthorized)
+}
+
+func iamProfileAuthError(w http.ResponseWriter, r *http.Request, err error) {
+	pr := credentialPrompt{MfaCode: aws.String(""), Type: "session"}
+	body, _ := json.Marshal(pr)
+
+	switch t := err.(type) {
+	case *credlib.ErrMfaRequired:
+		writeResponse(w, r, string(body), http.StatusUnauthorized)
+		return
+	case awserr.Error:
+		if t.Code() == "AccessDenied" && strings.HasPrefix(t.Message(), "MultiFactorAuthentication failed") {
+			writeResponse(w, r, string(body), http.StatusUnauthorized)
+			return
+		}
+	}
+
+	log.Error(err)
+	writeResponse(w, r, "Error getting session credentials", http.StatusInternalServerError)
 }
 
 func createSessionCredentials(mfa ...string) *credentials.Credentials {
