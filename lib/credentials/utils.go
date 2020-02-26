@@ -2,6 +2,7 @@ package credentials
 
 import (
 	"fmt"
+	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"os"
 )
@@ -10,7 +11,7 @@ import (
 func StdinCredProvider(u, p string) (string, string, error) {
 	var err error
 
-	if len(u) < 1 {
+	for len(u) < 1 {
 		fmt.Fprint(os.Stderr, "Username: ")
 		_, err = fmt.Scanln(&u)
 		if err != nil && err != io.EOF {
@@ -18,12 +19,14 @@ func StdinCredProvider(u, p string) (string, string, error) {
 		}
 	}
 
-	if len(p) < 1 {
+	for len(p) < 1 {
 		fmt.Fprint(os.Stderr, "Password: ")
-		_, err = fmt.Scanln(&p)
+		b, err := terminal.ReadPassword(int(os.Stdin.Fd()))
 		if err != nil && err != io.EOF {
 			return "", "", err
 		}
+		fmt.Println()
+		p = string(b)
 	}
 
 	return u, p, nil
