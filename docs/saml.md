@@ -104,6 +104,29 @@ of these setting is determined by where they are set in the profiles.  The most 
 specified in a role profile will be used instead of a value defined in the default section.
 
 
+### SAML Credentials
+There are multiple ways to provide a SAML password to aws-runas so that you can successfully authenticate to the identity
+provider.
+
+#### Command Line Option
+The `-P` option allows you to specify the SAML password directly on the command line.  This is the least secure way to
+provide the password, as anyone on the system can inspect the options used by the command and see the raw password value.
+
+#### Environment Variable
+Setting the `SAML_PASSWORD` environment variable will pass the value to aws-runas to use for SAML authentication.  This
+is slightly more secure than the `-P` flag, but anyone on the system capable of viewing the running program's environment
+will be able to see the raw password value.
+
+#### Credentials File (preferred)
+A password can be set in the AWS credentials file, which will be used if neither the command line option, or environment
+variable are detected.  This is the most secure way to use a SAML password with aws-runas, as the value stored in the
+credentials file is obfuscated to keep the raw value out of the file.  This is no more or less secure then storing a set
+of static AWS credentials in the file, as is the case with non-SAML profiles.
+
+To set a password in the credentials file, run `aws password <profile>`, substituting the SAML-enabled profile name for
+\<profile\>.  This will prompt you for the password value, and write the obfuscated information to the credentials file.
+
+
 ### Environment Variables
 Standard AWS SDK environment variables are supported by this program. (See the `Environment Variables` section in 
 [https://docs.aws.amazon.com/sdk-for-go/api/aws/session/](https://docs.aws.amazon.com/sdk-for-go/api/aws/session/))

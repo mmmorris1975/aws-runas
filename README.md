@@ -31,6 +31,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -E, --env                      Pass credentials to program as environment variables
       -e, --expiration               Show credential expiration time
       -O, --output=env               Credential output format, valid values: env (default) or json
+      -w, --whoami                   Print the AWS identity information for the provided profile
       -u, --update                   Check for updates to aws-runas
       -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
       -l, --list-roles               List role ARNs you are able to assume
@@ -59,6 +60,9 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     
       forward [<flags>] [<profile>] [<target>]
         Start an SSM port-forwarding session to the given target
+    
+      password [<profile>]
+        Set the SAML password for the specified profile
 
 ## Building
 

@@ -18,6 +18,7 @@ Flags:
   -E, --env                      Pass credentials to program as environment variables
   -e, --expiration               Show credential expiration time
   -O, --output=env               Credential output format, valid values: env (default) or json
+  -w, --whoami                   Print the AWS identity information for the provided profile
   -u, --update                   Check for updates to aws-runas
   -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
   -l, --list-roles               List role ARNs you are able to assume
@@ -46,6 +47,9 @@ Commands:
 
   forward [<flags>] [<profile>] [<target>]
     Start an SSM port-forwarding session to the given target
+
+  password [<profile>]
+    Set the SAML password for the specified profile
 ```
 
 ### Environment Variables
@@ -107,6 +111,12 @@ This command-line option is not supported for profiles using SAML single-signon.
 Use the `-e` option to display the date and time which the cached credentials will expire. If `profile` arg is specified,
 display the expiration for the credentials used with the given profile, otherwise use the 'default' profile. Specifying
 the profile name may be useful if you have multiple profiles configured, using different source_profile settings.
+
+
+### Showing Profile Identity Information
+Use the `-w` option to display the AWS identity information for the specified profile.  Use this information to troubleshoot
+suspected configuration issues to verify that the returned `Account` and `Arn` information lines up with what is configured
+for the profile.
 
 
 ### Assuming Roles
