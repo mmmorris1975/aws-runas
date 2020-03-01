@@ -9,6 +9,7 @@ import (
 	"aws-runas/lib/saml"
 	"aws-runas/lib/ssm"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/alecthomas/kingpin"
 	"github.com/aws/aws-sdk-go/aws"
@@ -55,7 +56,7 @@ var (
 
 func main() {
 	p := kingpin.Parse()
-	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, aws.String("default"))
+	profile = coalesce(execArgs.profile, shellArgs.profile, fwdArgs.profile, pwdArgs.profile, aws.String("default"))
 
 	if *verbose {
 		log.SetLevel(logger.DEBUG)
@@ -63,6 +64,11 @@ func main() {
 
 	if err := resolveConfig(); err != nil {
 		log.Fatal(err)
+	}
+
+	if p == passwd.FullCommand() {
+		setSamlPassword()
+		os.Exit(0)
 	}
 
 	awsSession()
@@ -525,6 +531,14 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 		return nil, err
 	}
 
+	if samlPass == nil || len(*samlPass) < 1 {
+		pw, err := getSamlPassword()
+		if err != nil {
+			log.Error(err)
+		}
+		samlPass = &pw
+	}
+
 	c, err := saml.GetClient(cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
@@ -794,4 +808,58 @@ func checkRefresh() {
 			}
 		}
 	}
+}
+
+func setSamlPassword() {
+	if cfg.SamlAuthUrl == nil || len(cfg.SamlAuthUrl.String()) < 1 {
+		log.Fatal("SAML URL not defined, set saml_auth_url or use -S option")
+	}
+	url := cfg.SamlAuthUrl.String()
+
+	if samlPass == nil || len(*samlPass) < 1 {
+		_, pw, err := credlib.StdinCredProvider("junk", ``)
+		if err != nil {
+			log.Fatalf("error reading password input: %v", err)
+		}
+		samlPass = aws.String(pw)
+	}
+
+	crypt, err := credlib.NewPasswordEncoder([]byte(url)).Encode(*samlPass, 18)
+	if err != nil {
+		log.Fatalf("error encrypting password: %v", err)
+	}
+
+	cf, err := cfglib.NewIniCredentialProvider(nil)
+	if err != nil {
+		log.Fatalf("error reading credentials file: %v", err)
+	}
+	defer cf.Close()
+
+	cf.Section(url).Key(`saml_password`).SetValue(crypt)
+
+	log.Debugf("saving credentials to %s", cf.Path)
+	if err := cf.SaveTo(cf.Path); err != nil {
+		log.Fatalf("error saving credentials to file: %v", err)
+	}
+}
+
+func getSamlPassword() (string, error) {
+	if cfg.SamlAuthUrl == nil || len(cfg.SamlAuthUrl.String()) < 1 {
+		return "", errors.New("SAML URL not defined, set saml_auth_url or use -S option")
+	}
+	url := cfg.SamlAuthUrl.String()
+
+	cf, err := cfglib.NewIniCredentialProvider(nil)
+	if err != nil {
+		return "", err
+	}
+	defer cf.Close()
+
+	pw := cf.Section(url).Key(`saml_password`).Value()
+	log.Debugf("found saml_password data: '%s'", pw)
+	if len(pw) > 0 {
+		return credlib.NewPasswordEncoder([]byte(url)).Decode(pw)
+	}
+
+	return "", nil
 }

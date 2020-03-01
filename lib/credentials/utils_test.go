@@ -8,7 +8,7 @@ import (
 )
 
 func TestStdinCredProvider(t *testing.T) {
-	ch := make(chan string)
+	ch := make(chan string, 3)
 
 	go func() {
 		defer close(ch)

@@ -537,6 +537,62 @@ func TestRunEcsSvc(t *testing.T) {
 	runEcsSvc(credentials.NewCredentials(new(mockCredProvider)))
 }
 
+func Test_getSamlPassword(t *testing.T) {
+	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", ".aws/credentials")
+	defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
+
+	t.Run("no url", func(t *testing.T) {
+		cfg = emptyConfig
+		cfg.SamlAuthUrl = nil
+		_, err := getSamlPassword()
+		if err == nil {
+			t.Error("did not receive expected error")
+			return
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		u, err := url.Parse("mock-saml")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		cfg = emptyConfig
+		cfg.SamlAuthUrl = u
+
+		p, err := getSamlPassword()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if p != "1234567890ABCDEF" {
+			t.Error("password mismatch")
+		}
+		log.Info(p)
+	})
+
+	t.Run("empty", func(t *testing.T) {
+		u, err := url.Parse("good")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		cfg = emptyConfig
+		cfg.SamlAuthUrl = u
+
+		p, err := getSamlPassword()
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(p) > 0 {
+			t.Error("unexpected password from non-saml profile")
+		}
+	})
+}
+
 type mockIdp struct {
 	identity.Provider
 	test string

@@ -29,13 +29,15 @@ var (
 	samlPass     *string
 	outputFmt    *string
 
-	exe   *kingpin.CmdClause
-	shell *kingpin.CmdClause
-	fwd   *kingpin.CmdClause
+	exe    *kingpin.CmdClause
+	shell  *kingpin.CmdClause
+	fwd    *kingpin.CmdClause
+	passwd *kingpin.CmdClause
 
 	execArgs  = new(cmdArgs)
 	shellArgs = new(cmdArgs)
 	fwdArgs   = new(cmdArgs)
+	pwdArgs   = new(cmdArgs)
 )
 
 type cmdArgs struct {
@@ -116,6 +118,9 @@ func init() {
 	fwdArgs.localPort = fwd.Flag("port", fwdPortDesc).Short('p').Default("0").Uint16()
 	fwdArgs.profile = profileEnvArg(fwd, profileArgDesc)
 	fwdArgs.target = fwd.Arg("target", "The EC2 instance id and remote port, separated by ':'").String()
+
+	passwd = kingpin.Command("password", "Set the SAML password for the specified profile").Alias("pwd")
+	pwdArgs.profile = profileEnvArg(passwd, profileArgDesc)
 
 	kingpin.Version(Version)
 	kingpin.CommandLine.VersionFlag.Short('V')
