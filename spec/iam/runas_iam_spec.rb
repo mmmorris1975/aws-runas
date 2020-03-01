@@ -139,4 +139,10 @@ describe 'tests using a profile without a role' do
         its(:stderr) { should match /\s+unknown unit d in duration 1d/ }
       end
     end
+
+    describe command('aws-runas --whoami') do
+        its(:exit_status) { should eq 0 }
+        its(:stderr) { should match /^\s+Account: "686784119290",$/}
+        its(:stderr) { should match /^\s+Arn: "arn:aws:iam::686784119290:user\/circleci",$/}
+    end
 end

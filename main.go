@@ -20,6 +20,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/dustin/go-humanize"
 	cfglib "github.com/mmmorris1975/aws-config/config"
 	"github.com/mmmorris1975/simple-logger/logger"
@@ -129,6 +130,15 @@ func main() {
 		} else {
 			// possibly on EC2 ... do AssumeRole directly
 			c = assumeRoleCredentials(ses)
+		}
+
+		if *whoAmI {
+			id, err := sts.New(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log))).
+				GetCallerIdentity(new(sts.GetCallerIdentityInput))
+			if err != nil {
+				log.Fatalf("error getting caller identity: %v", err)
+			}
+			log.Infof("%+v", id)
 		}
 
 		signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)

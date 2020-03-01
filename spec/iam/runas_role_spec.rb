@@ -129,6 +129,12 @@ describe 'tests using a profile with a role' do
       end
     end
 
+    describe command('aws-runas --whoami') do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should match /^\s+Account: "686784119290",$/}
+      its(:stderr) { should match /^\s+Arn: "arn:aws:sts::686784119290:assumed-role\/circleci-role\/circleci",$/}
+    end
+
     if ENV.fetch("CIRCLECI", false).to_s === "false"; then
         describe 'and setting invalid credentials as environment variables' do
             before(:each) do

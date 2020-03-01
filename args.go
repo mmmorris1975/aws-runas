@@ -18,6 +18,7 @@ var (
 	showExpire   *bool
 	refresh      *bool
 	sesCreds     *bool
+	whoAmI       *bool
 	duration     *time.Duration
 	roleDuration *time.Duration
 	mfaCode      *string
@@ -72,6 +73,7 @@ func init() {
 		profileArgDesc      = "name of profile, or role ARN"
 		fwdPortDesc         = "The local port for the forwarded connection"
 		outputArgDesc       = "Credential output format, valid values: env (default) or json"
+		whoAmIArgDesc       = "Print the AWS identity information for the provided profile"
 	)
 
 	// special flags
@@ -80,6 +82,7 @@ func init() {
 	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Envar("RUNAS_ENV_CREDENTIALS").Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()
 	outputFmt = kingpin.Flag("output", outputArgDesc).Short('O').Envar("RUNAS_OUTPUT_FORMAT").Default("env").Enum("env", "json")
+	whoAmI = kingpin.Flag("whoami", whoAmIArgDesc).Short('w').Bool()
 
 	// flags which don't actually do any credential stuff
 	updateFlag = kingpin.Flag("update", updateArgDesc).Short('u').Bool()
