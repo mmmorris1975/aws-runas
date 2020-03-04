@@ -95,11 +95,13 @@ func main() {
 	case *ec2MdFlag:
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {
+			cfg.Profile = "" // unset any profile we've seen so far, to avoid side-effects
 			opts := &metadata.EC2MetadataInput{
-				Config:   cfg,
-				Logger:   log,
-				Session:  ses,
-				CacheDir: filepath.Dir(sessionCredCacheName()),
+				Config:     cfg,
+				Logger:     log,
+				Session:    ses,
+				CacheDir:   filepath.Dir(sessionCredCacheName()),
+				SamlClient: samlClient,
 			}
 
 			log.Fatal(metadata.NewEC2MetadataService(opts))
@@ -571,8 +573,25 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 			return nil, err
 		}
 	}
-	log.Debugf("SAMLResponse:\n%s", s)
 
+	// set sane ownership on cookieFile, just in case we're running under sudo
+	if h, err := os.UserHomeDir(); err == nil {
+		if st, err := os.Stat(h); err == nil {
+			var uid uint32
+			switch s := st.Sys().(type) {
+			case syscall.Stat_t:
+				uid = s.Uid
+			case *syscall.Stat_t:
+				uid = s.Uid
+			}
+
+			if uid > 0 {
+				os.Chown(cookieFile, int(uid), -1)
+			}
+		}
+	}
+
+	log.Debugf("SAMLResponse:\n%s", s)
 	return c, nil
 }
 

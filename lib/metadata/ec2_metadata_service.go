@@ -105,6 +105,8 @@ type EC2MetadataInput struct {
 	Session *session.Session
 	// CacheDir is the path used to cache the credentials. Set to an empty string to disable caching.
 	CacheDir string
+	// SamlClient is an optional AWS SAML client to pre-configure the initial SAML client data
+	SamlClient saml.AwsClient
 }
 
 // NewEC2MetadataService starts an HTTP server which will listen on the EC2 metadata service address for handling
@@ -169,7 +171,8 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	http.HandleFunc(refreshPath, refreshHandler)
 	http.Handle(imdsV2Token, http.NotFoundHandler()) // disable IMDSv2 (for now?)
 
-	log.Infof("EC2 Metadata Service ready on http://%s", hp)
+	log.Infoln("EC2 Metadata Service ready!")
+	log.Infof("Access the web interface at http://%s and select a role to begin", hp)
 	return srv.Serve(l)
 }
 
@@ -179,7 +182,8 @@ func handleOptions(opts *EC2MetadataInput) error {
 		log = logger.StdLogger
 	}
 
-	profile = opts.Config // may be nil/empty if no profile passed at startup, it's not an error
+	profile = opts.Config        // may be nil/empty if no profile passed at startup, it's not an error
+	samlClient = opts.SamlClient // may be nil/empty if we're not starting with a SAML profile, it's not an error
 
 	s = opts.Session
 	if s == nil {
@@ -298,6 +302,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		var err error
+		var t time.Time
 		profile, err = cfglib.Wrap(p)
 		if err != nil {
 			writeResponse(w, r, fmt.Sprintf("configuration error: %v", err), http.StatusInternalServerError)
@@ -318,6 +323,8 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 				samlProfileAuthError(w, r)
 				return
 			}
+			d, _ := samlClient.GetSessionDuration()
+			t = time.Now().Add(time.Duration(d) * time.Second)
 
 			idp = samlClient
 		} else {
@@ -328,6 +335,7 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 				iamProfileAuthError(w, r, err)
 				return
 			}
+			t, _ = cred.ExpiresAt()
 
 			idp = identity.NewAwsIdentityProvider(s).WithLogger(log)
 		}
@@ -337,7 +345,6 @@ func profileHandler(w http.ResponseWriter, r *http.Request) {
 			log.Errorf("error resolving identity: %v", err)
 		}
 
-		t, _ := cred.ExpiresAt()
 		writeResponse(w, r, t.Local().String(), http.StatusOK)
 	} else {
 		sendProfile(w, r)
