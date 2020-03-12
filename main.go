@@ -870,6 +870,7 @@ func setSamlPassword() {
 	if err := cf.SaveTo(cf.Path); err != nil {
 		log.Fatalf("error saving credentials to file: %v", err)
 	}
+	os.Chmod(cf.Path, 0600)
 }
 
 func getSamlPassword() (string, error) {
