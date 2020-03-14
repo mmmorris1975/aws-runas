@@ -576,19 +576,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 
 	// set sane ownership on cookieFile, just in case we're running under sudo
 	if h, err := os.UserHomeDir(); err == nil {
-		if st, err := os.Stat(h); err == nil {
-			var uid uint32
-			switch s := st.Sys().(type) {
-			case syscall.Stat_t:
-				uid = s.Uid
-			case *syscall.Stat_t:
-				uid = s.Uid
-			}
-
-			if uid > 0 {
-				os.Chown(cookieFile, int(uid), -1)
-			}
-		}
+		chown(h)
 	}
 
 	log.Debugf("SAMLResponse:\n%s", s)
