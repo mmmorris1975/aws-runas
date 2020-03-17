@@ -504,7 +504,12 @@ func awsSession() {
 	if len(cfg.SourceProfile) > 0 {
 		p = cfg.SourceProfile
 	}
-	opts := session.Options{Config: *sc, Profile: p}
+
+	opts := session.Options{Config: *sc}
+	if p != "default" {
+		// Don't set Profile in options if it's the default value. See release notes for v1.22.0 of the AWS SDK for the rationale
+		opts.Profile = p
+	}
 
 	// Do not set opts.SharedConfigState to enabled so we only get credentials for the profile.  We don't want the config
 	// file values getting in the way (like prompting for MFA and assuming roles) at this point.
