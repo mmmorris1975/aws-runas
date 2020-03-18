@@ -155,7 +155,7 @@ func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
 		return nil
 	}
 
-	var authUrl string
+	var authUrl, mfaField string
 	var isMfa bool
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
@@ -171,8 +171,9 @@ func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
 
 			if n.Data == "input" {
 				for _, v := range n.Attr {
-					if v.Key == "id" && v.Val == "totp" {
+					if v.Key == "id" && (v.Val == "totp" || v.Val == "otp") {
 						isMfa = true
+						mfaField = v.Val
 						return
 					}
 				}
@@ -186,13 +187,13 @@ func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
 	f(doc)
 
 	if isMfa {
-		return c.doMfa(authUrl)
+		return c.doMfa(authUrl, mfaField)
 	}
 
 	return new(errAuthFailure).WithCode(http.StatusUnauthorized)
 }
 
-func (c *keycloakSamlClient) doMfa(authUrl string) error {
+func (c *keycloakSamlClient) doMfa(authUrl, mfaField string) error {
 	if len(c.MfaToken) < 1 {
 		if c.MfaTokenProvider != nil {
 			t, err := c.MfaTokenProvider()
@@ -207,7 +208,7 @@ func (c *keycloakSamlClient) doMfa(authUrl string) error {
 
 	form := url.Values{}
 	form.Set("login", "Log+In")
-	form.Set("totp", c.MfaToken)
+	form.Set(mfaField, c.MfaToken)
 
 	res, err := c.httpClient.PostForm(authUrl, form)
 	if err != nil {

@@ -556,6 +556,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 		samlPass = &pw
 	}
 
+	log.Debugln("divining SAML client")
 	c, err := saml.GetClient(cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
@@ -568,8 +569,10 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 
 	// If our cookies are still valid, the first AwsSaml() call should succeed.
 	// Assume any failure necessitates a re-auth.  Retry AwsSaml() to validate
+	log.Debugln("checking SAML response")
 	var s string
 	if s, err = c.AwsSaml(); err != nil {
+		log.Debugln("doing SAML authentication")
 		if err = c.Authenticate(); err != nil {
 			return nil, err
 		}
@@ -580,6 +583,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 	}
 
 	// set sane ownership on cookieFile, just in case we're running under sudo
+	log.Debugln("ensuring sanity of the cookie cache")
 	if h, err := os.UserHomeDir(); err == nil {
 		chown(h)
 	}
