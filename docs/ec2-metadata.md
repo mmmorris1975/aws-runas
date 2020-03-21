@@ -4,8 +4,9 @@ title: EC2 Metadata Service
 ---
 # EC2 Metadata Service
 The EC2 Metadata Service feature of aws-runas allows you to run a local web server which mimics the credential retrieval
-abilities of the EC2 metadata service which runs on AWS EC2 instances. In place of an EC2 instance profile, aws-runas
-will serve the assume role credentials of the provided profile.
+abilities of the [EC2 metadata service](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials)
+which runs on AWS EC2 instances. In place of an EC2 instance profile, aws-runas will serve the assume role credentials
+of the provided profile.
 
 This will enable use cases where a developer wishes to execute their code via an IDE, but it's cumbersome to setup the
 execution environment to use aws-runas in the traditional "wrapper" mode.
