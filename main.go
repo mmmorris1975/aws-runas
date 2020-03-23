@@ -560,7 +560,11 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 		samlPass = &pw
 	}
 
-	log.Debugln("divining SAML client")
+	sp := "auto-detect"
+	if len(cfg.SamlProvider) > 0 {
+		sp = cfg.SamlProvider
+	}
+	log.Debugf("divining SAML client (%s)", sp)
 	c, err := saml.GetClient(cfg.SamlProvider, cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
