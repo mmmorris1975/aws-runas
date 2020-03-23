@@ -8,18 +8,8 @@ import (
 )
 
 func TestGetClientMock(t *testing.T) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Headers", "X-MockTest-Only,X-MockTest-NoAuth")
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
-  <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
-    <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://%s/auth/SSOPOST/metaAlias/realm/saml-idp"/>
-  </IDPSSODescriptor>
-</EntityDescriptor>`, r.Host)
-	}))
-	defer s.Close()
-
-	c, err := GetClient(s.URL)
+	// test explicit provider setting
+	c, err := GetClient("mock", "https://my-mock-saml.local")
 	if err != nil {
 		t.Error(err)
 		return
@@ -36,7 +26,7 @@ func TestGetClientUnknown(t *testing.T) {
 	}))
 	defer s.Close()
 
-	_, err := GetClient(s.URL)
+	_, err := GetClient("", s.URL)
 	if err == nil {
 		t.Error("did not get expected error")
 	}
@@ -54,7 +44,7 @@ func TestGetClientForgerock(t *testing.T) {
 	}))
 	defer s.Close()
 
-	c, err := GetClient(fmt.Sprintf(`%s/auth/json/realms/mock-test/authenticate`, s.URL))
+	c, err := GetClient("", fmt.Sprintf(`%s/auth/json/realms/mock-test/authenticate`, s.URL))
 	if err != nil {
 		t.Error(err)
 		return
@@ -88,7 +78,7 @@ func TestGetClientKeycloak(t *testing.T) {
 	}))
 	defer s.Close()
 
-	c, err := GetClient(fmt.Sprintf("%s/auth/realms/master/protocol/saml/clients/aws", s.URL))
+	c, err := GetClient("", fmt.Sprintf("%s/auth/realms/master/protocol/saml/clients/aws", s.URL))
 	if err != nil {
 		t.Error(err)
 		return

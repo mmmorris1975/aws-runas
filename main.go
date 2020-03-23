@@ -480,6 +480,10 @@ func finalConfig(cfg *cfglib.AwsConfig) (*config.AwsConfig, error) {
 		newCfg.SamlUsername = *samlUser
 	}
 
+	if samlProvider != nil && len(*samlProvider) > 0 {
+		newCfg.SamlProvider = *samlProvider
+	}
+
 	log.Debugf("FINAL Config: %+v", newCfg)
 	return newCfg, nil
 }
@@ -557,7 +561,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 	}
 
 	log.Debugln("divining SAML client")
-	c, err := saml.GetClient(cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
+	c, err := saml.GetClient(cfg.SamlProvider, cfg.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
 		s.MfaToken = *mfaCode

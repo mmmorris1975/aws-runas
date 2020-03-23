@@ -411,7 +411,7 @@ func createSamlClient() *handlerError {
 		return newHandlerError(err.Error(), http.StatusInternalServerError)
 	}
 
-	sc, err := saml.GetClient(profile.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
+	sc, err := saml.GetClient(profile.SamlProvider, profile.SamlAuthUrl.String(), func(s *saml.BaseAwsClient) {
 		s.Username = profile.SamlUsername
 		s.Password = os.Getenv("SAML_PASSWORD")
 		s.CredProvider = func(u string, p string) (string, string, error) {

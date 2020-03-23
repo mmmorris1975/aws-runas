@@ -8,16 +8,21 @@ import (
 
 // GetClient is a factory method for detecting the SAML client to use based on properties of an HTTP request
 // the the provider's metadata endpoint
-func GetClient(authUrl string, options ...func(s *BaseAwsClient)) (AwsClient, error) {
+func GetClient(provider, authUrl string, options ...func(s *BaseAwsClient)) (AwsClient, error) {
 	var c AwsClient
+	var err error
 
-	r, err := http.Head(authUrl)
-	if err != nil {
-		return nil, err
+	if len(provider) < 1 {
+		r, err := http.Head(authUrl)
+		if err != nil {
+			return nil, err
+		}
+		defer r.Body.Close()
+
+		provider = divineClient(r)
 	}
-	defer r.Body.Close()
 
-	switch divineClient(r) {
+	switch provider {
 	case "forgerock":
 		c, err = NewForgerockSamlClient(authUrl)
 	case "keycloak":

@@ -28,6 +28,7 @@ var (
 	samlUrl      **url.URL
 	samlUser     *string
 	samlPass     *string
+	samlProvider *string
 	outputFmt    *string
 
 	exe    *kingpin.CmdClause
@@ -70,6 +71,7 @@ func init() {
 		samlUrlDesc         = "URL of the SAML authentication endpoint"
 		samlUserDesc        = "Username for SAML authentication"
 		samlPassDesc        = "Password for SAML authentication"
+		samlProviderDesc    = "The name of the saml provider to use, and bypass auto-detection"
 		profileArgDesc      = "name of profile, or role ARN"
 		fwdPortDesc         = "The local port for the forwarded connection"
 		outputArgDesc       = "Credential output format, valid values: env (default) or json"
@@ -106,6 +108,7 @@ func init() {
 	samlUrl = kingpin.Flag("saml-url", samlUrlDesc).Short('S').Envar("SAML_AUTH_URL").URL()
 	samlUser = kingpin.Flag("saml-user", samlUserDesc).Short('U').Envar("SAML_USERNAME").String()
 	samlPass = kingpin.Flag("saml-password", samlPassDesc).Short('P').Envar("SAML_PASSWORD").String()
+	samlProvider = kingpin.Flag("saml-provider", samlProviderDesc).Short('R').Envar("SAML_PROVIDER").String()
 
 	// Can not use Command() if you also have top-level Arg()s defined, so wrap "typical" behavior
 	// as the default command so users can continue to use the tool as before

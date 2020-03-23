@@ -4,6 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/mmmorris1975/aws-config/config"
 	"net/url"
+	"strings"
 	"time"
 )
 
@@ -15,6 +16,7 @@ type AwsConfig struct {
 	JumpRoleArn          arn.ARN
 	SamlAuthUrl          *url.URL
 	SamlUsername         string
+	SamlProvider         string
 }
 
 // Wrap converts an aws-config/config.AwsConfig type to our local AwsConfig type
@@ -22,6 +24,7 @@ func Wrap(c *config.AwsConfig) (*AwsConfig, error) {
 	t := AwsConfig{
 		AwsConfig:    c,
 		SamlUsername: c.Get("saml_username"),
+		SamlProvider: strings.ToLower(c.Get("saml_provider")),
 	}
 
 	if c.DurationSeconds < 1 {

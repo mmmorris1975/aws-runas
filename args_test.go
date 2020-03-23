@@ -20,6 +20,7 @@ var ev = map[string]string{
 	"SAML_AUTH_URL": "https://example.org/saml",
 	"SAML_USERNAME": "mock-user",
 	"SAML_PASSWORD": "mock-password",
+	"SAML_PROVIDER": "mock-saml",
 	"AWS_PROFILE":   "my-profile",
 }
 
@@ -78,7 +79,7 @@ func TestArgHandling(t *testing.T) {
 		}
 
 		if *jumpArn != ev["JUMP_ROLE_ARN"] || *samlUser != ev["SAML_USERNAME"] || *samlPass != ev["SAML_PASSWORD"] ||
-			(*samlUrl).String() != ev["SAML_AUTH_URL"] {
+			(*samlUrl).String() != ev["SAML_AUTH_URL"] || *samlProvider != ev["SAML_PROVIDER"] {
 			t.Error("unexpected SAML values")
 		}
 	})
