@@ -16,8 +16,8 @@ github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1/go.mod h1:wJfORR
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af h1:pmfjZENx5imkbgOkpRUYLnmbU7UEFbjtDA2hxJ1ichM=
 github.com/jmespath/go-jmespath v0.0.0-20180206201540-c2b33e8439af/go.mod h1:Nht3zPeWKUH0NzdCt2Blrr5ys8VGpn0CEB0cQHVjt7k=
 github.com/jtolds/gls v4.20.0+incompatible/go.mod h1:QJZ7F/aHp+rZTRtaJ1ow/lLfFfVYBRgL+9YlvaHOwJU=
-github.com/mmmorris1975/aws-config v0.3.1 h1:+pnwlLNcAdGLd8D3EsqO/LErr8QG5GyFAeVj+o5du94=
-github.com/mmmorris1975/aws-config v0.3.1/go.mod h1:i0VDvgfI0sJXrkTSGycJTywGKVecAijN5caGURn2Vfc=
+github.com/mmmorris1975/aws-config v0.3.2 h1:K8+wtmbgpH+yxXpkj0W/BUFsTRj4IKJsJ8rwKNd1BUE=
+github.com/mmmorris1975/aws-config v0.3.2/go.mod h1:i0VDvgfI0sJXrkTSGycJTywGKVecAijN5caGURn2Vfc=
 github.com/mmmorris1975/simple-logger v0.4.0 h1:KzbkZXytbJ49ItvnnHA50zVgD7Bw2Dfs4oemQPXdpKg=
 github.com/mmmorris1975/simple-logger v0.4.0/go.mod h1:7Q9LpcDIqBtiUMVembQnn7TovPx9l078zfYmv1pl3CY=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

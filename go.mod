@@ -4,7 +4,7 @@ require (
 	github.com/alecthomas/kingpin v0.0.0-20190816080609-dce89ec0b9f1
 	github.com/aws/aws-sdk-go v1.28.12
 	github.com/dustin/go-humanize v1.0.0
-	github.com/mmmorris1975/aws-config v0.3.1
+	github.com/mmmorris1975/aws-config v0.3.2
 	github.com/mmmorris1975/simple-logger v0.4.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
