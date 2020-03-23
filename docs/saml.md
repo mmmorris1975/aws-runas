@@ -87,6 +87,10 @@ and will be ignored by other tools leveraging the AWS SDK.
 
   * `saml_username` This attribute sets the username to use when performing the SAML authentication.  If not set, aws-runas
     will prompt for the value to be input via the command line.
+  * `saml_provider` This attribute allows you to explicitly specify the SAML provider to use, and bypass the auto-detection
+    logic.  This may be useful for cases where the auto-detection logic fails, or is blocked by a CDN or WAF.  The value is
+    treated as case-insensitive, but must be one of the supported providers, otherwise you will receive the error:
+    `FATAL unable to determine SAML client from url`
   * `jump_role_arn` For cases where you will perform SAML authentication to assume an initial (jump) role to retrieve
     credentials which allow you to assume a role in the target AWS account, configure this value with the role ARN needed
     for the initial role.

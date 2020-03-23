@@ -49,6 +49,8 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
       -U, --saml-user=SAML-USER      Username for SAML authentication
       -P, --saml-password=SAML-PASSWORD  
                                      Password for SAML authentication
+      -R, --saml-provider=SAML-PROVIDER  
+                                     The name of the saml provider to use, and bypass auto-detection
       -V, --version                  Show application version.
     
     Commands:
