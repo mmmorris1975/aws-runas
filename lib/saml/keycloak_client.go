@@ -25,9 +25,9 @@ func NewKeycloakSamlClient(authUrl string) (*keycloakSamlClient, error) {
 	bsc.MfaType = MfaTypeAuto
 
 	c := &keycloakSamlClient{BaseAwsClient: bsc}
-	c.parseBaseUrl()
-	c.parseRealm()
-	c.parseClientId()
+	//c.parseBaseUrl()
+	//c.parseRealm()
+	//c.parseClientId()
 
 	return c, nil
 }

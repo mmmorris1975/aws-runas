@@ -15,14 +15,9 @@ func TestNewKeycloakSamlClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		u := fmt.Sprintf("%s/auth/realms/master/protocol/saml/clients/aws", s.URL)
 
-		c, err := NewKeycloakSamlClient(u)
-		if err != nil {
+		if _, err := NewKeycloakSamlClient(u); err != nil {
 			t.Error(err)
 			return
-		}
-
-		if c.realm != "master" || c.clientId != "aws" {
-			t.Error("data mismatch")
 		}
 	})
 
