@@ -35,6 +35,7 @@ type AwsClient interface {
 type errAuthFailure struct {
 	error
 	code int
+	text string
 }
 
 func (e *errAuthFailure) WithCode(code int) *errAuthFailure {
@@ -42,8 +43,13 @@ func (e *errAuthFailure) WithCode(code int) *errAuthFailure {
 	return e
 }
 
+func (e *errAuthFailure) WithText(t string) *errAuthFailure {
+	e.text = t
+	return e
+}
+
 func (e *errAuthFailure) Error() string {
-	return fmt.Sprintf("auth status code %d", e.code)
+	return fmt.Sprintf("auth status code %d: %s", e.code, e.text)
 }
 
 type errMfaFailure struct {

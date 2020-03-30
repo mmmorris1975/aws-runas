@@ -149,7 +149,7 @@ func (c *forgerockSamlClient) doAuth(u string) (*http.Response, error) {
 
 	if res.StatusCode != http.StatusOK {
 		res.Body.Close()
-		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Authentication failed")
 	}
 
 	return res, err

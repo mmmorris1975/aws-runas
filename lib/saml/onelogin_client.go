@@ -190,20 +190,20 @@ func (c *oneloginSamlClient) doAuthRequest(r *http.Request) (*authReply, error) 
 
 	data, err := ioutil.ReadAll(res.Body)
 	if err != nil {
-		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Error reading response body")
 	}
 
 	if res.StatusCode != http.StatusOK {
 		if res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusUnauthorized {
 			s := new(authReply)
 			if err = json.Unmarshal(data, s); err != nil {
-				return nil, new(errAuthFailure).WithCode(res.StatusCode)
+				return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Invalid JSON reply")
 			}
 
 			return nil, fmt.Errorf(s.Status.Message)
 		}
 
-		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Authentication failed")
 	}
 
 	ar := new(authReply)
@@ -466,7 +466,7 @@ func (c *oneloginSamlClient) apiAccessToken() (*apiToken, error) {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Failed getting access token")
 	}
 
 	b, err := ioutil.ReadAll(res.Body)

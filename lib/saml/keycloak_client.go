@@ -77,7 +77,7 @@ func (c *keycloakSamlClient) AwsSaml() (string, error) {
 }
 
 func (c *keycloakSamlClient) auth() error {
-	u, err := c.getAuthUrl()
+	u, fields, err := c.getAuthUrl()
 	if err != nil {
 		if t, ok := err.(*errAuthFailure); ok && t.code == 0 {
 			return nil
@@ -85,18 +85,22 @@ func (c *keycloakSamlClient) auth() error {
 		return err
 	}
 
-	creds := url.Values{}
-	creds.Set("username", c.Username)
-	creds.Set("password", c.Password)
+	for key := range fields {
+		if strings.ToLower(key) == "username" {
+			fields.Set(key, c.Username)
+		} else if strings.ToLower(key) == "password" {
+			fields.Set(key, c.Password)
+		}
+	}
 
-	res, err := c.httpClient.PostForm(u.String(), creds)
+	res, err := c.httpClient.PostForm(u.String(), fields)
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return new(errAuthFailure).WithCode(res.StatusCode)
+		return new(errAuthFailure).WithCode(res.StatusCode).WithText("Authentication failed")
 	}
 
 	// HTTP 200 could either mean we've received a SAMLResponse after a successful authentication, we're being prompted
@@ -104,34 +108,54 @@ func (c *keycloakSamlClient) auth() error {
 	return c.handle200(res.Body)
 }
 
-func (c *keycloakSamlClient) getAuthUrl() (*url.URL, error) {
+func (c *keycloakSamlClient) getAuthUrl() (*url.URL, url.Values, error) {
 	res, err := c.httpClient.Get(c.authUrl.String())
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		if res.StatusCode == http.StatusFound {
-			return nil, new(errAuthFailure).WithCode(0)
+			return nil, nil, new(errAuthFailure).WithCode(0).WithText("Auth URL redirect")
 		}
-		return nil, new(errAuthFailure).WithCode(res.StatusCode)
+		return nil, nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Failure retrieving auth url")
 	}
 
 	doc, err := html.Parse(res.Body)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	var authUrl string
+	fields := url.Values{}
 	var f func(n *html.Node)
 	f = func(n *html.Node) {
 		if n.Type == html.ElementNode && n.Data == "form" {
 			for _, v := range n.Attr {
 				if v.Key == "action" {
 					authUrl = v.Val
-					return
+					break
 				}
+			}
+		}
+
+		if n.Type == html.ElementNode && n.Data == "input" {
+			var attr, val string
+			use := true
+			for _, v := range n.Attr {
+				if v.Key == "type" && (v.Val == "submit" || v.Val == "reset") {
+					use = false
+					break
+				} else if v.Key == "name" {
+					attr = v.Val
+				} else if v.Key == "value" {
+					val = v.Val
+				}
+			}
+
+			if use {
+				fields.Add(attr, val)
 			}
 		}
 
@@ -141,7 +165,12 @@ func (c *keycloakSamlClient) getAuthUrl() (*url.URL, error) {
 	}
 	f(doc)
 
-	return url.Parse(authUrl)
+	u, err := url.Parse(authUrl)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return u, fields, nil
 }
 
 func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
@@ -190,7 +219,7 @@ func (c *keycloakSamlClient) handle200(body io.ReadCloser) error {
 		return c.doMfa(authUrl, mfaField)
 	}
 
-	return new(errAuthFailure).WithCode(http.StatusUnauthorized)
+	return new(errAuthFailure).WithCode(http.StatusUnauthorized).WithText("Invalid authentication response")
 }
 
 func (c *keycloakSamlClient) doMfa(authUrl, mfaField string) error {
@@ -217,7 +246,7 @@ func (c *keycloakSamlClient) doMfa(authUrl, mfaField string) error {
 	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
-		return new(errAuthFailure).WithCode(res.StatusCode)
+		return new(errAuthFailure).WithCode(res.StatusCode).WithText("MFA failed")
 	}
 
 	c.MfaToken = ""

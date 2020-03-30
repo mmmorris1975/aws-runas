@@ -3,6 +3,7 @@ package saml
 import (
 	"fmt"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -38,6 +39,13 @@ func TestKeycloakSamlClient_AwsSaml(t *testing.T) {
 		t.Error(err)
 		return
 	}
+
+	cookie := http.Cookie{
+		Name:  "KEYCLOAK_SESSION",
+		Value: "logged-in",
+	}
+	c.httpClient.Jar, _ = cookiejar.New(nil)
+	c.httpClient.Jar.SetCookies(c.baseUrl, []*http.Cookie{&cookie})
 
 	if _, err := c.AwsSaml(); err != nil {
 		t.Error(err)
@@ -198,7 +206,11 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if r.URL.Path == "/auth/realms/master/protocol/saml/clients/aws" {
-		body := `
+		var body string
+		c, err := r.Cookie("KEYCLOAK_SESSION")
+		fmt.Printf("%+v\n", c)
+		if err == nil {
+			body = `
 <html>
 <head></head>
 <body>
@@ -208,6 +220,20 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
+		} else {
+			body = `
+<html>
+<head></head>
+<body>
+ <form method="post" action="http://%s/auth/realms/master/login-actions/authenticate">
+  <input name="username" value=""  type="text" />
+  <input name="password" type="password" />
+  <input type="hidden" id="id-hidden-input" name="credentialId" />
+ </form>
+</body>
+</html>
+`
+		}
 		fmt.Fprintf(w, body, r.Host)
 	} else if r.URL.Path == "/auth/realms/master/login-actions/authenticate" {
 		if err := r.ParseForm(); err != nil {
