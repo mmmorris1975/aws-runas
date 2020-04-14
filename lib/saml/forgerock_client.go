@@ -114,10 +114,10 @@ func (c *forgerockSamlClient) auth() error {
 		// try push, if fail ... try code, if fail ... try no mfa?
 		c.MfaType = MfaTypePush
 		if err := c.auth(); err != nil {
-			if err.Error() == "auth status code 401" {
+			if strings.HasPrefix(err.Error(), "auth status code 401") {
 				c.MfaType = MfaTypeCode
 				if err := c.auth(); err != nil {
-					if err.Error() == "auth status code 401" {
+					if strings.HasPrefix(err.Error(), "auth status code 401") {
 						// this may or may not be a good idea
 						c.MfaType = MfaTypeNone
 						return c.auth()
