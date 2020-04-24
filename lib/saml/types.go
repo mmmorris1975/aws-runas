@@ -4,6 +4,7 @@ import (
 	"aws-runas/lib/identity"
 	"fmt"
 	"net/http"
+	"strings"
 )
 
 const (
@@ -30,6 +31,35 @@ type AwsClient interface {
 	AwsSaml() (string, error)
 	GetSessionDuration() (int64, error)
 	Client() *BaseAwsClient
+	RoleDetails() (*RoleDetails, error)
+}
+
+type RoleDetails struct {
+	details map[string]string
+}
+
+func (r *RoleDetails) Roles() []string {
+	rd := make([]string, 0)
+	for k, _ := range r.details {
+		rd = append(rd, k)
+	}
+	return rd
+}
+
+func (r *RoleDetails) Principals() []string {
+	rd := make([]string, 0)
+	for _, v := range r.details {
+		rd = append(rd, v)
+	}
+	return rd
+}
+
+func (r *RoleDetails) String() string {
+	sb := new(strings.Builder)
+	for k, v := range r.details {
+		sb.WriteString(fmt.Sprintf("  %s %s\n", k, v))
+	}
+	return sb.String()
 }
 
 type errAuthFailure struct {

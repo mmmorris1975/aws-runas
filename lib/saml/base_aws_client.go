@@ -71,6 +71,11 @@ func (c *BaseAwsClient) Roles(user ...string) (identity.Roles, error) {
 	return c.roles()
 }
 
+// RoleDetails retrieves the IAM Role and SAML provider principal ARN from the data returned by AwsSaml()
+func (c *BaseAwsClient) RoleDetails() (*RoleDetails, error) {
+	return c.roleDetails()
+}
+
 // GetSessionDuration retrieves the SessionDuration attribute from the data returned by AwsSaml()
 func (c *BaseAwsClient) GetSessionDuration() (int64, error) {
 	return c.getSessionDuration()
@@ -110,12 +115,13 @@ func (c *BaseAwsClient) getIdentity() (*identity.Identity, error) {
 	}, nil
 }
 
-func (c *BaseAwsClient) roles(user ...string) (identity.Roles, error) {
+func (c *BaseAwsClient) roleDetails() (*RoleDetails, error) {
+	rd := new(RoleDetails)
+	rd.details = make(map[string]string)
+
 	if err := c.decodeSaml(); err != nil {
 		return nil, err
 	}
-
-	roles := make([]string, 0)
 
 	re, err := regexp.Compile(`>(arn:aws:iam::\d+:role/.*?),(arn:aws:iam::\d+:saml-provider/.*?)<`)
 	if err != nil {
@@ -125,11 +131,19 @@ func (c *BaseAwsClient) roles(user ...string) (identity.Roles, error) {
 	m := re.FindAllStringSubmatch(c.decodedSaml, -1)
 	if m != nil {
 		for _, r := range m {
-			roles = append(roles, r[1])
+			rd.details[r[1]] = r[2]
 		}
 	}
 
-	return roles, nil
+	return rd, nil
+}
+
+func (c *BaseAwsClient) roles() (identity.Roles, error) {
+	rd, err := c.roleDetails()
+	if err != nil {
+		return nil, err
+	}
+	return rd.Roles(), nil
 }
 
 func (c *BaseAwsClient) getSessionDuration() (int64, error) {

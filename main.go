@@ -597,6 +597,12 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 	}
 
 	log.Debugf("SAMLResponse:\n%s", s)
+
+	rd, err := c.RoleDetails()
+	if err != nil {
+		return nil, err
+	}
+	log.Debugf("SAML Role Details:\n%s", rd.String())
 	return c, nil
 }
 
