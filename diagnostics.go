@@ -83,8 +83,8 @@ func checkProfileCfg(p string, c *config.AwsConfig) {
 				log.Errorf("error communicating with SAML metadata url: %v", err)
 			}
 
-			if u.StatusCode != http.StatusOK {
-				log.Errorf("http status code %d when communicating with SAML metadaurl", u.StatusCode)
+			if u.StatusCode != http.StatusOK && u.StatusCode != http.StatusMethodNotAllowed {
+				log.Warnf("http status code %d when communicating with SAML metadaurl", u.StatusCode)
 			}
 		} else {
 			var cfgCreds bool
