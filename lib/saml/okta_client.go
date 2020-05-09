@@ -99,27 +99,27 @@ func (c oktaSamlClient) doMFA(token string, factors []*mfaFactor) (*apiResponse,
 	if len(factors) == 1 {
 		// single factor registered, just handle it
 		return c.handleMfa(token, factors[0])
-	} else {
-		index := make(map[string]int)
-		for i, f := range factors {
-			if f.Type == "push" || strings.HasPrefix(f.Type, "token") {
-				index[f.Type] = i
-			}
-		}
+	}
 
-		switch len(index) {
-		case 0:
-			// fall through
-		case 1:
-			// sucks that we need to range(), but at least it's only one time
-			for _, v := range index {
+	index := make(map[string]int)
+	for i, f := range factors {
+		if f.Type == "push" || strings.HasPrefix(f.Type, "token") {
+			index[f.Type] = i
+		}
+	}
+
+	switch len(index) {
+	case 0:
+		// fall through
+	case 1:
+		// sucks that we need to range(), but at least it's only one time
+		for _, v := range index {
+			return c.handleMfa(token, factors[v])
+		}
+	default:
+		for _, e := range []string{"push", "token:software:totp", "token:hotp", "token"} {
+			if v, ok := index[e]; ok {
 				return c.handleMfa(token, factors[v])
-			}
-		default:
-			for _, e := range []string{"push", "token:software:totp", "token:hotp", "token"} {
-				if v, ok := index[e]; ok {
-					return c.handleMfa(token, factors[v])
-				}
 			}
 		}
 	}

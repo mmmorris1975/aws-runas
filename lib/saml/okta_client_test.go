@@ -230,6 +230,7 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 					MfaFactors: nil,
 				},
 			}
+
 			if creds["password"] == "tokenmfa" {
 				vfyUrl := fmt.Sprintf("http://%s/api/v1/authn/factors/tokenmfa", r.Host)
 				f := mfaFactor{
@@ -244,8 +245,6 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 				body, _ := json.Marshal(&res)
 				w.Write(body)
 				return
-			} else {
-
 			}
 		} else {
 			http.Error(w, `{"errorSummary": "Authentication failed"}`, http.StatusUnauthorized)
@@ -266,10 +265,10 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 				bytes, _ := json.Marshal(&s)
 				w.Write(bytes)
 				return
-			} else {
-				http.Error(w, `{"errorSummary": "Invalid Passcode/Answer"}`, http.StatusForbidden)
-				return
 			}
+
+			http.Error(w, `{"errorSummary": "Invalid Passcode/Answer"}`, http.StatusForbidden)
+			return
 		}
 	} else if strings.HasPrefix(r.URL.Path, "/home/amazon_aws/") {
 		body := `
