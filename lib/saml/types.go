@@ -34,18 +34,22 @@ type AwsClient interface {
 	RoleDetails() (*RoleDetails, error)
 }
 
+// RoleDetails is a type which holds the details of the AWS roles defined in a SAMLResponse.
+// It includes both the IAM Role ARN, as well as the SAML SSO Principal ARN.
 type RoleDetails struct {
 	details map[string]string
 }
 
+// Roles will enumerate the list of IAM roles found in the SAMLResponse document
 func (r *RoleDetails) Roles() []string {
 	rd := make([]string, 0)
-	for k, _ := range r.details {
+	for k := range r.details {
 		rd = append(rd, k)
 	}
 	return rd
 }
 
+// Principals returns the list of AWS SAML integration principal ARN values.
 func (r *RoleDetails) Principals() []string {
 	rd := make([]string, 0)
 	for _, v := range r.details {
