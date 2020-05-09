@@ -88,3 +88,20 @@ func TestGetClientKeycloak(t *testing.T) {
 		t.Error("did not get correct client type")
 	}
 }
+
+func TestGetClientOneLogin(t *testing.T) {
+	t.Skip("onelogin client requires connection to OneLogin service")
+}
+
+func TestGetClientOkta(t *testing.T) {
+	u := "https://example.okta.com/home/amazon_aws/app-id/111"
+	c, err := GetClient("", u)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if _, ok := c.(*oktaSamlClient); !ok {
+		t.Error("did not get correct client type")
+	}
+}
