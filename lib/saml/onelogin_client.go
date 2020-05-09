@@ -263,7 +263,7 @@ func (c *oneloginSamlClient) handlePushMfa(u string, r *verifyMfaRequest) error 
 	if ar.Status.Code == http.StatusOK {
 		if ar.Status.Type == "pending" {
 			fmt.Println("Waiting for Push MFA confirmation...")
-			time.Sleep(1 * time.Second)
+			time.Sleep(1250 * time.Millisecond)
 			r.DoNotNotify = true
 			return c.handlePushMfa(u, r)
 		} else if strings.EqualFold(ar.Status.Message, "success") {

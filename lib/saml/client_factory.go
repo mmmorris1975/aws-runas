@@ -29,6 +29,8 @@ func GetClient(provider, authUrl string, options ...func(s *BaseAwsClient)) (Aws
 		c, err = NewKeycloakSamlClient(authUrl)
 	case "onelogin":
 		c, err = NewOneLoginSamlClient(authUrl)
+	case "okta":
+		c, err = NewOktaSamlClient(authUrl)
 	case "mock":
 		c, err = NewMockSamlClient(authUrl)
 	default:
@@ -49,6 +51,10 @@ func GetClient(provider, authUrl string, options ...func(s *BaseAwsClient)) (Aws
 func divineClient(r *http.Response) string {
 	if strings.Contains(r.Request.URL.Host, ".onelogin.com") {
 		return "onelogin"
+	}
+
+	if strings.Contains(r.Request.URL.Host, ".okta") {
+		return "okta"
 	}
 
 	h := r.Header.Get("Access-Control-Allow-Headers")

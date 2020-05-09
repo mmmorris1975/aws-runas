@@ -123,7 +123,7 @@ func (c *BaseAwsClient) roleDetails() (*RoleDetails, error) {
 		return nil, err
 	}
 
-	re, err := regexp.Compile(`>(arn:aws:iam::\d+:role/.*?),(arn:aws:iam::\d+:saml-provider/.*?)<`)
+	re, err := regexp.Compile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,11 @@ func (c *BaseAwsClient) roleDetails() (*RoleDetails, error) {
 	m := re.FindAllStringSubmatch(c.decodedSaml, -1)
 	if m != nil {
 		for _, r := range m {
-			rd.details[r[1]] = r[2]
+			if strings.Contains(":role/", r[1]) {
+				rd.details[r[1]] = r[2]
+			} else {
+				rd.details[r[2]] = r[1]
+			}
 		}
 	}
 
