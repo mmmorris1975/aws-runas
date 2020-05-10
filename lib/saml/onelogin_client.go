@@ -62,8 +62,6 @@ func NewOneLoginSamlClient(authUrl string) (*oneloginSamlClient, error) {
 		return nil, err
 	}
 
-	//c.httpClient.CheckRedirect = nil
-
 	return &c, nil
 }
 
