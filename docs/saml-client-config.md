@@ -66,7 +66,7 @@ echo -n 'client_id:client_secret' | base64
 Substituting client_id and client_secret with your actual values, of course. On some Linux systems you may need to add
 the `-w0` flag to the base64 command to disable text wrapping.
 
-Example Okta info in the .aws/config file:
+Example OneLogin info in the .aws/config file:
 ```text
 saml_auth_url = https://my-onelogin-hostname.com/trust/saml2/http-post/sso/__app_id__?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQ=
 saml_provider = onelogin
