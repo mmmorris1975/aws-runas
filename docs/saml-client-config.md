@@ -6,7 +6,7 @@ title: SAML Client Configuration Guide
 At this time, aws-runas works with Forgerock, Keycloak, Okta, and OneLogin Identity Providers who have configured SSO
 integration with AWS via SAML 2.0.  The sections below will describe the specific configuration needed to work with each
 supported provider.  Many of the details specific to your instance of the identity provider (like the URL) will need to
-be shared to you by your identity platform adminstrators.
+be shared to you by your identity platform administrators.
 
 In all of the examples below, the `saml_provider` configuration attribute is optional, and can be used to bypass the client
 auto-detection logic.
