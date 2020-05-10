@@ -59,7 +59,7 @@ the OneLogin API.  The format of the token parameter is the base64 encoding of t
 joined with a `:` between them. If you have access to a MacOS or Linux system, the following command can be used to
 generate the necessary value:
 
-```shell script
+```text
 echo -n 'client_id:client_secret' | base64
 ```
 
