@@ -8,7 +8,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
-	"regexp"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -16,19 +16,20 @@ import (
 
 type oneloginSamlClient struct {
 	*BaseAwsClient
-	appId           string
-	subdomain       string
-	mdBaseUrl       string
+	apiToken        *oneloginApiToken
 	apiBaseUrl      string
 	apiClientId     string
 	apiClientSecret string
-	apiToken        *apiToken
+	appId           string
+	subdomain       string
 }
 
 // NewOneLoginSamlClient creates a OneLogin aware SAML client using authUrl as the authentication endpoint
-// OneLogin convention for this is along the lines of __base-url__/trust/saml2/http-post/sso/__id__
-// which is the SAML 2.0 Endpoint found under the SSO section for the AWS OneLogin application.
-// It's is the same URL which is used to "do the SAML" between OneLogin and AWS
+// There is a SAML-specific endpoint available, however it requires that you provide the user's credentials with
+// every call, and does not persist the user's login state.  We'll take a different tact and use the login page API
+// which has a URL in the general form of https://my-tenant.onelogin.com/trust/saml2/launch/__app-id__ where the app-id
+// value can be found on the user's application landing page, hovering over the OneLogin AWS Application, and getting
+// the last element in the URL path.
 func NewOneLoginSamlClient(authUrl string) (*oneloginSamlClient, error) {
 	bsc, err := newBaseAwsClient(authUrl)
 	if err != nil {
@@ -39,22 +40,24 @@ func NewOneLoginSamlClient(authUrl string) (*oneloginSamlClient, error) {
 	c := oneloginSamlClient{BaseAwsClient: bsc}
 	c.subdomain = strings.Split(bsc.authUrl.Host, ".")[0]
 
-	if err := c.apiClient(); err != nil {
+	if err := c.apiClientCredentials(); err != nil {
 		return nil, err
 	}
 
 	// helps make this testable, real OL urls do the real thing, otherwise use the host provided in the authUrl
+	// "secret" region query string param allows callers to set the regional API endpoint, default is "us"
 	if strings.Contains(c.authUrl.Host, `.onelogin.com`) {
-		c.mdBaseUrl = fmt.Sprintf("%s://app.onelogin.com/saml/metadata", c.authUrl.Scheme)
-		c.apiBaseUrl = fmt.Sprintf("%s://api.us.onelogin.com", c.authUrl.Scheme) // fixme we may need to deal with regional endpoints (us vs eu vs others)
+		region := c.authUrl.Query().Get("region")
+		if len(region) < 1 {
+			region = "us"
+		}
+		c.apiBaseUrl = fmt.Sprintf("%s://api.%s.onelogin.com", c.authUrl.Scheme, region)
 	} else {
 		c.apiBaseUrl = fmt.Sprintf("%s://%s", c.authUrl.Scheme, c.authUrl.Host)
-		c.mdBaseUrl = fmt.Sprintf("%s/saml/metadata", c.apiBaseUrl)
 	}
 
-	if err = c.parseAppId(); err != nil {
-		return nil, err
-	}
+	s := strings.Split(c.authUrl.Path, `/`)
+	c.appId = s[len(s)-1]
 
 	// we need this in a few places, so fetch it early
 	c.apiToken, err = c.apiAccessToken()
@@ -62,72 +65,8 @@ func NewOneLoginSamlClient(authUrl string) (*oneloginSamlClient, error) {
 		return nil, err
 	}
 
+	c.httpClient.CheckRedirect = nil
 	return &c, nil
-}
-
-// API credentials for the OneLogin provider are passed in as the 'token' query string parameter in the
-// saml_auth_url configuration property.  The value of this parameter is the base64 encoded value of the
-// API client ID and API client secret joined with a ':' between them.  On a system like MacOS, or Linux,
-// you can use the following command to build that value:
-//    echo 'client_id:client_secret' | base64
-// with the resulting saml_auth_url property looking like this:
-//    https://my-tenant.onelogin.com/trust/saml2/http-post/sso/aws-app-id?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQK
-func (c *oneloginSamlClient) apiClient() error {
-	t := c.authUrl.Query().Get("token")
-	if len(t) < 1 {
-		return fmt.Errorf("missing token query parameter")
-	}
-	// erase any notion of a query string from authUrl, since we only use it internally
-	c.authUrl.RawQuery = ""
-
-	b, err := base64.StdEncoding.DecodeString(t)
-	if err != nil {
-		return err
-	}
-
-	s := strings.Split(string(b), `:`)
-	if len(s) < 2 {
-		return fmt.Errorf("invalid token parameter format")
-	}
-	c.apiClientId = s[0]
-	c.apiClientSecret = s[1]
-
-	return nil
-}
-
-func (c *oneloginSamlClient) parseAppId() error {
-	s := strings.Split(c.authUrl.Path, "/")
-	u := fmt.Sprintf("%s/%s", c.mdBaseUrl, s[len(s)-1])
-
-	res, err := http.Get(u)
-	if err != nil {
-		return err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("http code %d while fetching metadata", res.StatusCode)
-	}
-
-	b, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	re, err := regexp.Compile(`<SingleLogoutService\s+.*?\s+Location="(.*?)"/>`)
-	if err != nil {
-		return err
-	}
-
-	m := re.FindStringSubmatch(fmt.Sprintf("%s", b))
-	if m == nil || len(m) < 2 {
-		return fmt.Errorf("did not find required data in SAML metadata")
-	}
-
-	s = strings.Split(m[1], "/")
-	c.appId = s[len(s)-1]
-
-	return nil
 }
 
 // Authenticate handles authentication against a OneLogin identity provider
@@ -153,15 +92,14 @@ func (c *oneloginSamlClient) AwsSaml() (string, error) {
 	return c.rawSamlResponse, nil
 }
 
-// attempting to follow the redirect chain to try scraping a form to do the login results in a "must enable JS" page,
-// so it seems that we're required to drive through the OneLogin API to handle user authentication.  That means we're
-// required to use API token credentials to do authentication.  We're trying to avoid that where at all possible, since
-// that means we need to communicate those to everyone looking to configure this provider.
-//
-// The OneLogin provider allows us to scope these tokens down to just authentication only, so it's "less bad", although
-// we still need to find a way to communicate these back to the users
 func (c *oneloginSamlClient) auth() error {
-	req, err := c.authRequest()
+	creds := map[string]string{
+		"username_or_email": c.Username,
+		"password":          c.Password,
+		"subdomain":         c.subdomain,
+	}
+
+	req, err := c.apiPostReq(fmt.Sprintf("%s/api/1/login/auth", c.apiBaseUrl), &creds)
 	if err != nil {
 		return err
 	}
@@ -170,215 +108,53 @@ func (c *oneloginSamlClient) auth() error {
 	if err != nil {
 		return err
 	}
+	token := ar.Data[0].SessionToken
 
-	if len(ar.StateToken) < 1 {
-		c.rawSamlResponse = ar.Data
-		return nil
-	}
-
-	// MFA required to pass authentication
-	return c.handleMfa(ar)
-}
-
-func (c *oneloginSamlClient) doAuthRequest(r *http.Request) (*authReply, error) {
-	res, err := c.httpClient.Do(r)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	data, err := ioutil.ReadAll(res.Body)
-	if err != nil {
-		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Error reading response body")
-	}
-
-	if res.StatusCode != http.StatusOK {
-		if res.StatusCode == http.StatusBadRequest || res.StatusCode == http.StatusUnauthorized {
-			s := new(authReply)
-			if err = json.Unmarshal(data, s); err != nil {
-				return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Invalid JSON reply")
-			}
-
-			return nil, fmt.Errorf(s.Message)
+	if len(ar.Data) > 0 && len(ar.Data[0].MfaDevices) > 0 {
+		token, err = c.handleMfa(ar.Data[0])
+		if err != nil {
+			return err
 		}
-
-		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Authentication failed")
 	}
 
-	ar := new(authReply)
-	if err = json.Unmarshal(data, ar); err != nil {
-		return nil, err
-	}
-
-	return ar, nil
-}
-
-func (c *oneloginSamlClient) handleMfa(ar *authReply) error {
-	defaultMfa, err := c.defaultMfaDevice(ar.User.Id)
-	if err != nil {
+	if err = c.exchangeToken(token); err != nil {
 		return err
-	}
-
-	for _, d := range ar.Devices {
-		if d.Id == defaultMfa {
-			mfaReq := &verifyMfaRequest{
-				AppId:       c.appId,
-				DeviceId:    strconv.Itoa(d.Id),
-				StateToken:  ar.StateToken,
-				DoNotNotify: true,
-			}
-
-			u := fmt.Sprintf("%s/api/2/saml_assertion/verify_factor", c.apiBaseUrl)
-
-			if d.Type == "OneLogin Protect" {
-				mfaReq.DoNotNotify = false
-				return c.handlePushMfa(u, mfaReq)
-			}
-
-			// assume all others require prompting for the code
-			return c.handleCodeMfa(u, mfaReq)
-		}
 	}
 
 	return nil
 }
 
-func (c *oneloginSamlClient) handlePushMfa(u string, r *verifyMfaRequest) error {
-	req, err := c.apiPost(u, r)
+// API credentials for the OneLogin provider are passed in as the 'token' query string parameter in the
+// saml_auth_url configuration property.  The value of this parameter is the base64 encoded value of the
+// API client ID and API client secret joined with a ':' between them.  On a system like MacOS, or Linux,
+// you can use the following command to build that value:
+//    echo 'client_id:client_secret' | base64
+// with the resulting saml_auth_url property looking like this:
+//    https://my-tenant.onelogin.com/trust/saml2/launch/app-id?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQK
+func (c *oneloginSamlClient) apiClientCredentials() error {
+	t := c.authUrl.Query().Get("token")
+	if len(t) < 1 {
+		return fmt.Errorf("missing token query parameter")
+	}
+	// erase any notion of a query string from authUrl, since we only use it internally
+	c.authUrl.RawQuery = ""
+
+	b, err := base64.StdEncoding.DecodeString(t)
 	if err != nil {
 		return err
 	}
 
-	ar, err := c.doAuthRequest(req)
-	if err != nil {
-		return err
+	s := strings.Split(string(b), `:`)
+	if len(s) < 2 {
+		return fmt.Errorf("invalid token parameter format")
 	}
+	c.apiClientId = s[0]
+	c.apiClientSecret = s[1]
 
-	if strings.Contains(ar.Message, "pending") {
-		fmt.Println("Waiting for Push MFA confirmation...")
-		time.Sleep(1250 * time.Millisecond)
-		r.DoNotNotify = true
-		return c.handlePushMfa(u, r)
-	} else if strings.EqualFold(ar.Message, "success") {
-		c.rawSamlResponse = ar.Data
-		return nil
-	}
-
-	return fmt.Errorf(ar.Message)
+	return nil
 }
 
-func (c *oneloginSamlClient) handleCodeMfa(u string, r *verifyMfaRequest) error {
-	if len(c.MfaToken) < 1 {
-		if c.MfaTokenProvider != nil {
-			t, err := c.MfaTokenProvider()
-			if err != nil {
-				return err
-			}
-			c.MfaToken = t
-		} else {
-			return new(errMfaNotConfigured)
-		}
-	}
-	r.OtpToken = c.MfaToken
-
-	req, err := c.apiPost(u, r)
-	if err != nil {
-		return err
-	}
-
-	ar, err := c.doAuthRequest(req)
-	if err != nil {
-		if strings.EqualFold(err.Error(), "Failed authentication with this factor") {
-			fmt.Println("Invalid MFA Code ... try again")
-			c.MfaToken = ""
-			return c.handleCodeMfa(u, r)
-		}
-
-		return err
-	}
-
-	if strings.EqualFold(ar.Message, "success") {
-		c.rawSamlResponse = ar.Data
-		return nil
-	}
-
-	c.MfaToken = ""
-	return c.handleCodeMfa(u, r)
-}
-
-func (c *oneloginSamlClient) defaultMfaDevice(userId int) (int, error) {
-	// fixme OneLogin is moving to a v2 api, however there is no v2 endpoint for this yet
-	// I'm assuming this will need to get updated in the future, so I'll leave this little reminder.
-	// Despite the path in the url, this endpoint is actually under the MFA section as 'Get Enrolled Factors'
-	u := fmt.Sprintf("%s/api/1/users/%d/otp_devices", c.apiBaseUrl, userId)
-	req, err := http.NewRequest(http.MethodGet, u, http.NoBody)
-	if err != nil {
-		return -1, err
-	}
-	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
-
-	res, err := c.httpClient.Do(req)
-	if err != nil {
-		return -1, err
-	}
-	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return -1, fmt.Errorf("http code %d", res.StatusCode)
-	}
-
-	or := new(otpReply)
-	b, _ := ioutil.ReadAll(res.Body)
-	if err = json.Unmarshal(b, or); err != nil {
-		return -1, err
-	}
-
-	for _, i := range or.Data["otp_devices"] {
-		if i.Default {
-			return i.Id, nil
-		}
-	}
-
-	return -1, fmt.Errorf("default MFA device not found")
-}
-
-func (c *oneloginSamlClient) authRequest() (*http.Request, error) {
-	// Dont' set IPAddress until we find a requirement to do so.  I'm guessing this will involve finding the public IP
-	// of our client, which likely means calling out to some Internet endpoint capable of reflecting that back to us
-	// whatsmyip.org, icanhazip.com, etc...
-	b := authBody{
-		Username:  c.Username,
-		Password:  c.Password,
-		AppId:     c.appId,
-		Subdomain: c.subdomain,
-	}
-
-	return c.apiPost(fmt.Sprintf("%s/api/2/saml_assertion", c.apiBaseUrl), &b)
-}
-
-func (c *oneloginSamlClient) apiPost(u string, body interface{}) (*http.Request, error) {
-	var r io.Reader
-	r = http.NoBody
-
-	if body != nil {
-		j, err := json.Marshal(body)
-		if err != nil {
-			return nil, err
-		}
-		r = bytes.NewReader(j)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, u, r)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
-
-	return req, nil
-}
-
-func (c *oneloginSamlClient) apiAccessToken() (*apiToken, error) {
+func (c *oneloginSamlClient) apiAccessToken() (*oneloginApiToken, error) {
 	u := fmt.Sprintf("%s/auth/oauth2/v2/token", c.apiBaseUrl)
 	req, err := http.NewRequest(http.MethodPost, u, strings.NewReader(`{"grant_type": "client_credentials"}`))
 	if err != nil {
@@ -402,7 +178,7 @@ func (c *oneloginSamlClient) apiAccessToken() (*apiToken, error) {
 		return nil, err
 	}
 
-	t := new(apiToken)
+	t := new(oneloginApiToken)
 	if err = json.Unmarshal(b, t); err != nil {
 		return nil, err
 	}
@@ -410,72 +186,257 @@ func (c *oneloginSamlClient) apiAccessToken() (*apiToken, error) {
 	return t, nil
 }
 
-type apiToken struct {
-	AccessToken  string `json:"access_token"`
-	AccountId    int    `json:"account_id"`
-	CreatedAt    string `json:"created_at"`
-	ExpiresIn    int    `json:"expires_in"`
-	RefreshToken string `json:"refresh_token"`
-	TokenType    string `json:"token_type"`
+func (c *oneloginSamlClient) apiPostReq(u string, body interface{}) (*http.Request, error) {
+	var r io.Reader
+	r = http.NoBody
+
+	if body != nil {
+		j, err := json.Marshal(body)
+		if err != nil {
+			return nil, err
+		}
+		r = bytes.NewReader(j)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, u, r)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
+
+	return req, nil
 }
 
-type authBody struct {
-	Username  string `json:"username_or_email"`
-	Password  string `json:"password"`
-	AppId     string `json:"app_id"`
-	Subdomain string `json:"subdomain"`
-	IpAddress string `json:"ip_address,omitempty"`
+func (c *oneloginSamlClient) doAuthRequest(r *http.Request) (*oneloginAuthReplyV1, error) {
+	res, err := c.httpClient.Do(r)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText("Error reading response body")
+	}
+
+	ar := new(oneloginAuthReplyV1)
+	if err = json.Unmarshal(data, ar); err != nil {
+		return nil, err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return nil, new(errAuthFailure).WithCode(res.StatusCode).WithText(ar.Status.Message)
+	}
+
+	return ar, nil
 }
 
-type authReply struct {
-	Message     string       `json:"message"`
-	Data        string       `json:"data"`
-	StateToken  string       `json:"state_token"`
-	CallbackUrl string       `json:"callback_url"`
-	Devices     []*mfaDevice `json:"devices"`
-	User        *user        `json:"user"`
-	Status      *replyStatus `json:"status"`
+func (c *oneloginSamlClient) handleMfa(data *oneloginAuthDataV1) (string, error) {
+	defaultMfaId, err := c.defaultMfaDevice(data.User.Id)
+	if err != nil {
+		return "", err
+	}
+
+	for _, d := range data.MfaDevices {
+		if d.Id == defaultMfaId {
+			mfaReq := &oneloginVerifyFactorRequest{
+				DeviceId:    strconv.Itoa(d.Id),
+				StateToken:  data.StateToken,
+				DoNotNotify: true,
+			}
+
+			if d.Type == "OneLogin Protect" {
+				mfaReq.DoNotNotify = false
+				return c.handlePushMfa(data.CallbackUrl, mfaReq)
+			}
+
+			// assume all others require prompting for the code
+			return c.handleCodeMfa(data.CallbackUrl, mfaReq)
+		}
+	}
+
+	return "", new(errMfaNotConfigured)
 }
 
-type mfaDevice struct {
+func (c *oneloginSamlClient) defaultMfaDevice(userId int) (int, error) {
+	u := fmt.Sprintf("%s/api/1/users/%d/otp_devices", c.apiBaseUrl, userId)
+	req, err := http.NewRequest(http.MethodGet, u, http.NoBody)
+	if err != nil {
+		return -1, err
+	}
+	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
+
+	res, err := c.httpClient.Do(req)
+	if err != nil {
+		return -1, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return -1, new(errMfaFailure).WithCode(res.StatusCode)
+	}
+
+	or := new(oneloginEnrolledFactorsV1)
+	b, _ := ioutil.ReadAll(res.Body)
+	if err = json.Unmarshal(b, or); err != nil {
+		return -1, err
+	}
+
+	for _, i := range or.Data["otp_devices"] {
+		if i.Default && i.Active {
+			return i.Id, nil
+		}
+	}
+
+	return -1, fmt.Errorf("default MFA device not found")
+}
+
+func (c *oneloginSamlClient) handlePushMfa(url string, req *oneloginVerifyFactorRequest) (string, error) {
+	r, err := c.apiPostReq(url, req)
+	if err != nil {
+		return "", err
+	}
+
+	ar, err := c.doAuthRequest(r)
+	if err != nil {
+		return "", err
+	}
+
+	if strings.Contains(ar.Status.Message, "pending") {
+		fmt.Println("Waiting for Push MFA confirmation...")
+		time.Sleep(1250 * time.Millisecond)
+		req.DoNotNotify = true
+		return c.handlePushMfa(url, req)
+	} else if strings.EqualFold(ar.Status.Message, "success") {
+		if len(ar.Data) > 0 && len(ar.Data[0].SessionToken) > 0 {
+			return ar.Data[0].SessionToken, nil
+		}
+	}
+
+	return "", new(errMfaFailure).WithCode(ar.Status.Code)
+}
+
+func (c *oneloginSamlClient) handleCodeMfa(url string, req *oneloginVerifyFactorRequest) (string, error) {
+	if len(c.MfaToken) < 1 {
+		if c.MfaTokenProvider != nil {
+			t, err := c.MfaTokenProvider()
+			if err != nil {
+				return "", err
+			}
+			c.MfaToken = t
+		} else {
+			return "", new(errMfaNotConfigured)
+		}
+	}
+	req.OtpToken = c.MfaToken
+
+	r, err := c.apiPostReq(url, req)
+	if err != nil {
+		return "", err
+	}
+
+	ar, err := c.doAuthRequest(r)
+	if err != nil {
+		if strings.Contains(err.Error(), "Failed authentication with this factor") {
+			fmt.Println("Invalid MFA Code ... try again")
+			c.MfaToken = ""
+			return c.handleCodeMfa(url, req)
+		}
+
+		return "", new(errMfaFailure)
+	}
+
+	if strings.EqualFold(ar.Status.Message, "success") {
+		if len(ar.Data) > 0 && len(ar.Data[0].SessionToken) > 0 {
+			return ar.Data[0].SessionToken, nil
+		}
+	}
+
+	c.MfaToken = ""
+	return c.handleCodeMfa(url, req)
+}
+
+// If successful this wil provide the cookie to persist the user's login state, which we can use across
+// aws-runas invocations to minimize the number of time the user has to authentication to OneLogin
+func (c *oneloginSamlClient) exchangeToken(st string) error {
+	u := fmt.Sprintf("%s://%s/session_via_api_token", c.authUrl.Scheme, c.authUrl.Host)
+	body := url.Values{}
+	body.Set("session_token", st)
+
+	res, err := c.httpClient.Post(u, "application/x-www-form-urlencoded", strings.NewReader(body.Encode()))
+	if err != nil {
+		return err
+	}
+
+	if res.StatusCode != http.StatusOK {
+		return new(errAuthFailure).WithCode(res.StatusCode).WithText("Session Token Exchange Failed")
+	}
+
+	return nil
+}
+
+type oneloginApiToken struct {
+	AccessToken string `json:"access_token"`
+	AccountId   int    `json:"account_id"`
+	CreatedAt   string `json:"created_at"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
+}
+
+type oneloginAuthReplyV1 struct {
+	Status *oneloginApiStatus    `json:"status"`
+	Data   []*oneloginAuthDataV1 `json:"data"`
+}
+
+type oneloginApiStatus struct {
+	Code    int    `json:"code"`
+	Error   bool   `json:"error"`
+	Message string `json:"message"`
+	Type    string `json:"type"`
+}
+
+type oneloginAuthDataV1 struct {
+	CallbackUrl  string               `json:"callback_url"`
+	ExpiresAt    string               `json:"expires_at"`
+	MfaDevices   []*oneloginMfaDevice `json:"devices"`
+	ReturnUrl    string               `json:"return_to_url"`
+	SessionToken string               `json:"session_token"`
+	StateToken   string               `json:"state_token"`
+	Status       string               `json:"status"`
+	User         *oneloginUser        `json:"user"`
+}
+
+type oneloginMfaDevice struct {
 	Id   int    `json:"device_id"`
 	Type string `json:"device_type"`
 }
 
-type user struct {
+type oneloginUser struct {
 	Id        int    `json:"id"`
 	Email     string `json:"email"`
-	Firstname string `json:"firstname"`
-	Lastname  string `json:"lastname"`
+	FirstName string `json:"firstname"`
+	LastName  string `json:"lastname"`
 	Username  string `json:"username"`
 }
 
-type verifyMfaRequest struct {
-	AppId       string `json:"app_id"`
+type oneloginEnrolledFactorsV1 struct {
+	Status *oneloginApiStatus                    `json:"status"`
+	Data   map[string][]*oneloginEnrolledFactors `json:"data"`
+}
+
+type oneloginVerifyFactorRequest struct {
 	DeviceId    string `json:"device_id"`
-	StateToken  string `json:"state_token"`
-	OtpToken    string `json:"otp_token"`
 	DoNotNotify bool   `json:"do_not_notify"`
+	OtpToken    string `json:"otp_token"`
+	StateToken  string `json:"state_token"`
 }
 
-type otpReply struct {
-	Status *replyStatus            `json:"status"`
-	Data   map[string][]*otpDevice `json:"data"`
-}
-
-type replyStatus struct {
-	Type    string `json:"type"`
-	Code    int    `json:"code"`
-	Message string `json:"message"`
-	Error   bool   `json:"error"`
-}
-
-type otpDevice struct {
+type oneloginEnrolledFactors struct {
 	Id           int    `json:"id"`
+	Type         string `json:"auth_factor_name"`
 	Active       bool   `json:"active"`
 	Default      bool   `json:"default"`
 	NeedsTrigger bool   `json:"needs_trigger"`
-	FactorName   string `json:"auth_factor_name"`
-	FactorType   string `json:"type_display_name"`
-	DisplayName  string `json:"user_display_name"`
+	DisplayName  string `json:"type_display_name"`
 }

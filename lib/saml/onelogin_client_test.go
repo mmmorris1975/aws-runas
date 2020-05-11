@@ -7,25 +7,21 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
-	"regexp"
 	"strings"
 	"testing"
 	"time"
 )
 
-const olTenantId = "71447c18-558dba7eeb47"
-const olAppId = 54321
+const olAppId = "54321"
 
-// we don't have a good way to mock the SAML metadata endpoint, since the host is not specific to our tenant
-// so we either have to do a bunch of gyrations to make this testable, or rely on reaching out to OL with
-// our real tenant id to make the call
 func TestNewOneLoginSamlClient(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
 	defer s.Close()
 
+	baseAuthUrl := fmt.Sprintf("%s/trust/saml2/launch/%s", s.URL, olAppId)
+
 	t.Run("good", func(t *testing.T) {
-		u := fmt.Sprintf("%s/trust/saml2/http-post/sso/%s?token=YWJjOjEyMw==", s.URL, olTenantId)
-		c, err := NewOneLoginSamlClient(u)
+		c, err := NewOneLoginSamlClient(fmt.Sprintf("%s?token=YWJjOjEyMw==", baseAuthUrl))
 		if err != nil {
 			t.Error(err)
 			return
@@ -36,15 +32,15 @@ func TestNewOneLoginSamlClient(t *testing.T) {
 		}
 	})
 
-	t.Run("bad url", func(t *testing.T) {
-		_, err := NewOneLoginSamlClient(fmt.Sprintf("%s/trust/saml2/http-post/sso/%s", s.URL, olTenantId))
+	t.Run("missing token", func(t *testing.T) {
+		_, err := NewOneLoginSamlClient(baseAuthUrl)
 		if err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
 
 	t.Run("invalid token", func(t *testing.T) {
-		_, err := NewOneLoginSamlClient(fmt.Sprintf("%s/trust/saml2/http-post/sso/%s?token=cXFxcQ==", s.URL, olTenantId))
+		_, err := NewOneLoginSamlClient(fmt.Sprintf("%s?token=cXFxcQ==", baseAuthUrl))
 		if err == nil {
 			t.Error("did not receive expected error")
 		}
@@ -55,11 +51,7 @@ func TestOneloginSamlClient_AwsSaml(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
 	defer s.Close()
 
-	c, err := newOneloginClient(s)
-	if err != nil {
-		t.Error(err)
-		return
-	}
+	c := newOneloginClient(s)
 
 	if _, err := c.AwsSaml(); err != nil {
 		t.Error(err)
@@ -108,11 +100,7 @@ func TestOneloginSamlClient_AwsSaml(t *testing.T) {
 	})
 
 	t.Run("populated saml", func(t *testing.T) {
-		o, err := newOneloginClient(s)
-		if err != nil {
-			t.Error(err)
-			return
-		}
+		o := newOneloginClient(s)
 		o.rawSamlResponse = "abc123"
 
 		if _, err := o.AwsSaml(); err != nil {
@@ -126,17 +114,12 @@ func TestOneloginSamlClient_AwsSaml(t *testing.T) {
 	})
 }
 
-func TestOneloginSamlClient_AuthenticateBasic(t *testing.T) {
+func TestOneloginSamlClient_AuthenticateNoMfa(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
 	defer s.Close()
 
-	c, err := newOneloginClient(s)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	c.apiToken = &apiToken{AccessToken: "tok123", TokenType: "bearer"}
+	c := newOneloginClient(s)
+	c.apiToken = &oneloginApiToken{AccessToken: "tok123", TokenType: "bearer"}
 	c.apiBaseUrl = s.URL
 
 	t.Run("good", func(t *testing.T) {
@@ -146,10 +129,6 @@ func TestOneloginSamlClient_AuthenticateBasic(t *testing.T) {
 		if err := c.Authenticate(); err != nil {
 			t.Error(err)
 			return
-		}
-
-		if len(c.rawSamlResponse) < 1 {
-			t.Error("did not set SAML response after authentication")
 		}
 	})
 
@@ -164,17 +143,12 @@ func TestOneloginSamlClient_AuthenticateBasic(t *testing.T) {
 	})
 }
 
-func TestOneloginSamlClient_AuthenticateTotp(t *testing.T) {
+func TestOneloginSamlClient_AuthenticateTotpMfa(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
 	defer s.Close()
 
-	c, err := newOneloginClient(s)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	c.apiToken = &apiToken{AccessToken: "tok123", TokenType: "bearer"}
+	c := newOneloginClient(s)
+	c.apiToken = &oneloginApiToken{AccessToken: "tok123", TokenType: "bearer"}
 	c.apiBaseUrl = s.URL
 	c.Username = "codemfa"
 	c.Password = "codemfa"
@@ -185,10 +159,6 @@ func TestOneloginSamlClient_AuthenticateTotp(t *testing.T) {
 		if err := c.Authenticate(); err != nil {
 			t.Error(err)
 			return
-		}
-
-		if len(c.rawSamlResponse) < 1 {
-			t.Error("did not set SAML response after authentication")
 		}
 	})
 
@@ -202,13 +172,9 @@ func TestOneloginSamlClient_AuthenticateTotp(t *testing.T) {
 			t.Error(err)
 			return
 		}
-
-		if len(c.rawSamlResponse) < 1 {
-			t.Error("did not set SAML response after authentication")
-		}
 	})
 
-	t.Run("mfa not set", func(t *testing.T) {
+	t.Run("no mfa", func(t *testing.T) {
 		c.MfaToken = ""
 		c.MfaTokenProvider = nil
 
@@ -219,17 +185,12 @@ func TestOneloginSamlClient_AuthenticateTotp(t *testing.T) {
 	})
 }
 
-func TestOneloginSamlClient_AuthenticatePush(t *testing.T) {
+func TestOneloginSamlClient_AuthenticateNPushMfa(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
 	defer s.Close()
 
-	c, err := newOneloginClient(s)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	c.apiToken = &apiToken{AccessToken: "tok123", TokenType: "bearer"}
+	c := newOneloginClient(s)
+	c.apiToken = &oneloginApiToken{AccessToken: "tok123", TokenType: "bearer"}
 	c.apiBaseUrl = s.URL
 	c.Username = "pushmfa"
 	c.Password = "pushmfa"
@@ -238,33 +199,259 @@ func TestOneloginSamlClient_AuthenticatePush(t *testing.T) {
 		t.Error(err)
 		return
 	}
-
-	if len(c.rawSamlResponse) < 1 {
-		t.Error("did not set SAML response after authentication")
-	}
 }
 
-func newOneloginClient(s *httptest.Server) (*oneloginSamlClient, error) {
-	u, err := url.Parse(fmt.Sprintf("%s/trust/saml2/http-post/sso/%s", s.URL, olTenantId))
-	if err != nil {
-		return nil, err
-	}
+func newOneloginClient(s *httptest.Server) *oneloginSamlClient {
+	u, _ := url.Parse(fmt.Sprintf("%s/trust/saml2/launch/%s", s.URL, olAppId))
 
 	c := oneloginSamlClient{
 		BaseAwsClient: new(BaseAwsClient),
-		appId:         "12345",
+		appId:         olAppId,
+		subdomain:     strings.Split(u.Host, ".")[0],
 	}
-	c.subdomain = strings.Split(u.Host, ".")[0]
 	c.httpClient = s.Client()
 	c.authUrl = u
 
-	return &c, nil
+	return &c
 }
 
 func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if r.URL.Path == "/trust/saml2/http-post/sso/"+olTenantId {
+	switch p := r.URL.Path; {
+	case p == "/auth/oauth2/v2/token":
+		// The API initial authentication endpoint
+		t := oneloginApiToken{
+			AccessToken: "abc-123",
+			TokenType:   "bearer",
+		}
+
+		data, err := json.Marshal(&t)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(data)
+	case p == "/api/1/login/auth":
+		// User login endpoint
+		data := make(map[string]string)
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err = json.Unmarshal(body, &data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		reply := new(oneloginAuthReplyV1)
+		if data["username_or_email"] == "good" && data["password"] == "good" {
+			reply.Status = &oneloginApiStatus{
+				Code:    200,
+				Error:   false,
+				Message: "Success",
+				Type:    "success",
+			}
+
+			reply.Data = []*oneloginAuthDataV1{
+				&oneloginAuthDataV1{
+					ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
+					SessionToken: "AllGoodInDaHood",
+					Status:       "Authenticated",
+					User: &oneloginUser{
+						Id:        1000,
+						FirstName: "Good",
+						LastName:  "Guy",
+						Username:  data["username_or_email"],
+					},
+				},
+			}
+		} else if data["username_or_email"] == "codemfa" {
+			reply.Status = &oneloginApiStatus{
+				Code:    200,
+				Error:   false,
+				Message: "MFA is required for this user",
+				Type:    "success",
+			}
+
+			reply.Data = []*oneloginAuthDataV1{
+				&oneloginAuthDataV1{
+					User: &oneloginUser{
+						Id:        1001,
+						FirstName: "Code",
+						LastName:  "Mfa",
+						Username:  data["username_or_email"],
+					},
+					StateToken:  "StateOfConfusion",
+					CallbackUrl: fmt.Sprintf("http://%s/api/1/login/verify_factor", r.Host),
+					MfaDevices: []*oneloginMfaDevice{
+						&oneloginMfaDevice{
+							Id:   111,
+							Type: "Google Authenticator",
+						},
+					},
+				},
+			}
+		} else if data["username_or_email"] == "pushmfa" {
+			reply.Status = &oneloginApiStatus{
+				Code:    200,
+				Error:   false,
+				Message: "MFA is required for this user",
+				Type:    "success",
+			}
+
+			reply.Data = []*oneloginAuthDataV1{
+				&oneloginAuthDataV1{
+					User: &oneloginUser{
+						Id:        1002,
+						FirstName: "Push",
+						LastName:  "Mfa",
+						Username:  data["username_or_email"],
+					},
+					StateToken:  "StateOfConfusion",
+					CallbackUrl: fmt.Sprintf("http://%s/api/1/login/verify_factor", r.Host),
+					MfaDevices: []*oneloginMfaDevice{
+						&oneloginMfaDevice{
+							Id:   222,
+							Type: "OneLogin Protect",
+						},
+					},
+				},
+			}
+		} else {
+			http.Error(w, "Authentication Failed: Invalid user credentials", http.StatusUnauthorized)
+			return
+		}
+
+		b, err := json.Marshal(&reply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Write(b)
+	case strings.HasPrefix(p, "/api/1/users/") && strings.HasSuffix(p, "/otp_devices"):
+		reply := new(oneloginEnrolledFactorsV1)
+		reply.Status = &oneloginApiStatus{
+			Code:    200,
+			Error:   false,
+			Message: "Success",
+			Type:    "success",
+		}
+		reply.Data = make(map[string][]*oneloginEnrolledFactors)
+
+		if strings.Contains(p, "/1001/") {
+			// totp MFA
+			reply.Data["otp_devices"] = []*oneloginEnrolledFactors{{
+				Id:      111,
+				Type:    "Google Authenticator",
+				Active:  true,
+				Default: true,
+			}}
+		} else if strings.Contains(p, "/1002/") {
+			// push MFA user
+			reply.Data["otp_devices"] = []*oneloginEnrolledFactors{{
+				Id:      111,
+				Type:    "Google Authenticator",
+				Active:  true,
+				Default: false,
+			},
+				{
+					Id:      222,
+					Type:    "OneLogin Protect",
+					Active:  true,
+					Default: true,
+				}}
+		} else {
+			http.Error(w, "Bad Request", http.StatusBadRequest)
+			return
+		}
+
+		body, _ := json.Marshal(&reply)
+		w.Write(body)
+	case p == "/api/1/login/verify_factor":
+		data := new(oneloginVerifyFactorRequest)
+
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if err = json.Unmarshal(body, &data); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		reply := new(oneloginAuthReplyV1)
+		reply.Status = &oneloginApiStatus{
+			Code:    200,
+			Error:   false,
+			Message: "Success",
+			Type:    "success",
+		}
+
+		switch data.DeviceId {
+		case "111":
+			if data.OtpToken != "123456" {
+				reply.Status.Error = true
+				reply.Status.Code = http.StatusUnauthorized
+				reply.Status.Type = "Unauthorized"
+				reply.Status.Message = "Failed authentication with this factor"
+
+				body, _ = json.Marshal(&reply)
+
+				http.Error(w, string(body), http.StatusUnauthorized)
+				return
+			}
+
+			reply.Data = []*oneloginAuthDataV1{
+				&oneloginAuthDataV1{
+					ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
+					SessionToken: "AllGoodInDaHood",
+					Status:       "Authenticated",
+				},
+			}
+		case "222":
+			if time.Now().Unix()%2 == 0 {
+				reply.Data = []*oneloginAuthDataV1{
+					&oneloginAuthDataV1{
+						ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
+						SessionToken: "AllGoodInDaHood",
+						Status:       "Authenticated",
+					},
+				}
+			} else {
+				reply.Status.Message = "Push notification sent. Authentication pending."
+			}
+		default:
+			http.Error(w, "Unknown Device ID", http.StatusBadRequest)
+			return
+		}
+
+		b, _ := json.Marshal(&reply)
+		w.Write(b)
+	case p == "/session_via_api_token":
+		// Post login session token exchange
+		body, err := ioutil.ReadAll(r.Body)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		v, err := url.ParseQuery(string(body))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		if v.Get("session_token") == "AllGoodInDaHood" {
+			w.Write([]byte("OK"))
+		}
+	case p == fmt.Sprintf("/trust/saml2/launch/%s", olAppId):
+		// SAML assertion fetching URL
 		body := `
 <html>
 <head></head>
@@ -276,185 +463,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 </html>
 `
 		fmt.Fprintf(w, body, r.Host)
-	} else if r.URL.Path == "/saml/metadata/"+olTenantId {
-		body := `<SingleLogoutService Name="logout" Location="http://%s/saml/logout/%d"/>`
-		fmt.Fprintf(w, body, r.Host, olAppId)
-	} else if r.URL.Path == "/auth/oauth2/v2/token" {
-		t := apiToken{
-			AccessToken: "abc-123",
-			TokenType:   "bearer",
-		}
-
-		data, err := json.Marshal(&t)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Write(data)
-	} else if r.URL.Path == "/api/2/saml_assertion/verify_factor" {
-		b, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		d := new(verifyMfaRequest)
-		if err := json.Unmarshal(b, d); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		m := new(authReply)
-
-		if d.DeviceId == "9999" {
-			if d.OtpToken == "123456" {
-				m.Message = "Success"
-				m.Data = "PHNhbWw6QXR0cmlidXRlU3RhdGVtZW50PjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlU2Vzc2lvbk5hbWUiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+bXktc2FtbC11c2VyPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjwvc2FtbDpBdHRyaWJ1dGU+PHNhbWw6QXR0cmlidXRlIE5hbWU9Imh0dHBzOi8vYXdzLmFtYXpvbi5jb20vU0FNTC9BdHRyaWJ1dGVzL1Nlc3Npb25EdXJhdGlvbiI+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj40MzIwMDwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJ1cm46b2lkOjEuMy42LjEuNC4xLjU5MjMuMS4xLjEuMTEiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+Mjwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlIj48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnJvbGUvUG93ZXJVc2VyLGFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnNhbWwtcHJvdmlkZXIvbXlTU088L3NhbWw6QXR0cmlidXRlVmFsdWU+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj5hcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpyb2xlL1Bvd2VyVXNlcixhcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjExMTExMTExMTpyb2xlL0FkbWluLGFybjphd3M6aWFtOjoxMTExMTExMTE6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoyMjIyMjIyMjI6cm9sZS9tYW5hZ2VkLXJvbGUvQWRtaW4sYXJuOmF3czppYW06OjIyMjIyMjIyMjpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjMzMzMzMzMzMzpyb2xlL0FkbWluLGFybjphd3M6aWFtOjozMzMzMzMzMzM6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjwvc2FtbDpBdHRyaWJ1dGVTdGF0ZW1lbnQ+Cg=="
-			} else {
-				m.Message = "Failed authentication with this factor"
-				w.WriteHeader(http.StatusUnauthorized)
-			}
-		} else if d.DeviceId == "1001001" {
-			if time.Now().Unix()%2 == 0 {
-				m.Message = "Success"
-				m.Data = "PHNhbWw6QXR0cmlidXRlU3RhdGVtZW50PjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlU2Vzc2lvbk5hbWUiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+bXktc2FtbC11c2VyPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjwvc2FtbDpBdHRyaWJ1dGU+PHNhbWw6QXR0cmlidXRlIE5hbWU9Imh0dHBzOi8vYXdzLmFtYXpvbi5jb20vU0FNTC9BdHRyaWJ1dGVzL1Nlc3Npb25EdXJhdGlvbiI+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj40MzIwMDwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJ1cm46b2lkOjEuMy42LjEuNC4xLjU5MjMuMS4xLjEuMTEiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+Mjwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlIj48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnJvbGUvUG93ZXJVc2VyLGFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnNhbWwtcHJvdmlkZXIvbXlTU088L3NhbWw6QXR0cmlidXRlVmFsdWU+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj5hcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpyb2xlL1Bvd2VyVXNlcixhcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjExMTExMTExMTpyb2xlL0FkbWluLGFybjphd3M6aWFtOjoxMTExMTExMTE6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoyMjIyMjIyMjI6cm9sZS9tYW5hZ2VkLXJvbGUvQWRtaW4sYXJuOmF3czppYW06OjIyMjIyMjIyMjpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjMzMzMzMzMzMzpyb2xlL0FkbWluLGFybjphd3M6aWFtOjozMzMzMzMzMzM6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjwvc2FtbDpBdHRyaWJ1dGVTdGF0ZW1lbnQ+Cg=="
-			} else {
-				m.Message = "Authentication pending on OL Protect"
-			}
-		}
-
-		b, err = json.Marshal(m)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		w.Write(b)
-	} else if r.URL.Path == "/api/2/saml_assertion" {
-		data := new(authBody)
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if err := json.Unmarshal(body, data); err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		reply := new(authReply)
-		if data.Username == "good" && data.Password == "good" {
-			reply.Status = &replyStatus{
-				Type:    "success",
-				Message: "Success",
-				Error:   false,
-				Code:    http.StatusOK,
-			}
-			reply.Data = `PHNhbWw6QXR0cmlidXRlU3RhdGVtZW50PjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlU2Vzc2lvbk5hbWUiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+bXktc2FtbC11c2VyPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjwvc2FtbDpBdHRyaWJ1dGU+PHNhbWw6QXR0cmlidXRlIE5hbWU9Imh0dHBzOi8vYXdzLmFtYXpvbi5jb20vU0FNTC9BdHRyaWJ1dGVzL1Nlc3Npb25EdXJhdGlvbiI+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj40MzIwMDwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJ1cm46b2lkOjEuMy42LjEuNC4xLjU5MjMuMS4xLjEuMTEiPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+Mjwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjxzYW1sOkF0dHJpYnV0ZSBOYW1lPSJodHRwczovL2F3cy5hbWF6b24uY29tL1NBTUwvQXR0cmlidXRlcy9Sb2xlIj48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnJvbGUvUG93ZXJVc2VyLGFybjphd3M6aWFtOjoxMjM0NTY3ODkwOnNhbWwtcHJvdmlkZXIvbXlTU088L3NhbWw6QXR0cmlidXRlVmFsdWU+PHNhbWw6QXR0cmlidXRlVmFsdWUgeG1sbnM6eHM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hIiB4bWxuczp4c2k9Imh0dHA6Ly93d3cudzMub3JnLzIwMDEvWE1MU2NoZW1hLWluc3RhbmNlIiB4c2k6dHlwZT0ieHM6c3RyaW5nIj5hcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpyb2xlL1Bvd2VyVXNlcixhcm46YXdzOmlhbTo6MDk4NzY1NDMyMTpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjExMTExMTExMTpyb2xlL0FkbWluLGFybjphd3M6aWFtOjoxMTExMTExMTE6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48c2FtbDpBdHRyaWJ1dGVWYWx1ZSB4bWxuczp4cz0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEiIHhtbG5zOnhzaT0iaHR0cDovL3d3dy53My5vcmcvMjAwMS9YTUxTY2hlbWEtaW5zdGFuY2UiIHhzaTp0eXBlPSJ4czpzdHJpbmciPmFybjphd3M6aWFtOjoyMjIyMjIyMjI6cm9sZS9tYW5hZ2VkLXJvbGUvQWRtaW4sYXJuOmF3czppYW06OjIyMjIyMjIyMjpzYW1sLXByb3ZpZGVyL215U1NPPC9zYW1sOkF0dHJpYnV0ZVZhbHVlPjxzYW1sOkF0dHJpYnV0ZVZhbHVlIHhtbG5zOnhzPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYSIgeG1sbnM6eHNpPSJodHRwOi8vd3d3LnczLm9yZy8yMDAxL1hNTFNjaGVtYS1pbnN0YW5jZSIgeHNpOnR5cGU9InhzOnN0cmluZyI+YXJuOmF3czppYW06OjMzMzMzMzMzMzpyb2xlL0FkbWluLGFybjphd3M6aWFtOjozMzMzMzMzMzM6c2FtbC1wcm92aWRlci9teVNTTzwvc2FtbDpBdHRyaWJ1dGVWYWx1ZT48L3NhbWw6QXR0cmlidXRlPjwvc2FtbDpBdHRyaWJ1dGVTdGF0ZW1lbnQ+Cg==`
-		} else if data.Username == "codemfa" {
-			reply.StateToken = "qwerty-asdfg-zxcvb"
-			reply.Message = "MFA is required for this user"
-			reply.CallbackUrl = fmt.Sprintf("http://%s/api/2/saml_assertion/verify_factor", r.Host)
-
-			reply.Devices = []*mfaDevice{{
-				Id:   9999,
-				Type: "Google Authenticator",
-			}}
-
-			reply.User = &user{
-				Id:        1001001,
-				Email:     "codemfa@aol.com",
-				Firstname: "codemfa",
-				Lastname:  "user",
-				Username:  "codemfa",
-			}
-		} else if data.Username == "pushmfa" {
-			reply.StateToken = "qwerty-asdfg-zxcvb"
-			reply.Message = "MFA is required for this user"
-			reply.CallbackUrl = fmt.Sprintf("http://%s/api/2/saml_assertion/verify_factor", r.Host)
-
-			reply.Devices = []*mfaDevice{{
-				Id:   1001001,
-				Type: "OneLogin Protect",
-			}}
-
-			reply.User = &user{
-				Id:        9999,
-				Email:     "pushmfa@aol.com",
-				Firstname: "pushmfa",
-				Lastname:  "user",
-				Username:  "pushmfa",
-			}
-		} else {
-			reply.Status = &replyStatus{
-				Type:    "Unauthorized",
-				Message: "Authentication failed",
-				Error:   true,
-				Code:    http.StatusUnauthorized,
-			}
-
-			b, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-			}
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write(b)
-			return
-		}
-
-		b, err := json.Marshal(reply)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		w.Write(b)
-	} else {
-		m, err := regexp.MatchString(`^/api/1/users/\d+/otp_devices$`, r.URL.Path)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		if m {
-			reply := new(otpReply)
-			reply.Status = &replyStatus{
-				Type:    "success",
-				Message: "Success",
-				Error:   false,
-				Code:    http.StatusOK,
-			}
-
-			data := make(map[string][]*otpDevice)
-			var devices []*otpDevice
-
-			if strings.Contains(r.URL.Path, "1001001") {
-				devices = append(devices, &otpDevice{
-					NeedsTrigger: false,
-					Default:      true,
-					Active:       true,
-					FactorName:   "Google Authenticator",
-					Id:           9999,
-				})
-			} else if strings.Contains(r.URL.Path, "9999") {
-				devices = append(devices, &otpDevice{
-					NeedsTrigger: true,
-					Default:      true,
-					Active:       true,
-					FactorName:   "OneLogin Protect",
-					Id:           1001001,
-				})
-			}
-
-			data["otp_devices"] = devices
-			reply.Data = data
-
-			b, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			w.Write(b)
-		} else {
-			http.NotFound(w, r)
-		}
+	default:
+		http.NotFound(w, r)
 	}
 }
