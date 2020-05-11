@@ -129,8 +129,8 @@ variable are detected.  This is the most secure way to use a SAML password with 
 credentials file is obfuscated to keep the raw value out of the file.  This is no more or less secure then storing a set
 of static AWS credentials in the file, as is the case with non-SAML profiles.
 
-To set a password in the credentials file, run `aws password <profile>`, substituting the SAML-enabled profile name for
-\<profile\>.  This will prompt you for the password value, and write the obfuscated information to the credentials file.
+To set a password in the credentials file, run `aws-runas password <profile>`, substituting the SAML-enabled profile name
+for \<profile\>.  This will prompt you for the password value, and write the obfuscated information to the credentials file.
 
 
 ### Environment Variables
