@@ -47,8 +47,11 @@ saml_provider = okta
 
 ## OneLogin
 OneLogin is a commercial identity management service which provides the necessary infrastructure and services to integrate
-with numerous 3rd party applications. The 'SAML 2.0 Endpoint' for the AWS OneLogin application is used for the URL in the
-configuration. The aws-runas SAML client auto-discovery logic looks for `.onelogin.com` in the hostname portion of the URL.
+with numerous 3rd party applications. Prior to aws-runas version 2.1.0, the 'SAML 2.0 Endpoint' for the AWS OneLogin
+application is used for the URL in the configuration. Starting from version 2.1.0 the URL has changed so that we are able
+to persist the user's login state, and avoid having to re-authenticate each time aws-runas is executed.  See the below
+examples for the URL format change across the versions. The aws-runas SAML client auto-discovery logic looks for
+`.onelogin.com` in the hostname portion of the URL.
 
 The OneLogin platform requires the use of authentication for interacting with any portion of their API (even for
 authenticating public/untrusted apps). This necessitates your OneLogin admins create a set of API credentials which can
@@ -66,8 +69,17 @@ echo -n 'client_id:client_secret' | base64
 Substituting client_id and client_secret with your actual values, of course. On some Linux systems you may need to add
 the `-w0` flag to the base64 command to disable text wrapping.
 
-Example OneLogin info in the .aws/config file:
+Example OneLogin info for aws-runas before 2.1.0 in the .aws/config file:
 ```text
 saml_auth_url = https://my-onelogin-hostname.com/trust/saml2/http-post/sso/__app_id__?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQ=
 saml_provider = onelogin
 ```
+The URL to use can be found in the 'SAML 2.0 Endpoint' in the configuration for the OneLogin AWS application.
+
+Example OneLogin info for aws-runas for 2.1.0 and later in the .aws/config file:
+```text
+saml_auth_url = https://my-onelogin-hostname.com/trust/saml2/launch/__app_id__?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQ=
+saml_provider = onelogin
+```
+The app-id value can be found on the user's application landing page, hovering over the OneLogin AWS Application, and
+getting the last element in the URL path.
