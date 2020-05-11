@@ -257,7 +257,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			reply.Data = []*oneloginAuthDataV1{
-				&oneloginAuthDataV1{
+				{
 					ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
 					SessionToken: "AllGoodInDaHood",
 					Status:       "Authenticated",
@@ -278,7 +278,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			reply.Data = []*oneloginAuthDataV1{
-				&oneloginAuthDataV1{
+				{
 					User: &oneloginUser{
 						Id:        1001,
 						FirstName: "Code",
@@ -288,7 +288,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 					StateToken:  "StateOfConfusion",
 					CallbackUrl: fmt.Sprintf("http://%s/api/1/login/verify_factor", r.Host),
 					MfaDevices: []*oneloginMfaDevice{
-						&oneloginMfaDevice{
+						{
 							Id:   111,
 							Type: "Google Authenticator",
 						},
@@ -304,7 +304,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			reply.Data = []*oneloginAuthDataV1{
-				&oneloginAuthDataV1{
+				{
 					User: &oneloginUser{
 						Id:        1002,
 						FirstName: "Push",
@@ -314,7 +314,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 					StateToken:  "StateOfConfusion",
 					CallbackUrl: fmt.Sprintf("http://%s/api/1/login/verify_factor", r.Host),
 					MfaDevices: []*oneloginMfaDevice{
-						&oneloginMfaDevice{
+						{
 							Id:   222,
 							Type: "OneLogin Protect",
 						},
@@ -408,7 +408,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			}
 
 			reply.Data = []*oneloginAuthDataV1{
-				&oneloginAuthDataV1{
+				{
 					ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
 					SessionToken: "AllGoodInDaHood",
 					Status:       "Authenticated",
@@ -417,7 +417,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 		case "222":
 			if time.Now().Unix()%2 == 0 {
 				reply.Data = []*oneloginAuthDataV1{
-					&oneloginAuthDataV1{
+					{
 						ExpiresAt:    time.Now().Add(1 * time.Hour).String(),
 						SessionToken: "AllGoodInDaHood",
 						Status:       "Authenticated",
