@@ -35,6 +35,13 @@ used to obtain IAM role credentials from an EC2 instance profile, and does not s
 instance credentials. It also exposes some paths which are not part of the EC2 metadata service so we can adjust the
 configuration of the service while it is running.
 
+When using a non-IAM (SAML) profile with the EC2 metadata service, you may encounter timeout issues when using the awscli.
+This is due to the default timeout for the awscli EC2 metadata interaction of 1 second, and in some cases, the need to
+communicate with the IdP before fetching the AWS role credentials will cause this awscli timeout to be exceeded.  To work
+around this issue, you can set either (or both) of these parameters in your `.aws/config` file: `metadata_service_timeout`
+or `metadata_service_num_attempts`.  For more information see the [AWS docs](https://awscli.amazonaws.com/v2/documentation/api/latest/reference/configure/index.html#configuration-variables)
+
+
 ## Running
 To execute aws-runas using the EC2 Metadata Service feature, use the `--ec2` flag when running the command. For example,
 on a MacOS or Linux system:
