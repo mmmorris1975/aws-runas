@@ -42,10 +42,6 @@ func (c oktaSamlClient) Authenticate() error {
 }
 
 func (c oktaSamlClient) AwsSaml() (string, error) {
-	if len(c.rawSamlResponse) > 0 {
-		return c.rawSamlResponse, nil
-	}
-
 	if err := c.samlRequest(c.authUrl); err != nil {
 		return "", err
 	}

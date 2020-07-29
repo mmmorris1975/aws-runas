@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestNewOktaSamlClient(t *testing.T) {
@@ -175,6 +176,7 @@ func TestOktaSamlClient_AwsSaml(t *testing.T) {
 			return
 		}
 		k.rawSamlResponse = "123456"
+		k.samlResponseExpire = time.Now().Add(1 * time.Hour)
 
 		if _, err := c.AwsSaml(); err != nil {
 			t.Error(err)

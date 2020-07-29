@@ -11,21 +11,23 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // BaseAwsClient is the base AwsClient type which can handle much of the SAML interaction, once a client is authenticated
 type BaseAwsClient struct {
-	authUrl          *url.URL
-	baseUrl          *url.URL
-	httpClient       *http.Client
-	rawSamlResponse  string
-	decodedSaml      string
-	Username         string
-	Password         string
-	CredProvider     func(string, string) (string, string, error)
-	MfaTokenProvider func() (string, error)
-	MfaType          string
-	MfaToken         string
+	authUrl            *url.URL
+	baseUrl            *url.URL
+	httpClient         *http.Client
+	rawSamlResponse    string
+	decodedSaml        string
+	samlResponseExpire time.Time
+	Username           string
+	Password           string
+	CredProvider       func(string, string) (string, string, error)
+	MfaTokenProvider   func() (string, error)
+	MfaType            string
+	MfaToken           string
 }
 
 func newBaseAwsClient(authUrl string) (*BaseAwsClient, error) {
@@ -180,6 +182,10 @@ func (c *BaseAwsClient) decodeSaml() error {
 }
 
 func (c *BaseAwsClient) samlRequest(u *url.URL) error {
+	if len(c.rawSamlResponse) > 0 && c.samlResponseExpire.After(time.Now()) {
+		return nil
+	}
+
 	r, err := http.NewRequest(http.MethodGet, u.String(), nil)
 	if err != nil {
 		return err
@@ -204,6 +210,9 @@ func (c *BaseAwsClient) samlRequest(u *url.URL) error {
 	if len(c.rawSamlResponse) < 1 {
 		return fmt.Errorf("did not receive a valid SAML response")
 	}
+
+	// AWS rejects any SAML assertion older than 5 minutes, so set an expiration time lower then that
+	c.samlResponseExpire = time.Now().Add(4 * time.Minute)
 
 	return c.decodeSaml()
 }

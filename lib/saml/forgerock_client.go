@@ -76,10 +76,6 @@ func (c *forgerockSamlClient) Authenticate() error {
 // AwsSaml performs a SAML request using the well known AWS service provider URN.  The result of this request is cached
 // in memory to avoid repeated requests to the Forgerock endpoint.
 func (c *forgerockSamlClient) AwsSaml() (string, error) {
-	if len(c.rawSamlResponse) > 0 {
-		return c.rawSamlResponse, nil
-	}
-
 	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=/%s/saml-idp&spEntityID=%s", c.baseUrl, c.realm, AwsUrn))
 	if err != nil {
 		return "", err

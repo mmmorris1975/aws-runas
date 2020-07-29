@@ -81,10 +81,6 @@ func (c *oneloginSamlClient) Authenticate() error {
 // AwsSaml performs a SAML request using the auth URL provided at the start.  The result of this request is cached
 // in memory to avoid repeated requests to the OneLogin endpoint.
 func (c *oneloginSamlClient) AwsSaml() (string, error) {
-	if len(c.rawSamlResponse) > 0 {
-		return c.rawSamlResponse, nil
-	}
-
 	if err := c.samlRequest(c.authUrl); err != nil {
 		return "", err
 	}

@@ -102,6 +102,7 @@ func TestOneloginSamlClient_AwsSaml(t *testing.T) {
 	t.Run("populated saml", func(t *testing.T) {
 		o := newOneloginClient(s)
 		o.rawSamlResponse = "abc123"
+		o.samlResponseExpire = time.Now().Add(1 * time.Hour)
 
 		if _, err := o.AwsSaml(); err != nil {
 			t.Error(err)

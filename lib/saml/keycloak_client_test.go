@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"net/url"
 	"testing"
+	"time"
 )
 
 func TestNewKeycloakSamlClient(t *testing.T) {
@@ -100,6 +101,7 @@ func TestKeycloakSamlClient_AwsSaml(t *testing.T) {
 			return
 		}
 		k.rawSamlResponse = "abc123"
+		k.samlResponseExpire = time.Now().Add(1 * time.Hour)
 
 		if _, err := k.AwsSaml(); err != nil {
 			t.Error(err)
