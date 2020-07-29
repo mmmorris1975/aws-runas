@@ -95,7 +95,6 @@ func main() {
 	case *ec2MdFlag:
 		log.Debug("Metadata Server")
 		if usr.IdentityType == "user" {
-			cfg.Profile = "" // unset any profile we've seen so far, to avoid side-effects
 			opts := &metadata.EC2MetadataInput{
 				Config:     cfg,
 				Logger:     log,

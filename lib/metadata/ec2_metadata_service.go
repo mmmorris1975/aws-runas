@@ -22,6 +22,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/signal"
 	"path/filepath"
@@ -39,6 +40,7 @@ const (
 	listRolesPath    = "/list-roles"
 	refreshPath      = "/refresh"
 	imdsV2Token      = "/latest/api/token"
+	imdsAddr         = "169.254.169.254"
 )
 
 var (
@@ -58,10 +60,24 @@ var (
 
 	errCredsRequired = errors.New("credentials required")
 	errMfaRequired   = errors.New("mfa token required")
+
+	siteJs string
 )
 
 func init() {
-	ec2MdSvcAddr, _ = net.ResolveIPAddr("ip", "169.254.169.254")
+	ec2MdSvcAddr, _ = net.ResolveIPAddr("ip", imdsAddr)
+
+	m := make(map[string]interface{})
+	m["auth_ep"] = authPath
+	m["profile_ep"] = profilePath
+	m["refresh_ep"] = refreshPath
+	m["roles_ep"] = listRolesPath
+
+	b := new(strings.Builder)
+	if err := siteJsTmpl.Execute(b, m); err != nil {
+		panic(err)
+	}
+	siteJs = b.String()
 }
 
 type handlerError struct {
@@ -172,7 +188,15 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 	http.Handle(imdsV2Token, http.NotFoundHandler()) // disable IMDSv2 (for now?)
 
 	log.Infoln("EC2 Metadata Service ready!")
-	log.Infof("Access the web interface at http://%s and select a role to begin", hp)
+
+	if len(profile.Profile) > 0 {
+		wr := httptest.NewRecorder()
+		req, _ := http.NewRequest(http.MethodPost, profilePath, strings.NewReader(profile.Profile))
+		profileHandler(wr, req)
+		log.Infof("Using initial profile %s", profile.Profile)
+	} else {
+		log.Infof("Access the web interface at http://%s and select a role to begin", hp)
+	}
 	return srv.Serve(l)
 }
 
@@ -184,6 +208,9 @@ func handleOptions(opts *EC2MetadataInput) error {
 
 	profile = opts.Config        // may be nil/empty if no profile passed at startup, it's not an error
 	samlClient = opts.SamlClient // may be nil/empty if we're not starting with a SAML profile, it's not an error
+
+	log.Infof("%+v", profile)
+	log.Infof("%+v", samlClient)
 
 	s = opts.Session
 	if s == nil {
@@ -200,15 +227,16 @@ func handleOptions(opts *EC2MetadataInput) error {
 		cacheDir = d
 	}
 
-	_cr, err := config.NewAwsConfigResolver(nil)
-	cr = _cr
+	var err error
+	cr, err = config.NewAwsConfigResolver(nil)
 	return err
 }
 
 // Set capabilities to allow us to run without sudo or setuid on Linux. After installing the tool, you must run
 // sudo /sbin/setcap "cap_net_admin,cap_net_bind_service,cap_setgid,cap_setuid=p" aws-runas
-// to enable the use of these capability settings.  You can still execute aws-runas wrapped in sudo, if you prefer
-// to not use the capabilities feature.
+// to enable the use of these capability settings.  (If using the DEB or RPM packages, this is done as part of the
+// package install/update.)
+// You can still execute aws-runas wrapped in sudo, if you prefer to not use the capabilities feature.
 func linuxSetCap() error {
 	caps := capability.CAPS | capability.AMBIENT
 	c, err := capability.NewPid2(0)
@@ -269,21 +297,8 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func jsHandler(w http.ResponseWriter, r *http.Request) {
-	m := make(map[string]interface{})
-	m["auth_ep"] = authPath
-	m["profile_ep"] = profilePath
-	m["refresh_ep"] = refreshPath
-	m["roles_ep"] = listRolesPath
-
-	b := new(strings.Builder)
-	if err := siteJs.Execute(b, m); err != nil {
-		log.Error(err)
-		writeResponse(w, r, "Error building content", http.StatusInternalServerError)
-		return
-	}
-
 	w.Header().Set("Content-Type", "text/javascript")
-	writeResponse(w, r, b.String(), http.StatusOK)
+	writeResponse(w, r, siteJs, http.StatusOK)
 }
 
 func profileHandler(w http.ResponseWriter, r *http.Request) {
@@ -674,13 +689,18 @@ func assumeSamlRole() ([]byte, error) {
 
 		if len(profile.JumpRoleArn.Resource) > 0 {
 			p.RoleARN = profile.JumpRoleArn.String()
+
+			parts := strings.Split(profile.JumpRoleArn.Resource, "/")
+			cf := fmt.Sprintf(".aws_saml_role_%s-%s", profile.JumpRoleArn.AccountID, parts[len(parts)-1])
+			p.Cache = cache.NewFileCredentialCache(cacheFile(cf))
+
+			profile.MfaSerial = "" // explicitly unset MfaSerial, just to be extra sure
 		}
 
 		p.ExpiryWindow = p.Duration / 10
 	})
 
 	if len(profile.JumpRoleArn.Resource) > 0 {
-		profile.MfaSerial = "" // explicitly unset MfaSerial, just to be extra sure
 		c = assumeRoleCredentials(s.Copy(new(aws.Config).WithCredentials(sc)))
 	} else {
 		c = sc
@@ -852,7 +872,7 @@ var indexHtml = `
 </html>
 `
 
-var siteJs = template.Must(template.New("").Parse(`
+var siteJsTmpl = template.Must(template.New("").Parse(`
 function postProfile(role) {
     let xhr = new XMLHttpRequest();
     xhr.onreadystatechange = function () {
