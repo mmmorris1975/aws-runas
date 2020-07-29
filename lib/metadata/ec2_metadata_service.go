@@ -209,9 +209,6 @@ func handleOptions(opts *EC2MetadataInput) error {
 	profile = opts.Config        // may be nil/empty if no profile passed at startup, it's not an error
 	samlClient = opts.SamlClient // may be nil/empty if we're not starting with a SAML profile, it's not an error
 
-	log.Infof("%+v", profile)
-	log.Infof("%+v", samlClient)
-
 	s = opts.Session
 	if s == nil {
 		return errors.New("invalid session provided")
