@@ -2,7 +2,7 @@ module aws-runas
 
 require (
 	github.com/alecthomas/kingpin v0.0.0-20190816080609-dce89ec0b9f1
-	github.com/aws/aws-sdk-go v1.30.24
+	github.com/aws/aws-sdk-go v1.33.15
 	github.com/dustin/go-humanize v1.0.0
 	github.com/mmmorris1975/aws-config v0.3.2
 	github.com/mmmorris1975/simple-logger v0.4.0

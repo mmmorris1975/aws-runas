@@ -193,7 +193,7 @@ func NewEC2MetadataService(opts *EC2MetadataInput) error {
 		wr := httptest.NewRecorder()
 		req, _ := http.NewRequest(http.MethodPost, profilePath, strings.NewReader(profile.Profile))
 		profileHandler(wr, req)
-		log.Infof("Using initial profile %s", profile.Profile)
+		log.Infof("Using initial profile '%s'", profile.Profile)
 	} else {
 		log.Infof("Access the web interface at http://%s and select a role to begin", hp)
 	}
