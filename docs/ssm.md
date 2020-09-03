@@ -7,7 +7,10 @@ Starting with version 1.5, the tool supports integration with the SSM Session Ma
 a shell, or port-forwarding, session with appropriately configured EC2 instances.
 
 Starting with version 2.2, the tool supports the ability to specify the target instance as an EC2 instance identifier,
-or using a DNS TXT record which contains the instance ID.
+or using a DNS TXT record which contains the instance ID. As of version 2.2.1 you can also provide the target instance
+as the instance's private IPv4 address, or as a tag key and tag value pair in the format `tag_key:tag_value`.  Both
+formats will perform a DescribeInstances EC2 API call, and if multiple instance IDs are returned, the first one in the
+list is used.
 
 ### Prerequisites
 In addition to having a target EC2 instance registered with an SSM agent version supporting the desired functionality,

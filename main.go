@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/iam/iamiface"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -910,7 +911,7 @@ func getSamlPassword() (string, error) {
 func checkTarget(target string) string {
 	matched, err := regexp.MatchString(`^i-[[:xdigit:]]{8,}$`, target)
 	if err != nil {
-		log.Fatalf("error checking target host", err)
+		log.Fatalf("error checking target host: %s", err)
 	}
 
 	if matched {
@@ -918,9 +919,32 @@ func checkTarget(target string) string {
 		return target
 	}
 
+	matched, err = regexp.MatchString(`^.+:.+$`, target)
+	if err != nil {
+		log.Fatalf("error checking target host: %s", err)
+	}
+
+	if matched {
+		log.Debugln("detected EC2 instance tag spec")
+		spec := strings.SplitN(target, `:`, 2)
+		f := new(ec2.Filter).SetName(fmt.Sprintf(`tag:%s`, spec[0])).SetValues(aws.StringSlice([]string{spec[1]}))
+		return describeInstance(f)
+	}
+
+	matched, err = regexp.MatchString(`^\d{1,3}\.\d{1,3}\.\d{1,3}.\d{1,3}$`, target)
+	if err != nil {
+		log.Fatalf("error checking target host: %s", err)
+	}
+
+	if matched {
+		log.Debugln("detected EC2 instance IPv4 address")
+		f := new(ec2.Filter).SetName(`private-ip-address`).SetValues(aws.StringSlice([]string{target}))
+		return describeInstance(f)
+	}
+
 	rr, err := net.LookupTXT(target)
 	if err != nil {
-		log.Fatalf("error looking up target host", err)
+		log.Fatalf("error looking up target host: %s", err)
 	}
 
 	for _, r := range rr {
@@ -936,5 +960,25 @@ func checkTarget(target string) string {
 	}
 
 	log.Fatal("unable to determine target host type")
+	return ""
+}
+
+func describeInstance(filter *ec2.Filter) string {
+	o, err := ec2.New(ses).DescribeInstances(new(ec2.DescribeInstancesInput).SetFilters([]*ec2.Filter{filter}))
+	if err != nil {
+		log.Fatalf("error describing instance: %s", err)
+	}
+
+	for _, r := range o.Reservations {
+		if len(r.Instances) > 0 {
+			if len(r.Instances) > 1 {
+				log.Warn("more than 1 instance found, using 1st value")
+			}
+
+			return *r.Instances[0].InstanceId
+		}
+	}
+
+	log.Fatal("no instances returned from lookup")
 	return ""
 }
