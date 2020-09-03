@@ -29,6 +29,7 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"sort"
 	"strings"
@@ -152,12 +153,14 @@ func main() {
 
 		switch p {
 		case shell.FullCommand():
+			tgt := checkTarget(*shellArgs.target)
 			h := ssm.NewSsmHandler(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log)))
-			if err := h.StartSession(*shellArgs.target); err != nil {
+			if err := h.StartSession(tgt); err != nil {
 				log.Fatal(err)
 			}
 		case fwd.FullCommand():
-			host, remPort, err := net.SplitHostPort(*fwdArgs.target)
+			tgt := checkTarget(*fwdArgs.target)
+			host, remPort, err := net.SplitHostPort(tgt)
 			if err != nil {
 				log.Fatal(err)
 			}
@@ -902,4 +905,36 @@ func getSamlPassword() (string, error) {
 	}
 
 	return "", nil
+}
+
+func checkTarget(target string) string {
+	matched, err := regexp.MatchString(`^i-[[:xdigit:]]{8,}$`, target)
+	if err != nil {
+		log.Fatalf("error checking target host", err)
+	}
+
+	if matched {
+		log.Debugln("detected EC2 instance id target")
+		return target
+	}
+
+	rr, err := net.LookupTXT(target)
+	if err != nil {
+		log.Fatalf("error looking up target host", err)
+	}
+
+	for _, r := range rr {
+		matched, err = regexp.MatchString(`^i-[[:xdigit:]]{8,}$`, r)
+		if err != nil {
+			continue
+		}
+
+		if matched {
+			log.Debugln("found EC2 instance id in DNS TXT record")
+			return r
+		}
+	}
+
+	log.Fatal("unable to determine target host type")
+	return ""
 }

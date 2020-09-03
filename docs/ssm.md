@@ -6,6 +6,9 @@ title: SSM Session Support
 Starting with version 1.5, the tool supports integration with the SSM Session Manager service, so you are able to open
 a shell, or port-forwarding, session with appropriately configured EC2 instances.
 
+Starting with version 2.2, the tool supports the ability to specify the target instance as an EC2 instance identifier,
+or using a DNS TXT record which contains the instance ID.
+
 ### Prerequisites
 In addition to having a target EC2 instance registered with an SSM agent version supporting the desired functionality,
 `aws-runas` requires that you install the `session-manager-plugin` helper to handle the communication with the SSM service.
