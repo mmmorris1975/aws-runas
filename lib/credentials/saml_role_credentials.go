@@ -3,6 +3,7 @@ package credentials
 import (
 	"aws-runas/lib/cache"
 	"encoding/base64"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/service/sts"
@@ -82,6 +83,14 @@ func (p *SamlRoleProvider) Retrieve() (credentials.Value, error) {
 func (p *SamlRoleProvider) retrieve() (*cache.CacheableCredentials, error) {
 	if p.Duration < 1 {
 		p.Duration = AssumeRoleDefaultDuration
+	}
+
+	if len(p.SAMLAssertion) < 20 {
+		return nil, fmt.Errorf("invalid SAML Assertion detected, check your local SAML and identity provider configuration")
+	}
+
+	if len(p.principalArn) < 20 {
+		return nil, fmt.Errorf("invalid Principal ARN, check that your configured role ARN matches the identity provider configuration")
 	}
 
 	i := new(sts.AssumeRoleWithSAMLInput).SetDurationSeconds(p.validateDuration(p.Duration)).SetRoleArn(p.RoleARN).
