@@ -154,13 +154,15 @@ func main() {
 
 		switch p {
 		case shell.FullCommand():
-			tgt := checkTarget(*shellArgs.target)
-			h := ssm.NewSsmHandler(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log)))
+			s := ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log))
+			tgt := checkTarget(*shellArgs.target, s)
+			h := ssm.NewSsmHandler(s)
 			if err := h.StartSession(tgt); err != nil {
 				log.Fatal(err)
 			}
 		case fwd.FullCommand():
-			tgt := checkTarget(*fwdArgs.target)
+			s := ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log))
+			tgt := checkTarget(*fwdArgs.target, s)
 			host, remPort, err := net.SplitHostPort(tgt)
 			if err != nil {
 				log.Fatal(err)
@@ -168,7 +170,7 @@ func main() {
 
 			locPort := fmt.Sprintf("%d", *fwdArgs.localPort)
 
-			h := ssm.NewSsmHandler(ses.Copy(new(aws.Config).WithCredentials(c).WithLogger(log)))
+			h := ssm.NewSsmHandler(s)
 			if err := h.ForwardPort(host, locPort, remPort); err != nil {
 				log.Fatal(err)
 			}
@@ -908,7 +910,7 @@ func getSamlPassword() (string, error) {
 	return "", nil
 }
 
-func checkTarget(target string) string {
+func checkTarget(target string, s *session.Session) string {
 	matched, err := regexp.MatchString(`^i-[[:xdigit:]]{8,}$`, target)
 	if err != nil {
 		log.Fatalf("error checking target host: %s", err)
@@ -928,7 +930,7 @@ func checkTarget(target string) string {
 		log.Debugln("detected EC2 instance tag spec")
 		spec := strings.SplitN(target, `:`, 2)
 		f := new(ec2.Filter).SetName(fmt.Sprintf(`tag:%s`, spec[0])).SetValues(aws.StringSlice([]string{spec[1]}))
-		return describeInstance(f)
+		return describeInstance(f, s)
 	}
 
 	matched, err = regexp.MatchString(`^\d{1,3}\.\d{1,3}\.\d{1,3}.\d{1,3}$`, target)
@@ -939,7 +941,7 @@ func checkTarget(target string) string {
 	if matched {
 		log.Debugln("detected EC2 instance IPv4 address")
 		f := new(ec2.Filter).SetName(`private-ip-address`).SetValues(aws.StringSlice([]string{target}))
-		return describeInstance(f)
+		return describeInstance(f, s)
 	}
 
 	rr, err := net.LookupTXT(target)
@@ -963,8 +965,8 @@ func checkTarget(target string) string {
 	return ""
 }
 
-func describeInstance(filter *ec2.Filter) string {
-	o, err := ec2.New(ses).DescribeInstances(new(ec2.DescribeInstancesInput).SetFilters([]*ec2.Filter{filter}))
+func describeInstance(filter *ec2.Filter, s *session.Session) string {
+	o, err := ec2.New(s).DescribeInstances(new(ec2.DescribeInstancesInput).SetFilters([]*ec2.Filter{filter}))
 	if err != nil {
 		log.Fatalf("error describing instance: %s", err)
 	}
