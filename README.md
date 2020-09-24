@@ -27,6 +27,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     Flags:
       -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
           --ec2                      Run a mock EC2 metadata service to provide role credentials
+          --ecs                      Run a mock ECS credential endpoint to provide role credentials
       -v, --verbose                  Print verbose/debug messages
       -E, --env                      Pass credentials to program as environment variables
       -e, --expiration               Show credential expiration time
