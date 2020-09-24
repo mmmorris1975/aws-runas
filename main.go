@@ -180,6 +180,18 @@ func main() {
 				log.Fatalf("Error getting credentials: %v", err)
 			}
 
+			if *ecsMdFlag {
+				signal.Reset(os.Interrupt, syscall.SIGTERM) // reset signal handler
+				in := &metadata.EcsMetadataInput{Credentials: c, Logger: log, Port: 12319}
+				s, err := metadata.NewEcsMetadataService(in)
+				if err != nil {
+					log.Fatal(err)
+				}
+				log.Infof("ECS credential endpoint: %s", s.Url.String())
+				log.Infof("Set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable with this value to allow programs to use it")
+				s.Run()
+			}
+
 			updateEnv(creds)
 			cmd := *execArgs.cmd
 

@@ -19,6 +19,7 @@ var (
 	refresh      *bool
 	sesCreds     *bool
 	whoAmI       *bool
+	ecsMdFlag    *bool
 	duration     *time.Duration
 	roleDuration *time.Duration
 	mfaCode      *string
@@ -76,10 +77,12 @@ func init() {
 		fwdPortDesc         = "The local port for the forwarded connection"
 		outputArgDesc       = "Credential output format, valid values: env (default) or json"
 		whoAmIArgDesc       = "Print the AWS identity information for the provided profile"
+		ecsArgDesc          = "Run a mock ECS credential endpoint to provide role credentials"
 	)
 
 	// special flags
 	ec2MdFlag = kingpin.Flag("ec2", ec2ArgDesc).Bool()
+	ecsMdFlag = kingpin.Flag("ecs", ecsArgDesc).Bool()
 	verbose = kingpin.Flag("verbose", verboseArgDesc).Short('v').Envar("RUNAS_VERBOSE").Bool()
 	envFlag = kingpin.Flag("env", envArgDesc).Short('E').Envar("RUNAS_ENV_CREDENTIALS").Bool()
 	showExpire = kingpin.Flag("expiration", showExpArgDesc).Short('e').Bool()

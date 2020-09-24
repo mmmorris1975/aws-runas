@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -22,6 +23,8 @@ type EcsMetadataInput struct {
 	Credentials *credentials.Credentials
 	// Logger is the logging object to configure for the service.  If not provided, a standard logger is configured.
 	Logger *logger.Logger
+	// Port is the port the service will listen on, default is a randomly chosen port.
+	Port int16
 }
 
 // ecsMetadataService is the object encapsulating the details of the service
@@ -40,9 +43,21 @@ func NewEcsMetadataService(opts *EcsMetadataInput) (*ecsMetadataService, error) 
 	}
 
 	// The SDK seems to only support listening on "localhost" and 127.0.0.1, not the ::1 IPv6 loopback, try not to be clever
-	l, err := net.Listen("tcp", "127.0.0.1:0")
+	l, err := net.Listen("tcp", net.JoinHostPort("127.0.0.1", strconv.Itoa(int(opts.Port))))
 	if err != nil {
-		return nil, err
+		if _, ok := err.(*net.OpError); ok {
+			// listen errors are OS-specific, so we can't scrape the message with any consistency
+			// If opts.Port > 0, retry with port set to zero
+			if opts.Port > 0 {
+				log.Warnf("Error trying to listen with port %d, retrying with random port", opts.Port)
+				l, err = net.Listen("tcp", "127.0.0.1:0")
+				if err != nil {
+					return nil, err
+				}
+			}
+		} else {
+			return nil, err
+		}
 	}
 
 	u, _ := url.Parse(fmt.Sprintf("http://%s%s", l.Addr(), ecsCredentialsPath))
