@@ -28,13 +28,11 @@ func (s *SamlAssertion) RoleDetails() (*roleDetails, error) {
 	re, _ := regexp.Compile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
 
 	m := re.FindAllStringSubmatch(saml, -1)
-	if m != nil {
-		for _, r := range m {
-			if strings.Contains(r[1], ":role/") {
-				rd.details[r[1]] = r[2]
-			} else {
-				rd.details[r[2]] = r[1]
-			}
+	for _, r := range m {
+		if strings.Contains(r[1], ":role/") {
+			rd.details[r[1]] = r[2]
+		} else {
+			rd.details[r[2]] = r[1]
 		}
 	}
 

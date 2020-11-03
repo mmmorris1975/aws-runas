@@ -69,7 +69,7 @@ func TestListMfaCmd_listMfa(t *testing.T) {
 	t.Run("user", func(t *testing.T) {
 		s := mock.Session
 		s.Config.Region = aws.String("mock")
-		listMfa(iam.New(s), &identity.Identity{IdentityType: "user"})
+		_ = listMfa(iam.New(s), &identity.Identity{IdentityType: "user"})
 	})
 
 	t.Run("not user", func(t *testing.T) {

@@ -217,7 +217,6 @@ func ntpTime() (time.Time, error) {
 
 	for !gotResponse {
 		if deadlineDuration > 10*time.Second {
-			gotResponse = true
 			return time.Time{}, fmt.Errorf("retry attempt limit exceeded")
 		}
 

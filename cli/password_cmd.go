@@ -91,7 +91,7 @@ func updateCreds(cfg *config.AwsConfig, password string) error {
 			return err
 		}
 
-		f, err = ini.Load(newFile)
+		f, _ = ini.Load(newFile)
 	}
 	f.Section(url).Key(key).SetValue(crypt)
 

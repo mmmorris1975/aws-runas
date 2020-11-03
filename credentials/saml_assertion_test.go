@@ -217,7 +217,7 @@ func TestSamlAssertion_RoleSessionName(t *testing.T) {
 	})
 }
 
-func ExampleRoleDetails_String() {
+func Example_roleDetails_String() {
 	rd := new(roleDetails)
 	rd.details = map[string]string{"mockRole1": "mockPrincipal1"}
 	fmt.Print(rd.String())

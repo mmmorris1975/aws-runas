@@ -98,7 +98,7 @@ func TestAwsIdentityProvider_Roles(t *testing.T) {
 	})
 }
 
-func ExampleAwsIdentityProvider_Roles() {
+func Example_awsIdentityProvider_Roles() {
 	p := &awsIdentityProvider{stsClient: new(mockStsClient), iamClient: new(mockIamClient), wg: new(sync.WaitGroup), logger: new(shared.DefaultLogger)}
 
 	r, _ := p.Roles()

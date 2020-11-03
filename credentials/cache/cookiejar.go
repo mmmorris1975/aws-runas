@@ -74,9 +74,7 @@ func (c *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	defer c.mu.Unlock()
 
 	c.jar.SetCookies(u, cookies)
-	if err := c.flush(u); err != nil {
-		// todo handle (log?) error
-	}
+	_ = c.flush(u) // todo handle (log?) error
 }
 
 // Cookies is the implementation of the http.CookieJar interface to retrieve cookies from the cache.
@@ -142,11 +140,9 @@ func readCache(path string) (map[string][]*http.Cookie, error) {
 		return cookies, nil
 	}
 
-	if data != nil && len(data) > 2 {
-		if err := json.Unmarshal(data, &cookies); err != nil {
-			// todo handle (log?) error
-			// this is non-fatal, just rewrite a fresh cache without the old data
-		}
+	if len(data) > 2 {
+		// this is non-fatal, just rewrite a fresh cache without the old data
+		_ = json.Unmarshal(data, &cookies) // todo handle (log?) error
 	}
 
 	return cookies, nil

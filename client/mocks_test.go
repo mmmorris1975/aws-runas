@@ -156,7 +156,7 @@ func (p *mockWebRoleProvider) RetrieveWithContext(awscreds.Context) (awscreds.Va
 }
 
 func (p *mockWebRoleProvider) WebIdentityToken(*credentials.OidcIdentityToken) {
-	return
+	//return
 }
 
 func (p *mockWebRoleProvider) ClearCache() error {
@@ -192,7 +192,7 @@ func (p *mockSamlRoleProvider) RetrieveWithContext(awscreds.Context) (awscreds.V
 }
 
 func (p *mockSamlRoleProvider) SamlAssertion(*credentials.SamlAssertion) {
-	return
+	//return
 }
 
 func (p *mockSamlRoleProvider) ClearCache() error {

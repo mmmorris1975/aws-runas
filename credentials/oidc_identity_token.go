@@ -11,10 +11,7 @@ import (
 type OidcIdentityToken string
 
 func (t *OidcIdentityToken) IsExpired() bool {
-	if t.ExpiresAt().After(time.Now()) {
-		return false
-	}
-	return true
+	return !t.ExpiresAt().After(time.Now())
 }
 
 func (t *OidcIdentityToken) ExpiresAt() time.Time {

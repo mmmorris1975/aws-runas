@@ -95,11 +95,12 @@ func TestWebIdentityCache_Cache(t *testing.T) {
 
 	t.Run("bad data", func(t *testing.T) {
 		f, err := os.Create(filepath.Join(t.TempDir(), "cache"))
-		f.Write([]byte("test"))
 		if err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			return
 		}
-		f.Close()
+		_, _ = f.Write([]byte("test"))
+		_ = f.Close()
 
 		c, err := newWebIdentityCache(f.Name())
 		if err != nil {

@@ -176,7 +176,7 @@ func (c *mockSamlClient) AuthenticateWithContext(ctx context.Context) error {
 }
 
 func (c *mockSamlClient) SetCookieJar(http.CookieJar) {
-	return
+	//return
 }
 
 func (c *mockSamlClient) SamlAssertion() (*credentials.SamlAssertion, error) {

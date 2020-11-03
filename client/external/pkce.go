@@ -23,7 +23,7 @@ func newPkceCode() (*pkceCode, error) {
 	pkce.verifier = base64.RawURLEncoding.EncodeToString(buf)
 
 	h := sha256.New()
-	h.Write([]byte(pkce.verifier))
+	_, _ = h.Write([]byte(pkce.verifier))
 	pkce.challenge = base64.RawURLEncoding.EncodeToString(h.Sum(nil))
 
 	return pkce, nil

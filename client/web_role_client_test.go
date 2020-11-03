@@ -180,7 +180,7 @@ func (c *mockWebClient) AuthenticateWithContext(context.Context) error {
 }
 
 func (c *mockWebClient) SetCookieJar(http.CookieJar) {
-	return
+	//return
 }
 
 func (c *mockWebClient) IdentityToken() (*credentials.OidcIdentityToken, error) {

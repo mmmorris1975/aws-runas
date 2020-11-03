@@ -35,7 +35,7 @@ func TestPkceCode(t *testing.T) {
 
 	t.Run("hash", func(t *testing.T) {
 		h := sha256.New()
-		h.Write([]byte(pkce.Verifier()))
+		_, _ = h.Write([]byte(pkce.Verifier()))
 
 		if pkce.Challenge() != base64.RawURLEncoding.EncodeToString(h.Sum(nil)) {
 			t.Error("invalid challenge hash")

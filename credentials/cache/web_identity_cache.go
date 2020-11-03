@@ -100,11 +100,9 @@ func (c *webIdentityCache) loadCache() error {
 		return nil
 	}
 
-	if data != nil && len(data) > 2 {
-		if err := json.Unmarshal(data, &c.cache); err != nil {
-			// todo handle (log?) error
-			// this is non-fatal, just rewrite a fresh cache without the old data
-		}
+	if len(data) > 2 {
+		// this is non-fatal, just rewrite a fresh cache without the old data
+		_ = json.Unmarshal(data, &c.cache) // todo handle (log?) error
 	}
 
 	return nil

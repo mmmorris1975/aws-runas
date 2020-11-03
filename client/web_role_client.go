@@ -140,8 +140,8 @@ func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
 
 	err = tokenCache.Store(c.idpUrl, tok)
 	if err != nil {
-		// todo - handle (log?) error
 		// non-fatal ... just won't have a cached token
+		c.logger.Debugf("error writing to token cache: %v", err)
 	}
 
 	return []byte(tok.String()), nil

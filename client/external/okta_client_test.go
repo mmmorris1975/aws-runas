@@ -25,6 +25,7 @@ func TestNewOktaClient(t *testing.T) {
 
 		if c == nil {
 			t.Error("nil client")
+			return
 		}
 
 		if c.authUrl == nil || c.httpClient == nil {
