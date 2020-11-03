@@ -116,11 +116,12 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 func divineClient(u, method string) string {
 	// somewhat arbitrary timeout, but should hopefully work for most things
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
 	r, err := http.NewRequestWithContext(ctx, method, u, http.NoBody)
 	if err != nil {
 		return ""
 	}
-	defer cancel()
 
 	// test if URL explicitly calls out a provider, and bypass any outbound requests
 	switch h := strings.ToLower(r.URL.Host); {
