@@ -92,7 +92,7 @@ func execSsmPlugin(cfg awsclient.ConfigProvider, in *ssm.StartSessionInput) erro
 	// the empty string after StartSession would normally be where a named profile would be specified, but
 	// that's unnecessary when wrapping with aws-runas, which handles profile and credential stuff for us
 	// session-manager-plugin executable must be found in PATH
-	c := exec.Command("session-manager-plugin", string(outJ), s.SigningRegion, "StartSession", "", string(inJ), s.Endpoint)
+	c := exec.Command("session-manager-plugin", string(outJ), s.SigningRegion, "StartSession", "", string(inJ), s.Endpoint) //nolint:gosec
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

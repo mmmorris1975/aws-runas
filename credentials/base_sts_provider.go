@@ -55,13 +55,14 @@ func (p *baseStsProvider) CheckCache() *Credentials {
 // be used, if less than the minimum, the minimum value will be used, and if greater than the maximum,
 // the maximum value will be used.
 func (p *baseStsProvider) ConvertDuration(d, min, max, def time.Duration) *int64 {
-	if d < 1 {
+	switch {
+	case d < 1:
 		p.Logger.Debugf("provided duration less than 1, setting to default value")
 		d = def
-	} else if d < min {
+	case d < min:
 		p.Logger.Debugf("provided duration too short, setting to minimum value")
 		d = min
-	} else if d > max {
+	case d > max:
 		p.Logger.Debugf("provided duration too long, setting to maximum value")
 		d = max
 	}

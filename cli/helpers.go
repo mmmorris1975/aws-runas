@@ -35,12 +35,10 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 	var profile string
 	if ctx.NArg() >= expectedArgs {
 		profile = ctx.Args().First()
-	} else {
-		if ctx.NArg() == 0 && len(ctx.Lineage()) > 2 {
-			next := ctx.Lineage()[1]
-			if next.NArg() >= expectedArgs {
-				profile = next.Args().First()
-			}
+	} else if ctx.NArg() == 0 && len(ctx.Lineage()) > 2 {
+		next := ctx.Lineage()[1]
+		if next.NArg() >= expectedArgs {
+			profile = next.Args().First()
 		}
 	}
 

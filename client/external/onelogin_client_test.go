@@ -15,7 +15,22 @@ import (
 	"time"
 )
 
-var oneloginMock = httptest.NewServer(http.HandlerFunc(mockOneloginHandler))
+var oneloginMock *httptest.Server
+
+func init() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", olDefaultHandler)
+	mux.HandleFunc("/auth/oauth2/v2/token", olAuthTokenHandler)
+	mux.HandleFunc("/oidc/2/auth", olOauthAuthHandler)
+	mux.HandleFunc("/oidc/2/token", olOauthTokenHandler)
+	mux.HandleFunc("/trust/saml2/launch/", olSamlHandler)
+	mux.HandleFunc("/session_via_api_token", olSessionHandler)
+	mux.HandleFunc("/api/1/login/auth", olAuthHandler)
+	mux.HandleFunc("/api/1/users/", olMfaDeviceHandler)
+	mux.HandleFunc("/verify_mfa_local", olVerifyMfaHandler)
+
+	oneloginMock = httptest.NewServer(mux)
+}
 
 func TestNewOneloginClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
@@ -301,67 +316,88 @@ func newMockOneloginClient() *oneloginClient {
 	return c
 }
 
-func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
+func olDefaultHandler(w http.ResponseWriter, r *http.Request) {
+	// Set the expected Onelogin cookie for use with the Client Factory test code
 	defer r.Body.Close()
 
-	switch p := r.URL.Path; {
-	case p == "/auth/oauth2/v2/token":
-		// The API initial authentication endpoint
-		w.Header().Set("Content-Type", "application-json")
+	http.SetCookie(w, &http.Cookie{
+		Name:  "sub_session_onelogin.com",
+		Value: "abc123",
+	})
+	http.NotFound(w, r)
+}
 
-		user, pass, ok := r.BasicAuth()
-		if !ok || user != "mockClientId" || pass != "mockClientSecret" {
-			e := oneloginApiError{
-				Status: &oneloginApiStatus{
-					Error:   true,
-					Code:    401,
-					Type:    "Unauthorized",
-					Message: "Authentication Failure",
-				},
-			}
+func olAuthTokenHandler(w http.ResponseWriter, r *http.Request) {
+	// The API initial authentication endpoint
+	defer r.Body.Close()
 
-			body, _ := json.Marshal(e)
-			http.Error(w, string(body), http.StatusUnauthorized)
-			return
+	w.Header().Set("Content-Type", "application-json")
+
+	user, pass, ok := r.BasicAuth()
+	if !ok || user != "mockClientId" || pass != "mockClientSecret" {
+		e := oneloginApiError{
+			Status: &oneloginApiStatus{
+				Error:   true,
+				Code:    401,
+				Type:    "Unauthorized",
+				Message: "Authentication Failure",
+			},
 		}
 
-		token := oneloginApiToken{
-			AccessToken: "mockApiAccessToken",
-			AccountId:   12345,
-			CreatedAt:   time.Now().UTC().Format(time.RFC3339),
-			ExpiresIn:   3600,
-			TokenType:   "bearer",
-		}
-		body, _ := json.Marshal(token)
-		_, _ = w.Write(body)
-	case p == "/oidc/2/auth":
-		// Oauth authorization URL
-		reqQ := r.URL.Query()
+		body, _ := json.Marshal(e)
+		http.Error(w, string(body), http.StatusUnauthorized)
+		return
+	}
 
-		newQ := url.Values{}
-		newQ.Set("state", reqQ.Get("state"))
-		newQ.Set("code", "mockAuthorizationCode")
+	token := oneloginApiToken{
+		AccessToken: "mockApiAccessToken",
+		AccountId:   12345,
+		CreatedAt:   time.Now().UTC().Format(time.RFC3339),
+		ExpiresIn:   3600,
+		TokenType:   "bearer",
+	}
+	body, _ := json.Marshal(token)
+	_, _ = w.Write(body)
+}
 
-		redirUri := fmt.Sprintf("%s?%s", reqQ.Get("redirect_uri"), newQ.Encode())
-		w.Header().Set("Location", redirUri)
-		http.Error(w, "", http.StatusFound)
-	case p == "/oidc/2/token":
-		// Oauth token URL
-		id := credentials.OidcIdentityToken("my.mockIdentityToken.WithSomeExtraStuffRequiredToPassTheTest")
-		token := &oauthToken{
-			AccessToken: "mockAccessToken",
-			ExpiresIn:   3600,
-			IdToken:     &id,
-			Scope:       "openid",
-			TokenType:   "bearer",
-		}
-		body, _ := json.Marshal(token)
+func olOauthAuthHandler(w http.ResponseWriter, r *http.Request) {
+	// Oauth authorization URL
+	defer r.Body.Close()
 
-		w.Header().Set("Content-Type", "application-json")
-		_, _ = w.Write(body)
-	case strings.HasPrefix(p, "/trust/saml2/launch/"):
-		// SAML assertion fetching URL
-		body := `
+	reqQ := r.URL.Query()
+
+	newQ := url.Values{}
+	newQ.Set("state", reqQ.Get("state"))
+	newQ.Set("code", "mockAuthorizationCode")
+
+	redirUri := fmt.Sprintf("%s?%s", reqQ.Get("redirect_uri"), newQ.Encode())
+	w.Header().Set("Location", redirUri)
+	http.Error(w, "", http.StatusFound)
+}
+
+func olOauthTokenHandler(w http.ResponseWriter, r *http.Request) {
+	// Oauth token URL
+	defer r.Body.Close()
+
+	id := credentials.OidcIdentityToken("my.mockIdentityToken.WithSomeExtraStuffRequiredToPassTheTest")
+	token := &oauthToken{
+		AccessToken: "mockAccessToken",
+		ExpiresIn:   3600,
+		IdToken:     &id,
+		Scope:       "openid",
+		TokenType:   "bearer",
+	}
+	body, _ := json.Marshal(token)
+
+	w.Header().Set("Content-Type", "application-json")
+	_, _ = w.Write(body)
+}
+
+func olSamlHandler(w http.ResponseWriter, r *http.Request) {
+	// SAML assertion fetching URL
+	defer r.Body.Close()
+
+	body := `
 <html>
 <head></head>
 <body>
@@ -371,143 +407,150 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		_, _ = fmt.Fprintf(w, body, r.Host)
-	case p == "/api/1/login/auth":
-		defer r.Body.Close()
-		body, err := ioutil.ReadAll(r.Body)
+	_, _ = fmt.Fprintf(w, body, r.Host)
+}
+
+func olSessionHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	st := r.PostFormValue("session_token")
+	if len(st) < 1 {
+		http.Error(w, "invalid session token", http.StatusBadRequest)
+	}
+	_, _ = w.Write(nil)
+}
+
+func olAuthHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	authParam := make(map[string]string)
+	if err := json.Unmarshal(body, &authParam); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if authParam["password"] != "goodPassword" {
+		http.Error(w, "invalid username or password", http.StatusUnauthorized)
+		return
+	}
+
+	switch authParam["username_or_email"] {
+	case "badtoken":
+		reply := &oneloginAuthReply{
+			Status: &oneloginApiStatus{
+				Error:   false,
+				Code:    http.StatusOK,
+				Message: "success",
+			},
+			Data: []*oneloginAuthData{
+				{Status: "SUCCESS"},
+			},
+		}
+
+		data, err := json.Marshal(reply)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		authParam := make(map[string]string)
-		if err := json.Unmarshal(body, &authParam); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if authParam["password"] != "goodPassword" {
-			http.Error(w, "invalid username or password", http.StatusUnauthorized)
-			return
-		}
-
-		switch authParam["username_or_email"] {
-		case "badtoken":
-			reply := &oneloginAuthReply{
-				Status: &oneloginApiStatus{
-					Error:   false,
-					Code:    http.StatusOK,
-					Message: "success",
-				},
-				Data: []*oneloginAuthData{
-					{Status: "SUCCESS"},
-				},
-			}
-
-			data, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(data)
-			return
-		case "nomfa":
-			reply := &oneloginAuthReply{
-				Status: &oneloginApiStatus{
-					Error:   false,
-					Code:    http.StatusOK,
-					Message: "success",
-				},
-				Data: []*oneloginAuthData{
-					{
-						Status:       "SUCCESS",
-						SessionToken: "token",
-					},
-				},
-			}
-
-			data, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(data)
-			return
-		case "codemfa":
-			cbUrl := fmt.Sprintf("http://%s/verify_mfa_local", r.Host)
-			reply := &oneloginAuthReply{
-				Status: new(oneloginApiStatus),
-				Data: []*oneloginAuthData{
-					{
-						Status:      "MFA_REQUIRED",
-						StateToken:  "state token",
-						CallbackUrl: cbUrl,
-						Devices: []*oneloginMfaDevice{
-							{
-								DeviceType: "",
-								DeviceId:   123,
-							},
-						},
-						User: &oneloginUser{Id: 123},
-					},
-				},
-			}
-
-			data, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(data)
-		case "pushmfa":
-			cbUrl := fmt.Sprintf("http://%s/verify_mfa_local", r.Host)
-			reply := &oneloginAuthReply{
-				Status: new(oneloginApiStatus),
-				Data: []*oneloginAuthData{
-					{
-						Status:      "MFA_REQUIRED",
-						StateToken:  "state token",
-						CallbackUrl: cbUrl,
-						Devices: []*oneloginMfaDevice{
-							{
-								DeviceType: "",
-								DeviceId:   321,
-							},
-						},
-						User: &oneloginUser{Id: 321},
-					},
-				},
-			}
-
-			data, err := json.Marshal(reply)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			w.Header().Set("Content-Type", "application/json")
-			_, _ = w.Write(data)
-		default:
-			http.Error(w, "invalid username or password", http.StatusUnauthorized)
-			return
-		}
-	case p == "/session_via_api_token":
-		defer r.Body.Close()
-		st := r.PostFormValue("session_token")
-		if len(st) < 1 {
-			http.Error(w, "invalid session token", http.StatusBadRequest)
-		}
-		_, _ = w.Write(nil)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
 		return
-	case strings.HasPrefix(p, "/api/1/users/") && strings.HasSuffix(p, "/otp_devices"):
-		defer r.Body.Close()
-		parts := strings.Split(p, `/`)
+	case "nomfa":
+		reply := &oneloginAuthReply{
+			Status: &oneloginApiStatus{
+				Error:   false,
+				Code:    http.StatusOK,
+				Message: "success",
+			},
+			Data: []*oneloginAuthData{
+				{
+					Status:       "SUCCESS",
+					SessionToken: "token",
+				},
+			},
+		}
+
+		data, err := json.Marshal(reply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+		return
+	case "codemfa":
+		cbUrl := fmt.Sprintf("http://%s/verify_mfa_local", r.Host)
+		reply := &oneloginAuthReply{
+			Status: new(oneloginApiStatus),
+			Data: []*oneloginAuthData{
+				{
+					Status:      "MFA_REQUIRED",
+					StateToken:  "state token",
+					CallbackUrl: cbUrl,
+					Devices: []*oneloginMfaDevice{
+						{
+							DeviceType: "",
+							DeviceId:   123,
+						},
+					},
+					User: &oneloginUser{Id: 123},
+				},
+			},
+		}
+
+		data, err := json.Marshal(reply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	case "pushmfa":
+		cbUrl := fmt.Sprintf("http://%s/verify_mfa_local", r.Host)
+		reply := &oneloginAuthReply{
+			Status: new(oneloginApiStatus),
+			Data: []*oneloginAuthData{
+				{
+					Status:      "MFA_REQUIRED",
+					StateToken:  "state token",
+					CallbackUrl: cbUrl,
+					Devices: []*oneloginMfaDevice{
+						{
+							DeviceType: "",
+							DeviceId:   321,
+						},
+					},
+					User: &oneloginUser{Id: 321},
+				},
+			},
+		}
+
+		data, err := json.Marshal(reply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+	default:
+		http.Error(w, "invalid username or password", http.StatusUnauthorized)
+		return
+	}
+}
+
+func olMfaDeviceHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	if strings.HasSuffix(r.URL.Path, "/otp_devices") {
+		parts := strings.Split(r.URL.Path, `/`)
 		switch parts[4] {
 		case "123":
 			// code mfa user
@@ -571,71 +614,39 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "invalid user", http.StatusBadRequest)
 			return
 		}
-	case p == "/verify_mfa_local":
-		defer r.Body.Close()
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	}
+}
 
-		verifyReq := new(oneloginVerifyFactorRequest)
-		if err := json.Unmarshal(body, verifyReq); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
-		switch r := verifyReq; {
-		case r.DeviceId == "555":
-			// code mfa
-			if r.OtpToken == "54321" {
-				reply := &oneloginAuthReply{
-					Status: &oneloginApiStatus{
-						Error:   false,
-						Code:    http.StatusOK,
-						Message: "success",
+	verifyReq := new(oneloginVerifyFactorRequest)
+	if err := json.Unmarshal(body, verifyReq); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	switch r := verifyReq; {
+	case r.DeviceId == "555":
+		// code mfa
+		if r.OtpToken == "54321" {
+			reply := &oneloginAuthReply{
+				Status: &oneloginApiStatus{
+					Error:   false,
+					Code:    http.StatusOK,
+					Message: "success",
+				},
+				Data: []*oneloginAuthData{
+					{
+						Status:       "SUCCESS",
+						SessionToken: "token",
 					},
-					Data: []*oneloginAuthData{
-						{
-							Status:       "SUCCESS",
-							SessionToken: "token",
-						},
-					},
-				}
-
-				data, err := json.Marshal(reply)
-				if err != nil {
-					http.Error(w, err.Error(), http.StatusInternalServerError)
-					return
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(data)
-				return
-			} else {
-				reply := &oneloginApiError{Status: &oneloginApiStatus{
-					Error:   true,
-					Code:    http.StatusUnauthorized,
-					Message: "Failed authentication with this factor",
-				}}
-				msg, _ := json.Marshal(reply)
-
-				w.Header().Set("Content-Type", "application/json")
-				http.Error(w, string(msg), http.StatusUnauthorized)
-				return
-			}
-		case r.DeviceId == "666":
-			// push mfa
-			reply := new(oneloginAuthReply)
-			reply.Status = &oneloginApiStatus{Error: false, Code: http.StatusOK}
-
-			if time.Now().Second()%10 == 0 {
-				reply.Status.Message = "success"
-				reply.Data = []*oneloginAuthData{
-					{SessionToken: "session token"},
-				}
-			} else {
-				reply.Status.Message = "pending"
+				},
 			}
 
 			data, err := json.Marshal(reply)
@@ -647,15 +658,42 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(data)
 			return
-		default:
-			http.Error(w, "unknown mfa failure", http.StatusUnauthorized)
+		} else {
+			reply := &oneloginApiError{Status: &oneloginApiStatus{
+				Error:   true,
+				Code:    http.StatusUnauthorized,
+				Message: "Failed authentication with this factor",
+			}}
+			msg, _ := json.Marshal(reply)
+
+			w.Header().Set("Content-Type", "application/json")
+			http.Error(w, string(msg), http.StatusUnauthorized)
+			return
 		}
+	case r.DeviceId == "666":
+		// push mfa
+		reply := new(oneloginAuthReply)
+		reply.Status = &oneloginApiStatus{Error: false, Code: http.StatusOK}
+
+		if time.Now().Second()%10 == 0 {
+			reply.Status.Message = "success"
+			reply.Data = []*oneloginAuthData{
+				{SessionToken: "session token"},
+			}
+		} else {
+			reply.Status.Message = "pending"
+		}
+
+		data, err := json.Marshal(reply)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write(data)
+		return
 	default:
-		// Set the expected Onelogin cookie for use with the Client Factory test code
-		http.SetCookie(w, &http.Cookie{
-			Name:  "sub_session_onelogin.com",
-			Value: "abc123",
-		})
-		http.NotFound(w, r)
+		http.Error(w, "unknown mfa failure", http.StatusUnauthorized)
 	}
 }

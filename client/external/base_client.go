@@ -162,7 +162,7 @@ func (c *baseClient) identity(provider string) *identity.Identity {
 }
 
 func (c *baseClient) pkceAuthzRequest(pkceChallenge string) url.Values {
-	state := fmt.Sprintf("%d.%d.%s", time.Now().UnixNano(), rand.Int(), pkceChallenge)
+	state := fmt.Sprintf("%d.%d.%s", time.Now().UnixNano(), rand.Int(), pkceChallenge) //nolint:gosec  // no need for crypto-strength random
 
 	qs := url.Values{}
 	qs.Set("client_id", c.ClientId)

@@ -13,7 +13,18 @@ import (
 	"testing"
 )
 
-var oktaMock = httptest.NewServer(http.HandlerFunc(mockOktaHandler))
+var oktaMock *httptest.Server
+
+func init() {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/v1/authorize", oktaOauthAuthHandler)
+	mux.HandleFunc("/v1/token", oktaOauthTokenHandler)
+	mux.HandleFunc("/home/amazon_aws/", oktaSamlHandler)
+	mux.HandleFunc("/api/v1/authn", oktaUserAuthHandler)
+	mux.HandleFunc("/verify_mfa_local", oktaVerifyMfaHandler)
+
+	oktaMock = httptest.NewServer(mux)
+}
 
 func TestNewOktaClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
@@ -255,38 +266,45 @@ func newMockOktaClient() *oktaClient {
 	return c
 
 }
-func mockOktaHandler(w http.ResponseWriter, r *http.Request) {
+
+func oktaOauthAuthHandler(w http.ResponseWriter, r *http.Request) {
+	// Oauth authorization URL
 	defer r.Body.Close()
 
-	switch p := r.URL.Path; {
-	case p == "/v1/authorize":
-		// Oauth authorization URL
-		reqQ := r.URL.Query()
+	reqQ := r.URL.Query()
 
-		newQ := url.Values{}
-		newQ.Set("state", reqQ.Get("state"))
-		newQ.Set("code", "mockAuthorizationCode")
+	newQ := url.Values{}
+	newQ.Set("state", reqQ.Get("state"))
+	newQ.Set("code", "mockAuthorizationCode")
 
-		redirUri := fmt.Sprintf("%s?%s", reqQ.Get("redirect_uri"), newQ.Encode())
-		w.Header().Set("Location", redirUri)
-		http.Error(w, "", http.StatusFound)
-	case p == "/v1/token":
-		// Oauth token URL
-		id := credentials.OidcIdentityToken("my.mockIdentityToken.WithSomeExtraStuffRequiredToPassTheTest")
-		token := &oauthToken{
-			AccessToken: "mockAccessToken",
-			ExpiresIn:   3600,
-			IdToken:     &id,
-			Scope:       "openid",
-			TokenType:   "bearer",
-		}
-		body, _ := json.Marshal(token)
+	redirUri := fmt.Sprintf("%s?%s", reqQ.Get("redirect_uri"), newQ.Encode())
+	w.Header().Set("Location", redirUri)
+	http.Error(w, "", http.StatusFound)
+}
 
-		w.Header().Set("Content-Type", "application-json")
-		_, _ = w.Write(body)
-	case strings.HasPrefix(p, "/home/amazon_aws/"):
-		// SAML assertion fetching URL
-		body := `
+func oktaOauthTokenHandler(w http.ResponseWriter, r *http.Request) {
+	// Oauth token URL
+	defer r.Body.Close()
+
+	id := credentials.OidcIdentityToken("my.mockIdentityToken.WithSomeExtraStuffRequiredToPassTheTest")
+	token := &oauthToken{
+		AccessToken: "mockAccessToken",
+		ExpiresIn:   3600,
+		IdToken:     &id,
+		Scope:       "openid",
+		TokenType:   "bearer",
+	}
+	body, _ := json.Marshal(token)
+
+	w.Header().Set("Content-Type", "application-json")
+	_, _ = w.Write(body)
+}
+
+func oktaSamlHandler(w http.ResponseWriter, r *http.Request) {
+	// SAML assertion fetching URL
+	defer r.Body.Close()
+
+	body := `
 <html>
 <head></head>
 <body>
@@ -296,184 +314,183 @@ func mockOktaHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		_, _ = w.Write([]byte(body))
-	case p == "/api/v1/authn":
-		defer r.Body.Close()
+	_, _ = w.Write([]byte(body))
+}
 
-		data, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
 
-		creds := make(map[string]string)
-		if err := json.Unmarshal(data, &creds); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if creds["password"] == "goodPassword" {
-			switch creds["username"] {
-			case "badstatus":
-				reply := oktaAuthnResponse{
-					Status:       "unknown",
-					SessionToken: "mock session token",
-				}
-
-				body, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
-				return
-			case "nomfa":
-				reply := oktaAuthnResponse{
-					Status:       "SUCCESS",
-					SessionToken: "mock session token",
-				}
-
-				body, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
-				return
-			case "codemfa":
-				reply := oktaAuthnResponse{
-					Status:     "MFA_REQUIRED",
-					StateToken: "mock state token",
-					EmbeddedData: struct {
-						MfaFactors []*oktaMfaFactor `json:"factors"`
-					}{[]*oktaMfaFactor{
-						{
-							Id:         "12345",
-							FactorType: "token:software:totp",
-							Provider:   "Google Authenticator",
-							Links: map[string]struct {
-								Href string `json:"href"`
-							}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
-						},
-					}},
-				}
-
-				body, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
-				return
-			case "pushmfa":
-				reply := oktaAuthnResponse{
-					Status:     "MFA_REQUIRED",
-					StateToken: "mock state token",
-					EmbeddedData: struct {
-						MfaFactors []*oktaMfaFactor `json:"factors"`
-					}{[]*oktaMfaFactor{
-						{
-							Id:         "12345",
-							FactorType: "token:software:totp",
-							Provider:   "Google Authenticator",
-							Links: map[string]struct {
-								Href string `json:"href"`
-							}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
-						},
-						{
-							Id:         "54321",
-							FactorType: "push",
-							Provider:   "Okta Verify",
-							Links: map[string]struct {
-								Href string `json:"href"`
-							}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
-						},
-					}},
-				}
-
-				body, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
-				return
-			case "yubikey":
-				reply := oktaAuthnResponse{
-					Status:     "MFA_REQUIRED",
-					StateToken: "mock state token",
-					EmbeddedData: struct {
-						MfaFactors []*oktaMfaFactor `json:"factors"`
-					}{[]*oktaMfaFactor{
-						{
-							Id:         "12345",
-							FactorType: "Yubikey",
-							Provider:   "yubikey",
-							Links: map[string]struct {
-								Href string `json:"href"`
-							}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
-						},
-					}},
-				}
-
-				body, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(body)
-				return
-			}
-		}
-
-		reply := oktaApiError{
-			Code:    "401 Unauthorized",
-			Message: "Invalid credentials",
-			Id:      "mock",
-		}
-		j, _ := json.Marshal(reply)
-		w.Header().Set("Content-Type", "application/json")
-		http.Error(w, string(j), http.StatusUnauthorized)
+	data, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
-	case p == "/verify_mfa_local":
-		defer r.Body.Close()
+	}
 
-		body, err := ioutil.ReadAll(r.Body)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
+	creds := make(map[string]string)
+	if err := json.Unmarshal(data, &creds); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-		mfa := new(oktaMfaResponse)
-		if err := json.Unmarshal(body, mfa); err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if len(mfa.Code) > 0 {
-			// code mfa
-			if mfa.Code == "54321" {
-				reply := &oktaAuthnResponse{
-					Status:       "SUCCESS",
-					SessionToken: "mock session token",
-					FactorResult: "Success",
-				}
-
-				j, _ := json.Marshal(reply)
-				w.Header().Set("Content-Type", "application/json")
-				_, _ = w.Write(j)
-				return
+	if creds["password"] == "goodPassword" {
+		switch creds["username"] {
+		case "badstatus":
+			reply := oktaAuthnResponse{
+				Status:       "unknown",
+				SessionToken: "mock session token",
 			}
-			http.Error(w, "invalid mfa code", http.StatusUnauthorized)
+
+			body, _ := json.Marshal(reply)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		case "nomfa":
+			reply := oktaAuthnResponse{
+				Status:       "SUCCESS",
+				SessionToken: "mock session token",
+			}
+
+			body, _ := json.Marshal(reply)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		case "codemfa":
+			reply := oktaAuthnResponse{
+				Status:     "MFA_REQUIRED",
+				StateToken: "mock state token",
+				EmbeddedData: struct {
+					MfaFactors []*oktaMfaFactor `json:"factors"`
+				}{[]*oktaMfaFactor{
+					{
+						Id:         "12345",
+						FactorType: "token:software:totp",
+						Provider:   "Google Authenticator",
+						Links: map[string]struct {
+							Href string `json:"href"`
+						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
+					},
+				}},
+			}
+
+			body, _ := json.Marshal(reply)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		case "pushmfa":
+			reply := oktaAuthnResponse{
+				Status:     "MFA_REQUIRED",
+				StateToken: "mock state token",
+				EmbeddedData: struct {
+					MfaFactors []*oktaMfaFactor `json:"factors"`
+				}{[]*oktaMfaFactor{
+					{
+						Id:         "12345",
+						FactorType: "token:software:totp",
+						Provider:   "Google Authenticator",
+						Links: map[string]struct {
+							Href string `json:"href"`
+						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
+					},
+					{
+						Id:         "54321",
+						FactorType: "push",
+						Provider:   "Okta Verify",
+						Links: map[string]struct {
+							Href string `json:"href"`
+						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
+					},
+				}},
+			}
+
+			body, _ := json.Marshal(reply)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
+			return
+		case "yubikey":
+			reply := oktaAuthnResponse{
+				Status:     "MFA_REQUIRED",
+				StateToken: "mock state token",
+				EmbeddedData: struct {
+					MfaFactors []*oktaMfaFactor `json:"factors"`
+				}{[]*oktaMfaFactor{
+					{
+						Id:         "12345",
+						FactorType: "Yubikey",
+						Provider:   "yubikey",
+						Links: map[string]struct {
+							Href string `json:"href"`
+						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
+					},
+				}},
+			}
+
+			body, _ := json.Marshal(reply)
+			w.Header().Set("Content-Type", "application/json")
+			_, _ = w.Write(body)
 			return
 		}
+	}
 
-		// push mfa
-		reply := new(oktaAuthnResponse)
-		if r.URL.Query().Get("success") != "" {
-			reply.Status = "SUCCESS"
-			reply.SessionToken = "mock session token"
+	reply := oktaApiError{
+		Code:    "401 Unauthorized",
+		Message: "Invalid credentials",
+		Id:      "mock",
+	}
+	j, _ := json.Marshal(reply)
+	w.Header().Set("Content-Type", "application/json")
+	http.Error(w, string(j), http.StatusUnauthorized)
+}
+
+func oktaVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	mfa := new(oktaMfaResponse)
+	if err := json.Unmarshal(body, mfa); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if len(mfa.Code) > 0 {
+		// code mfa
+		if mfa.Code == "54321" {
+			reply := &oktaAuthnResponse{
+				Status:       "SUCCESS",
+				SessionToken: "mock session token",
+				FactorResult: "Success",
+			}
 
 			j, _ := json.Marshal(reply)
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(j)
 			return
 		}
+		http.Error(w, "invalid mfa code", http.StatusUnauthorized)
+		return
+	}
 
-		reply.Status = "MFA_CHALLENGE"
-		reply.FactorResult = "WAITING"
-		reply.Links = map[string]interface{}{"next": map[string]string{"href": fmt.Sprintf("http://%s%s?success=1", r.Host, r.URL.Path)}}
+	// push mfa
+	reply := new(oktaAuthnResponse)
+	if r.URL.Query().Get("success") != "" {
+		reply.Status = "SUCCESS"
+		reply.SessionToken = "mock session token"
 
 		j, _ := json.Marshal(reply)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write(j)
 		return
-	default:
-		http.NotFound(w, r)
 	}
+
+	reply.Status = "MFA_CHALLENGE"
+	reply.FactorResult = "WAITING"
+	reply.Links = map[string]interface{}{"next": map[string]string{"href": fmt.Sprintf("http://%s%s?success=1", r.Host, r.URL.Path)}}
+
+	j, _ := json.Marshal(reply)
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(j)
 }

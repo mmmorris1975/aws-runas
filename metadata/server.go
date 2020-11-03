@@ -28,7 +28,7 @@ const (
 	profilePath   = "/profile"
 	listRolesPath = "/list-roles"
 	refreshPath   = "/refresh"
-	imdsTokenPath = "/latest/api/token"
+	imdsTokenPath = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
 )
 
 var (
@@ -104,12 +104,10 @@ func (s *metadataCredentialService) Run() error {
 		// print ECS credential endpoint message
 		logger.Infof("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
 		logger.Infof("Set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable with the above value to allow programs to use it")
-	} else {
-		if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
-			// print non-default EC2 IMDS endpoint message
-			logger.Infof("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
-			logger.Infof("Set the AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable with the above value to allow programs to use it")
-		}
+	} else if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
+		// print non-default EC2 IMDS endpoint message
+		logger.Infof("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
+		logger.Infof("Set the AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable with the above value to allow programs to use it")
 	}
 
 	if len(s.options.Profile) > 0 {
@@ -145,10 +143,8 @@ func (s *metadataCredentialService) RunHeadless() error {
 		// configure ECS http handler without request logging
 		mux.HandleFunc(s.options.Path, s.ecsCredHandler)
 		logger.Debugf("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
-	} else {
-		if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
-			logger.Debugf("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
-		}
+	} else if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
+		logger.Debugf("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
 	}
 
 	if len(s.options.Profile) > 0 {

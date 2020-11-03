@@ -1,11 +1,11 @@
 package cache
 
 import (
-	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"hash/fnv"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -130,8 +130,9 @@ func (c *webIdentityCache) flush() error {
 	return err
 }
 
-// The MD5 [16]byte hash isn't directly serializable, use hex string encoding.
+// The hash isn't directly serializable, use hex string encoding.
 func tokenCacheKey(url string) string {
-	sum := md5.Sum([]byte(url))
-	return hex.EncodeToString(sum[:])
+	h := fnv.New128()
+	h.Sum([]byte(url))
+	return hex.EncodeToString(h.Sum([]byte(url)))
 }

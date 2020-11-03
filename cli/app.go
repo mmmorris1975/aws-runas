@@ -173,7 +173,7 @@ func execCmd(ctx *cli.Context) error {
 		}
 
 		wrapped := wrapCmd(cmd)
-		c := exec.Command(wrapped[0], wrapped[1:]...)
+		c := exec.Command(wrapped[0], wrapped[1:]...) //nolint:gosec // it's sort of the whole reason this tool exists
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr
@@ -216,15 +216,12 @@ func printCreds(env map[string]string) {
 	format := "%s %s='%s'\n"
 	exportToken := "export"
 
-	switch runtime.GOOS {
-	case "windows":
-		// SHELL env var is not set by default in "normal" Windows cmd.exe and PowerShell sessions.
-		// If we detect it, assume we're running under something like git-bash (or maybe Cygwin?)
-		// and fall through to using linux-style env var setting syntax
-		if len(os.Getenv("SHELL")) < 1 {
-			exportToken = "set"
-			format = "%s %s=%s\n"
-		}
+	// SHELL env var is not set by default in "normal" Windows cmd.exe and PowerShell sessions.
+	// If we detect it, assume we're running under something like git-bash (or maybe Cygwin?)
+	// and fall through to using linux-style env var setting syntax
+	if runtime.GOOS == "windows" && len(os.Getenv("SHELL")) < 1 {
+		exportToken = "set"
+		format = "%s %s=%s\n"
 	}
 
 	for k, v := range env {

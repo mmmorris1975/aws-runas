@@ -144,10 +144,11 @@ func checkProfileCfg(cfg *config.AwsConfig) {
 }
 
 func checkProvider(url string) {
-	res, err := http.Head(url)
+	res, err := http.Head(url) //nolint:gosec
 	if err != nil {
 		log.Errorf("error communicating with external provider endpoint: %v", err)
 	}
+	defer res.Body.Close()
 
 	// default http client chases redirects automatically
 	if res.StatusCode != http.StatusOK && res.StatusCode != http.StatusMethodNotAllowed {

@@ -31,10 +31,11 @@ func versionCheck(ghUrl, ver string) error {
 		return http.ErrUseLastResponse
 	}
 
-	res, err := http.Head(ghUrl)
+	res, err := http.Head(ghUrl) //nolint:gosec
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode == http.StatusFound {
 		url, err := res.Location()
