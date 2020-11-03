@@ -19,7 +19,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   A friendly way to assume roles in AWS
 baseurl: "/aws-runas" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
-github_username:  mmmorris1975
+github_username: mmmorris1975
 repository: mmmorris1975/aws-runas
 show_downloads: "true"
 

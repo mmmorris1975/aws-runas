@@ -1,0 +1,550 @@
+package metadata
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/aws/aws-sdk-go/aws"
+	awsclient "github.com/aws/aws-sdk-go/aws/client"
+	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/mmmorris1975/aws-runas/client"
+	"github.com/mmmorris1975/aws-runas/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/identity"
+	"github.com/mmmorris1975/aws-runas/shared"
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"testing"
+	"time"
+)
+
+func TestNewMetadataCredentialService(t *testing.T) {
+	t.Run("empty addr", func(t *testing.T) {
+		mcs, err := NewMetadataCredentialService("", new(Options))
+		if err != nil {
+			t.Error("did not receive expected error")
+			return
+		}
+
+		if mcs.Addr() == nil {
+			t.Error("invalid listener address")
+		}
+	})
+
+	t.Run("nil options", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Error("did not receive expected panic")
+			}
+		}()
+
+		_, _ = NewMetadataCredentialService("", nil)
+	})
+
+	t.Run("empty options", func(t *testing.T) {
+		mcs, err := NewMetadataCredentialService(":0", new(Options))
+		if err != nil {
+			t.Error("did not receive expected error")
+			return
+		}
+
+		if mcs.Addr() == nil {
+			t.Error("invalid listener address")
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		o := &Options{
+			Path:        "/mock",
+			Profile:     "mock",
+			Logger:      new(shared.DefaultLogger),
+			AwsLogLevel: aws.LogOff,
+		}
+
+		mcs, err := NewMetadataCredentialService(":0", o)
+		if err != nil {
+			t.Error(err)
+		}
+
+		if mcs.Addr() == nil {
+			t.Error("invalid listener address")
+		}
+	})
+}
+
+func TestMetadataCredentialService_Run(t *testing.T) {
+	t.Skip("not testable")
+}
+
+func TestMetadataCredentialService_RunHeadless(t *testing.T) {
+	t.Skip("not testable")
+}
+
+func TestMetadataCredentialService_profileHandler(t *testing.T) {
+	mcs := mockMetadataCredentialService()
+
+	t.Run("update", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, profilePath, bytes.NewBufferString("mockUpdate"))
+
+		mcs.profileHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status: %d", rec.Code)
+		}
+
+		if mcs.awsConfig.ProfileName != "mockUpdate" {
+			t.Error("profile was not updated")
+		}
+	})
+
+	t.Run("fetch", func(t *testing.T) {
+		cfg, _ := mcs.configResolver.Config("mock")
+		mcs.awsConfig = cfg
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, profilePath, http.NoBody)
+
+		mcs.profileHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status: %d", rec.Code)
+		}
+
+		buf := make([]byte, rec.Body.Len())
+		_, _ = rec.Body.Read(buf)
+
+		if string(buf) != cfg.ProfileName {
+			t.Error("profile retrieval failed")
+		}
+	})
+
+	t.Run("no config", func(t *testing.T) {
+		mcs.awsConfig = nil
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, profilePath, http.NoBody)
+
+		mcs.profileHandler(rec, req)
+
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("unexpected http status: %d", rec.Code)
+		}
+	})
+
+	t.Run("bad config", func(t *testing.T) {
+		cfg := mockConfigResolver(true)
+		mcs.configResolver = &cfg
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, profilePath, bytes.NewBufferString("mockUpdate"))
+
+		mcs.profileHandler(rec, req)
+
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("unexpected http status: %d", rec.Code)
+		}
+	})
+}
+
+func TestMetadataCredentialService_imdsV2TokenHandler(t *testing.T) {
+	mcs := mockMetadataCredentialService()
+
+	t.Run("unsupported method", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, imdsTokenPath, http.NoBody)
+
+		mcs.imdsV2TokenHandler(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("missing header", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, imdsTokenPath, http.NoBody)
+
+		mcs.imdsV2TokenHandler(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("bad header", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, imdsTokenPath, http.NoBody)
+		req.Header.Set("X-Aws-Ec2-Metadata-Token-Ttl-Seconds", "-1")
+
+		mcs.imdsV2TokenHandler(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPut, imdsTokenPath, http.NoBody)
+		req.Header.Set("X-Aws-Ec2-Metadata-Token-Ttl-Seconds", "1800")
+
+		mcs.imdsV2TokenHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+
+		if rec.Body.Len() < 15 {
+			t.Errorf("invalid token length: %d", rec.Body.Len())
+		}
+	})
+}
+
+func TestMetadataCredentialService_ec2CredHandler(t *testing.T) {
+	mcs := mockMetadataCredentialService()
+
+	cfg, _ := mcs.configResolver.Config("mock")
+	mcs.awsConfig = cfg
+
+	t.Run("first call", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, ec2CredPath, http.NoBody)
+
+		mcs.ec2CredHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		buf := make([]byte, rec.Body.Len())
+		_, _ = rec.Body.Read(buf)
+
+		if string(buf) != cfg.ProfileName {
+			t.Errorf("did not receive expected profile name")
+		}
+	})
+
+	t.Run("second call good", func(t *testing.T) {
+		mcs.awsClient = new(mockAwsClient)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", ec2CredPath, cfg.ProfileName), http.NoBody)
+
+		mcs.ec2CredHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		buf := make([]byte, rec.Body.Len())
+		_, _ = rec.Body.Read(buf)
+
+		var creds map[string]string
+		if err := json.Unmarshal(buf, &creds); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if creds["Code"] != "Success" || creds["Type"] != "AWS-HMAC" {
+			t.Error("invalid credentials")
+		}
+	})
+
+	t.Run("second call bad", func(t *testing.T) {
+		c := mockAwsClient(true)
+		mcs.awsClient = &c
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("%s%s", ec2CredPath, cfg.ProfileName), http.NoBody)
+
+		mcs.ec2CredHandler(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+	})
+}
+
+func TestMetadataCredentialService_ecsCredHandler(t *testing.T) {
+	mcs := mockMetadataCredentialService()
+
+	t.Run("good", func(t *testing.T) {
+		mcs.awsClient = new(mockAwsClient)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+
+		mcs.ecsCredHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		buf := make([]byte, rec.Body.Len())
+		_, _ = rec.Body.Read(buf)
+
+		var creds map[string]string
+		if err := json.Unmarshal(buf, &creds); err != nil {
+			t.Error(err)
+			return
+		}
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		c := mockAwsClient(true)
+		mcs.awsClient = &c
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+
+		mcs.ecsCredHandler(rec, req)
+
+		if rec.Code != http.StatusUnauthorized {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+	})
+}
+
+func TestMetadataCredentialService_refreshHandler(t *testing.T) {
+	mcs := mockMetadataCredentialService()
+
+	t.Run("unsupported method", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, refreshPath, http.NoBody)
+
+		mcs.refreshHandler(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("nil client", func(t *testing.T) {
+		mcs.awsClient = nil
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, refreshPath, http.NoBody)
+
+		mcs.refreshHandler(rec, req)
+
+		if rec.Code != http.StatusMethodNotAllowed {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("good", func(t *testing.T) {
+		cfg, _ := mcs.configResolver.Config("mock")
+		c, _ := mcs.clientFactory.Get(cfg)
+		mcs.awsClient = c
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, refreshPath, http.NoBody)
+
+		mcs.refreshHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		c := mockAwsClient(true)
+		mcs.awsClient = &c
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, refreshPath, http.NoBody)
+
+		mcs.refreshHandler(rec, req)
+
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+		}
+	})
+}
+
+func TestMetadataCredentialService_listRolesHandler(t *testing.T) {
+	t.Run("good", func(t *testing.T) {
+		cfgFile := filepath.Join(t.TempDir(), "config")
+		f, err := os.Create(cfgFile)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer f.Close()
+
+		if _, err = f.Write([]byte(testConfig)); err != nil {
+			t.Error(err)
+			return
+		}
+
+		_ = os.Setenv("AWS_CONFIG_FILE", cfgFile)
+		defer os.Unsetenv("AWS_CONFIG_FILE")
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, listRolesPath, http.NoBody)
+
+		mockMetadataCredentialService().listRolesHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		var body []string
+		if err = json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if len(body) < 2 {
+			t.Error("did not find any roles")
+		}
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		_ = os.Setenv("AWS_CONFIG_FILE", "cfgFile")
+		defer os.Unsetenv("AWS_CONFIG_FILE")
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, listRolesPath, http.NoBody)
+
+		mockMetadataCredentialService().listRolesHandler(rec, req)
+
+		if rec.Code != http.StatusInternalServerError {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+	})
+}
+
+// for teh coverage gainz!!
+func TestMetadataCredentialService_installSigHandler(t *testing.T) {
+	installSigHandler(httptest.NewServer(nil).Config)
+}
+
+func TestMetadataCredentialService_logHandler(t *testing.T) {
+	h := logHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("mock", "test")
+		http.Error(w, "success", http.StatusTeapot)
+	})
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+
+	h(rec, req)
+
+	if rec.Code != http.StatusTeapot {
+		t.Errorf("unexpected http status code: %d", rec.Code)
+	}
+
+	if rec.Header().Get("mock") != "test" {
+		t.Error("missing header")
+	}
+
+	if !bytes.Equal(rec.Body.Bytes(), []byte("success\n")) {
+		t.Error("invalid body")
+	}
+}
+
+func mockMetadataCredentialService() *metadataCredentialService {
+	mcs := new(metadataCredentialService)
+	mcs.configResolver = new(mockConfigResolver)
+
+	factoryOptions := client.DefaultOptions
+	factoryOptions.EnableCache = false
+	factoryOptions.AwsLogLevel = aws.LogOff
+	factoryOptions.Logger = new(shared.DefaultLogger)
+
+	mcs.clientFactory = client.NewClientFactory(mcs.configResolver, factoryOptions)
+
+	return mcs
+}
+
+type mockConfigResolver bool
+
+func (m *mockConfigResolver) Config(profile string) (*config.AwsConfig, error) {
+	if *m {
+		return nil, errors.New("error")
+	}
+
+	return &config.AwsConfig{
+		Region:       "us-east-1",
+		SamlUrl:      "https://mock.local/saml",
+		SamlUsername: "mockUser",
+		SamlProvider: "mock",
+		ProfileName:  profile,
+	}, nil
+}
+
+func (m *mockConfigResolver) Credentials(string) (*config.AwsCredentials, error) {
+	if *m {
+		return nil, errors.New("error")
+	}
+
+	return &config.AwsCredentials{
+		SamlPassword:        "",
+		WebIdentityPassword: "",
+	}, nil
+}
+
+type mockAwsClient bool
+
+func (m *mockAwsClient) Identity() (*identity.Identity, error) {
+	return new(identity.Identity), nil
+}
+
+func (m *mockAwsClient) Roles() (*identity.Roles, error) {
+	return new(identity.Roles), nil
+}
+
+func (m *mockAwsClient) Credentials() (*credentials.Credentials, error) {
+	return m.CredentialsWithContext(context.Background())
+}
+
+func (m *mockAwsClient) CredentialsWithContext(context.Context) (*credentials.Credentials, error) {
+	if *m {
+		return nil, errors.New("error")
+	}
+
+	creds := &credentials.Credentials{
+		AccessKeyId:     "mockAK",
+		SecretAccessKey: "mockSK",
+		Token:           "mockToken",
+		Expiration:      time.Now().Add(30 * time.Minute),
+		ProviderName:    "mock",
+	}
+	return creds, nil
+}
+
+func (m *mockAwsClient) ConfigProvider() awsclient.ConfigProvider {
+	return mock.Session
+}
+
+func (m *mockAwsClient) ClearCache() error {
+	if *m {
+		return errors.New("error")
+	}
+	return nil
+}
+
+var testConfig = `[default]
+
+[profile norole]
+
+[profile role1]
+role_arn = arn:aws:iam::0123456789:role/role1
+
+[profile x]
+
+[role2]
+role_arn = arn:aws:iam::0123456789:role/role2
+`
