@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-// DefaultEnvLoader creates a default EnvLoader type to read configuration and credentials from environment variables
+// DefaultEnvLoader creates a default EnvLoader type to read configuration and credentials from environment variables.
 var DefaultEnvLoader = new(envLoader)
 
 type envLoader bool
@@ -27,7 +27,7 @@ func (l *envLoader) Credentials(string, ...interface{}) (*AwsCredentials, error)
 	return l.EnvCredentials()
 }
 
-// Config loads fields in the AwsConfig type which support environment variables
+// Config loads fields in the AwsConfig type which support environment variables.
 func (l *envLoader) EnvConfig() (*AwsConfig, error) {
 	c := new(AwsConfig)
 	if err := resolveEnv(c); err != nil {
@@ -36,7 +36,7 @@ func (l *envLoader) EnvConfig() (*AwsConfig, error) {
 	return c, nil
 }
 
-// Credentials loads SAML and or Web Identity (OIDC) passwords from environment variables
+// Credentials loads SAML and or Web Identity (OIDC) passwords from environment variables.
 func (l *envLoader) EnvCredentials() (*AwsCredentials, error) {
 	c := new(AwsCredentials)
 	if err := resolveEnv(c); err != nil {
@@ -80,22 +80,22 @@ func setVal(field reflect.Value, value string) error {
 	switch field.Type().Kind() {
 	case reflect.String:
 		field.SetString(value)
-	//case reflect.Bool:
-	//	b, err := strconv.ParseBool(value)
-	//	if err != nil {
-	//		b = false
-	//	}
-	//	field.SetBool(b)
-	//case reflect.Complex64, reflect.Complex128:
-	//	cplx := complex128(0)
-	//	if len(value) > 0 {
+	// case reflect.Bool:
+	// 	 b, err := strconv.ParseBool(value)
+	// 	 if err != nil {
+	//		 b = false
+	//	 }
+	//	 field.SetBool(b)
+	// case reflect.Complex64, reflect.Complex128:
+	//	 cplx := complex128(0)
+	//	 if len(value) > 0 {
 	//		cplx, err = strconv.ParseComplex(value, 128)
 	//		if err != nil {
 	//			return err
 	//		}
-	//	}
-	//	field.SetComplex(cplx)
-	//case reflect.Float32, reflect.Float64:
+	//	 }
+	//	 field.SetComplex(cplx)
+	// case reflect.Float32, reflect.Float64:
 	//	fl := float64(0)
 	//	if len(value) > 0 {
 	//		fl, err = strconv.ParseFloat(value, 64)
@@ -104,7 +104,7 @@ func setVal(field reflect.Value, value string) error {
 	//		}
 	//	}
 	//	field.SetFloat(fl)
-	//case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
+	// case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32:
 	//	i := int64(0)
 	//	if len(value) > 0 {
 	//		i, err = strconv.ParseInt(value, 0, 64)
@@ -127,7 +127,7 @@ func setVal(field reflect.Value, value string) error {
 			}
 		}
 		field.SetInt(i)
-	//case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	// case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 	//	ui := uint64(0)
 	//	if len(value) > 0 {
 	//		// Uint8 may break handling of byte values

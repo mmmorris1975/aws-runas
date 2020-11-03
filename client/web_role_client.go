@@ -15,7 +15,7 @@ import (
 	"time"
 )
 
-// singleton Web (OIDC) Identity Token cache implementation
+// singleton Web (OIDC) Identity Token cache implementation.
 var tokenCache = cache.WebIdentityCache(filepath.Join(cachePath(), ".aws_runas_identity_token.cache"))
 
 type webRoleClient struct {
@@ -70,7 +70,7 @@ func NewWebRoleClient(cfg client.ConfigProvider, url string, clientCfg *WebRoleC
 	return c
 }
 
-// Identity is the implementation of the IdentityClient interface for retrieving identity information from the external IdP
+// Identity is the implementation of the IdentityClient interface for retrieving identity information from the external IdP.
 func (c *webRoleClient) Identity() (*identity.Identity, error) {
 	return c.webClient.Identity()
 }
@@ -82,13 +82,13 @@ func (c *webRoleClient) Roles() (*identity.Roles, error) {
 }
 
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a
-// background context
+// background context.
 func (c *webRoleClient) Credentials() (*credentials.Credentials, error) {
 	return c.CredentialsWithContext(aws.BackgroundContext())
 }
 
 // CredentialsWithContext is the implementation of the CredentialClient interface for retrieving temporary AWS
-// credentials using the Assume Role with Web Identity operation
+// credentials using the Assume Role with Web Identity operation.
 func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credentials.Credentials, error) {
 	tok, err := c.FetchToken(ctx)
 	if err != nil {
@@ -117,7 +117,7 @@ func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credential
 // FetchToken is the implementation of the AWS TokenFetch interface for retrieving Web (OIDC) Identity tokens.  If
 // configured, this implementation will consult a Web Identity Token file.  Otherwise, if caching is enabled, it will
 // be checked.  If no cache is configured or the token retrieved from cache is expired, a new token will be retrieved
-// from the external IdP
+// from the external IdP.
 func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
 	// support retrieval via Web Identity token file
 	// The file is treated as an always available, always valid, source of truth for providing an identity token
@@ -147,12 +147,12 @@ func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
 	return []byte(tok.String()), nil
 }
 
-// ConfigProvider returns the AWS SDK client.ConfigProvider for this client
+// ConfigProvider returns the AWS SDK client.ConfigProvider for this client.
 func (c *webRoleClient) ConfigProvider() client.ConfigProvider {
 	return c.session
 }
 
-// ClearCache cleans the cache for this client's OIDC token and AWS credential cache
+// ClearCache cleans the cache for this client's OIDC token and AWS credential cache.
 func (c *webRoleClient) ClearCache() error {
 	c.logger.Debugf("clearing cached web identity token")
 	e1 := tokenCache.Clear()

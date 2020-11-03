@@ -15,7 +15,7 @@ import (
 	"sync"
 )
 
-// ProviderAws is the name which names the the provider which resolved the identity
+// ProviderAws is the name which names the the provider which resolved the identity.
 const ProviderAws = "AwsIdentityProvider"
 
 type awsIdentityProvider struct {
@@ -25,7 +25,7 @@ type awsIdentityProvider struct {
 	wg        *sync.WaitGroup
 }
 
-// NewAwsIdentityProvider creates a valid, default AwsIdentityProvider using the specified client.ConfigProvider
+// NewAwsIdentityProvider creates a valid, default AwsIdentityProvider using the specified client.ConfigProvider.
 func NewAwsIdentityProvider(cfg client.ConfigProvider) *awsIdentityProvider {
 	return &awsIdentityProvider{
 		stsClient: sts.New(cfg),
@@ -35,7 +35,7 @@ func NewAwsIdentityProvider(cfg client.ConfigProvider) *awsIdentityProvider {
 	}
 }
 
-// WithLogger is a fluent method used or setting the logger implementation for the identity provider
+// WithLogger is a fluent method used or setting the logger implementation for the identity provider.
 func (p *awsIdentityProvider) WithLogger(l shared.Logger) *awsIdentityProvider {
 	if l != nil {
 		p.logger = l
@@ -43,7 +43,7 @@ func (p *awsIdentityProvider) WithLogger(l shared.Logger) *awsIdentityProvider {
 	return p
 }
 
-// Identity retrieves the Identity information for the AWS IAM user
+// Identity retrieves the Identity information for the AWS IAM user.
 func (p *awsIdentityProvider) Identity() (*Identity, error) {
 	out, err := p.stsClient.GetCallerIdentity(new(sts.GetCallerIdentityInput))
 	if err != nil {
@@ -53,10 +53,10 @@ func (p *awsIdentityProvider) Identity() (*Identity, error) {
 
 	// pretty sure this will always be valid if GetCallerIdentity() succeeds
 	a, _ := arn.Parse(*out.Arn)
-	//if err != nil {
+	// if err != nil {
 	//	p.logger.Errorf("error parsing identity ARN: %v", err)
 	//	return nil, err
-	//}
+	// }
 
 	id := &Identity{Provider: ProviderAws}
 
@@ -69,8 +69,8 @@ func (p *awsIdentityProvider) Identity() (*Identity, error) {
 
 // Roles retrieves the roles which the identity is able to assume.
 //
-// This method will check the inline and attached IAM policies for the user, and any groups the user is a member of.  It
-// will return all roles the user is allowed to assume, even those specifying wildcards in the ARN fields.
+// This method will check the inline and attached IAM policies for the user, and any groups the user is a member of.
+// It will return all roles the user is allowed to assume, even those specifying wildcards in the ARN fields.
 func (p *awsIdentityProvider) Roles(user ...string) (*Roles, error) {
 	if user == nil || len(user) < 1 || len(user[0]) < 1 {
 		id, err := p.Identity()
@@ -314,7 +314,6 @@ func (p *awsIdentityProvider) isRoleArn(s string) bool {
 
 	a, err := arn.Parse(s)
 	if err != nil {
-		//p.error("error parsing ARN %s: %v", s, err)
 		p.logger.Errorf("error parsing ARN %s: %v", s, err)
 		return false
 	}

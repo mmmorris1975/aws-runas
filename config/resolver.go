@@ -47,7 +47,7 @@ func (r *resolver) WithDefaultCredentials(creds *AwsCredentials) *resolver {
 }
 
 // MergeConfig sets additional configuration for the resolver, and returns the updated configuration.
-// For best effect, use after calling Config()
+// For best effect, use after calling Config().
 func (r *resolver) MergeConfig(cfg ...*AwsConfig) *AwsConfig {
 	if r.config == nil {
 		r.config = r.defConfig
@@ -57,7 +57,7 @@ func (r *resolver) MergeConfig(cfg ...*AwsConfig) *AwsConfig {
 }
 
 // MergeCredentials sets additional credentials for the resolver, and returns th updated credentials.
-// For best effect, use after calling Credentials()
+// For best effect, use after calling Credentials().
 func (r *resolver) MergeCredentials(creds ...*AwsCredentials) *AwsCredentials {
 	if r.creds == nil {
 		r.creds = r.defCreds
@@ -66,7 +66,7 @@ func (r *resolver) MergeCredentials(creds ...*AwsCredentials) *AwsCredentials {
 	return r.creds
 }
 
-// Config is the implementation of the Resolver interface to build a coherent AwsConfig object
+// Config is the implementation of the Resolver interface to build a coherent AwsConfig object.
 func (r *resolver) Config(profile string) (*AwsConfig, error) {
 	c, err := r.loader.Config(profile)
 	if err != nil {
@@ -85,7 +85,7 @@ func (r *resolver) Config(profile string) (*AwsConfig, error) {
 	return r.config, nil
 }
 
-// Credentials is the implementation of the Resolver interface to build a coherent AwsCredentials object
+// Credentials is the implementation of the Resolver interface to build a coherent AwsCredentials object.
 func (r resolver) Credentials(profile string) (*AwsCredentials, error) {
 	c, err := r.loader.Credentials(profile)
 	if err != nil {

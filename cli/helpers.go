@@ -24,7 +24,7 @@ import (
 //
 // returns the name of the profile discovered via the command line or env vars, and the
 // resolved AwsConfig object for the discovered profile (or source profile, if requested).
-// Error will be returned for a failure of configuration resolution
+// Error will be returned for a failure of configuration resolution.
 func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfig, error) {
 	// if we got here via a top-level flag, ctx.Args() could be empty,
 	// must check 1 level up via ctx.Lineage() for the value
@@ -84,7 +84,7 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 
 // configure signal handler to make runas ignore (pass through) the below signals.
 // used by SSM shell, and 'wrapped' commands to pass signals to the called commands.
-// code calling this function should configure a defer function to reset the signal handling, if desired
+// code calling this function should configure a defer function to reset the signal handling, if desired.
 func installSignalHandler() chan os.Signal {
 	sigCh := make(chan os.Signal, 3)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT)
@@ -104,7 +104,7 @@ func installSignalHandler() chan os.Signal {
 // of the client setup.
 //
 // for things where we don't deal with sts credentials (-l, -r, -u, -D, password sub command), or could possibly
-// deal with a lot of them (ec2 and ecs metadata services), this wouldn't make sense to use
+// deal with a lot of them (ec2 and ecs metadata services), this wouldn't make sense to use.
 func refreshCreds(c client.AwsClient) {
 	if err := c.ClearCache(); err != nil {
 		log.Warningf("failed to clear cache: %v", err)
@@ -146,7 +146,7 @@ func printCredIdentity(cfg awsclient.ConfigProvider, creds *credentials.Credenti
 	return nil
 }
 
-// this may(?) not get called if coming in via the top-level flags (only subcommand paths)
+// this may(?) not get called if coming in via the top-level flags (only subcommand paths).
 func bashCompleteProfile(ctx *cli.Context) {
 	// todo - profile name lookup (just iam profiles? ... could be tricky) ... do same for roles command (or any command which accepts a profile arg?)
 	if ctx.NArg() > 0 {

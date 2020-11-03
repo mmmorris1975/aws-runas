@@ -23,7 +23,7 @@ type oktaClient struct {
 }
 
 // NewOktaClient returns a new AuthenticationClient capable of handling SAML and WebIdentity operations
-// using the Okta identity platform
+// using the Okta identity platform.
 func NewOktaClient(url string) (*oktaClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {
@@ -37,7 +37,7 @@ func NewOktaClient(url string) (*oktaClient, error) {
 }
 
 // Authenticate performs authentication against OneLogin.  This delegates to AuthenticateWithContext using
-// context.Background()
+// context.Background().
 func (c *oktaClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
@@ -58,7 +58,7 @@ func (c *oktaClient) AuthenticateWithContext(ctx context.Context) error {
 	return nil
 }
 
-// Identity returns the identity information for the user
+// Identity returns the identity information for the user.
 func (c *oktaClient) Identity() (*identity.Identity, error) {
 	return c.identity(oktaIdentityProvider), nil
 }
@@ -69,7 +69,7 @@ func (c *oktaClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 }
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Okta. Authentication will automatically be attempted,
-// if required
+// if required.
 func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	pkce, err := newPkceCode()
 	if err != nil {
@@ -106,13 +106,13 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 	return token.IdToken, nil
 }
 
-// SamlAssertion calls SamlAssertionWithContext using a background context
+// SamlAssertion calls SamlAssertionWithContext using a background context.
 func (c *oktaClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 	return c.SamlAssertionWithContext(context.Background())
 }
 
 // SamlAssertionWithContext retrieves the SAML Assertion from Okta.
-// Authentication will automatically be attempted, if required
+// Authentication will automatically be attempted, if required.
 func (c *oktaClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
 	u := *c.authUrl
 	qs := url.Values{}

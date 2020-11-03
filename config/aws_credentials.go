@@ -8,8 +8,9 @@ type AwsCredentials struct {
 	WebIdentityPassword string `ini:"web_identity_password" env:"WEB_IDENTITY_PASSWORD"`
 }
 
-// MergeIn takes the credential settings in the provided "creds" argument and applies them to the existing AwsCredentials
-// object.  New values are applied only if they are not the field type's zero value, the last (non-zero) value take priority.
+// MergeIn takes the credential settings in the provided "creds" argument and applies them to the existing
+// AwsCredentials object.  New values are applied only if they are not the field type's zero value, the last
+// (non-zero) value take priority.
 func (c *AwsCredentials) MergeIn(creds ...*AwsCredentials) {
 	for _, cr := range creds {
 		if len(cr.SamlPassword) > 0 {

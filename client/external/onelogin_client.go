@@ -28,7 +28,7 @@ type oneloginClient struct {
 }
 
 // NewOneloginClient returns a new AuthenticationClient capable of handling SAML and WebIdentity operations
-// using the OneLogin identity platform
+// using the OneLogin identity platform.
 func NewOneloginClient(url string) (*oneloginClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {
@@ -50,7 +50,7 @@ func NewOneloginClient(url string) (*oneloginClient, error) {
 }
 
 // Authenticate performs authentication against OneLogin.  This delegates to AuthenticateWithContext using
-// context.Background()
+// context.Background().
 func (c *oneloginClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
@@ -65,7 +65,7 @@ func (c *oneloginClient) AuthenticateWithContext(ctx context.Context) error {
 	return c.auth(ctx)
 }
 
-// Identity returns the identity information for the user
+// Identity returns the identity information for the user.
 func (c *oneloginClient) Identity() (*identity.Identity, error) {
 	return c.identity(oneloginIdentityProvider), nil
 }
@@ -104,13 +104,13 @@ func (c *oneloginClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	return token.IdToken, nil
 }
 
-// SamlAssertion calls SamlAssertionWithContext using a background context
+// SamlAssertion calls SamlAssertionWithContext using a background context.
 func (c *oneloginClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 	return c.SamlAssertionWithContext(context.Background())
 }
 
 // SamlAssertionWithContext retrieves the SAML Assertion from OneLogin.
-// Authentication will automatically be attempted, if required
+// Authentication will automatically be attempted, if required.
 func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
 	if err := c.samlRequest(ctx, c.authUrl); err != nil {
 		return nil, err
@@ -127,7 +127,7 @@ func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credent
 }
 
 // helps make this testable, real OL urls do the real thing, otherwise use the host provided in the authUrl.
-// A "secret" region query string param allows callers to set the regional API endpoint, default is "us"
+// A "secret" region query string param allows callers to set the regional API endpoint, default is "us".
 func (c *oneloginClient) setApiBaseUrl() {
 	defer c.authUrl.Query().Del("region")
 
@@ -393,6 +393,7 @@ func (c *oneloginClient) exchangeToken(st string) error {
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	if res.StatusCode != http.StatusOK {
 		return &oneloginApiError{

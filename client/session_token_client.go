@@ -13,7 +13,7 @@ type sessionTokenClient struct {
 	provider *credentials.SessionTokenProvider
 }
 
-// SessionTokenClientConfig is the configuration attributes for the STS GetSessionToken operation for IAM identities
+// SessionTokenClientConfig is the configuration attributes for the STS GetSessionToken operation for IAM identities.
 type SessionTokenClientConfig struct {
 	Cache         credentials.CredentialCacher
 	Logger        shared.Logger
@@ -23,7 +23,7 @@ type SessionTokenClientConfig struct {
 	TokenProvider func() (string, error)
 }
 
-// NewSessionTokenClient is an AwsClient which knows how to do Get Session Token operations
+// NewSessionTokenClient is an AwsClient which knows how to do Get Session Token operations.
 func NewSessionTokenClient(cfg client.ConfigProvider, clientCfg *SessionTokenClientConfig) *sessionTokenClient {
 	c := &sessionTokenClient{newBaseIamClient(cfg, clientCfg.Logger), nil}
 
@@ -40,7 +40,7 @@ func NewSessionTokenClient(cfg client.ConfigProvider, clientCfg *SessionTokenCli
 	return c
 }
 
-// ClearCache cleans the cache for this client's AWS credential cache
+// ClearCache cleans the cache for this client's AWS credential cache.
 func (c *sessionTokenClient) ClearCache() error {
 	if c.provider.Cache != nil {
 		c.provider.Logger.Debugf("clearing cached session token credentials")
@@ -49,7 +49,7 @@ func (c *sessionTokenClient) ClearCache() error {
 	return nil
 }
 
-// I can't remember why we added this, and it seems to be unhelpful
-//func (c *sessionTokenClient) ExpiresAt() time.Time {
+// I can't remember why we added this, and it seems to be unhelpful.
+// func (c *sessionTokenClient) ExpiresAt() time.Time {
 //	return time.Time{}
-//}
+// }

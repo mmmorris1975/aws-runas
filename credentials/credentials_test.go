@@ -232,7 +232,7 @@ func TestCredentials_StsCredentials(t *testing.T) {
 			t.Error("data mismatch")
 		}
 
-		if (*v.Expiration).Unix() != 12345 {
+		if v.Expiration.Unix() != 12345 {
 			t.Error("expiration time mismatch")
 		}
 	})

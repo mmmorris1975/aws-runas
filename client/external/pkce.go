@@ -29,12 +29,12 @@ func newPkceCode() (*pkceCode, error) {
 	return pkce, nil
 }
 
-// Challenge returns the PKCE challenge value which is used in the 1st step of the OAuth/OIDC authentication flow
+// Challenge returns the PKCE challenge value which is used in the 1st step of the OAuth/OIDC authentication flow.
 func (p *pkceCode) Challenge() string {
 	return p.challenge
 }
 
-// Verifier returns the PKCE verifier value which is used in the final step of the OAuth/OIDC authentication flow
+// Verifier returns the PKCE verifier value which is used in the final step of the OAuth/OIDC authentication flow.
 func (p *pkceCode) Verifier() string {
 	return p.verifier
 }

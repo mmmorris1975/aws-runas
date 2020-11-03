@@ -50,7 +50,7 @@ func TestMustGetSamlClient_Okta(t *testing.T) {
 }
 
 // The Onelogin client requires access to a Onelogin endpoint to get an API access token
-// use the mock endpoint in the onelogin_client_test file for testing
+// use the mock endpoint in the onelogin_client_test file for testing.
 func TestMustGetSamlClient_Onelogin(t *testing.T) {
 	s := oneloginMock
 	qs := url.Values{}
@@ -148,7 +148,7 @@ func TestMustGetWebIdentityClient_Okta(t *testing.T) {
 }
 
 // The Onelogin client requires access to a Onelogin endpoint to get an API access token
-// use the mock endpoint in the onelogin_client_test file for testing
+// use the mock endpoint in the onelogin_client_test file for testing.
 func TestMustGetWebIdentityClient_Onelogin(t *testing.T) {
 	s := oneloginMock
 

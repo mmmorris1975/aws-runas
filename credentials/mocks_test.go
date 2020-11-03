@@ -10,12 +10,12 @@ import (
 	"time"
 )
 
-// stsMock provides a mock STS client used for testing
+// stsMock provides a mock STS client used for testing.
 type stsMock struct {
 	stsiface.STSAPI
 }
 
-// GetSessionTokenWithContext implements the AWS API for getting Session Token credentials for testing
+// GetSessionTokenWithContext implements the AWS API for getting Session Token credentials for testing.
 func (m *stsMock) GetSessionTokenWithContext(_ aws.Context, in *sts.GetSessionTokenInput, _ ...request.Option) (*sts.GetSessionTokenOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
@@ -29,7 +29,7 @@ func (m *stsMock) GetSessionTokenWithContext(_ aws.Context, in *sts.GetSessionTo
 	return new(sts.GetSessionTokenOutput).SetCredentials(buildCredentials(d)), nil
 }
 
-// AssumeRoleWithContext implements the AWS API for getting Assume Role credentials for testing
+// AssumeRoleWithContext implements the AWS API for getting Assume Role credentials for testing.
 func (m *stsMock) AssumeRoleWithContext(_ aws.Context, in *sts.AssumeRoleInput, _ ...request.Option) (*sts.AssumeRoleOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
@@ -51,7 +51,7 @@ func (m *stsMock) AssumeRoleWithContext(_ aws.Context, in *sts.AssumeRoleInput, 
 	return new(sts.AssumeRoleOutput).SetCredentials(buildCredentials(d)), nil
 }
 
-// AssumeRoleWithSAMLWithContext implements the AWS API for getting role credentials using SAML for testing
+// AssumeRoleWithSAMLWithContext implements the AWS API for getting role credentials using SAML for testing.
 func (m *stsMock) AssumeRoleWithSAMLWithContext(_ aws.Context, in *sts.AssumeRoleWithSAMLInput, _ ...request.Option) (*sts.AssumeRoleWithSAMLOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
@@ -73,7 +73,7 @@ func (m *stsMock) AssumeRoleWithSAMLWithContext(_ aws.Context, in *sts.AssumeRol
 	return new(sts.AssumeRoleWithSAMLOutput).SetCredentials(buildCredentials(d)), nil
 }
 
-// AssumeRoleWithWebIdentityWithContext implements the AWS API for getting role credentials using Oauth2/OIDC for testing
+// AssumeRoleWithWebIdentityWithContext implements the AWS API for getting role credentials using Oauth2/OIDC for testing.
 func (m *stsMock) AssumeRoleWithWebIdentityWithContext(_ aws.Context, in *sts.AssumeRoleWithWebIdentityInput, _ ...request.Option) (*sts.AssumeRoleWithWebIdentityOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
@@ -95,7 +95,7 @@ func (m *stsMock) AssumeRoleWithWebIdentityWithContext(_ aws.Context, in *sts.As
 	return new(sts.AssumeRoleWithWebIdentityOutput).SetCredentials(buildCredentials(d)), nil
 }
 
-// if duration != nil (default), must be in acceptable range
+// if duration != nil (default), must be in acceptable range.
 func validateDuration(d *int64, min, max, def time.Duration) (time.Duration, error) {
 	if d != nil {
 		t := time.Duration(*d) * time.Second

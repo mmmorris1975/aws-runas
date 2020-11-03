@@ -52,7 +52,7 @@ func newBaseClient(u string) (*baseClient, error) {
 	return c, nil
 }
 
-// SetCookieJar updates this clients HTTP cookie storage to use the provides http.CookieJar
+// SetCookieJar updates this clients HTTP cookie storage to use the provides http.CookieJar.
 func (c *baseClient) SetCookieJar(jar http.CookieJar) {
 	if c.httpClient == nil {
 		c.httpClient = http.DefaultClient
@@ -61,7 +61,7 @@ func (c *baseClient) SetCookieJar(jar http.CookieJar) {
 }
 
 // Roles retrieves the available roles for SamlClients.  Attempting to call this method
-// against an Oauth/OIDC client will return an error
+// against an Oauth/OIDC client will return an error.
 func (c *baseClient) Roles(user ...string) (*identity.Roles, error) {
 	if len(c.ClientId) > 0 && len(c.RedirectUri) > 0 {
 		return nil, errors.New("OIDC clients are not role aware")
@@ -102,12 +102,12 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 	// must use http client which will not auto-follow redirects ... apparently except for okta (maybe onelogin?)
 	// just be sure to update any non-redirect cases in the individual client implementations by
 	// setting c.httpClient.CheckRedirect as below
-	//httpClient := http.Client{
+	// httpClient := http.Client{
 	//	Jar: c.httpClient.Jar,
 	//	CheckRedirect: func(req *http.Request, via []*http.Request) error {
 	//		return http.ErrUseLastResponse
 	//	},
-	//}
+	// }
 
 	res, err := c.httpClient.Get(u.String())
 	if err != nil {

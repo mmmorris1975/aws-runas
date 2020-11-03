@@ -140,6 +140,7 @@ func divineClient(u, method string) string {
 			errCh <- err
 			return
 		}
+		defer res.Body.Close()
 		resCh <- res
 	}(r)
 	defer func() {

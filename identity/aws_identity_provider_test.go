@@ -119,7 +119,7 @@ func Example_awsIdentityProvider_Roles() {
 	// arn:aws:iam::666666666:role/p6b
 }
 
-// An STS client we can use for testing to avoid calls out to AWS
+// An STS client we can use for testing to avoid calls out to AWS.
 type mockStsClient struct {
 	stsiface.STSAPI
 	sendError bool
@@ -138,7 +138,7 @@ func (c *mockStsClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.Get
 
 // An IAM client we can use for testing to avoid calls out to AWS
 // In addition to the IAM API, we also create a number of private methods in order to manage that data used
-// by the various IAM API calls
+// by the various IAM API calls.
 type mockIamClient struct {
 	iamiface.IAMAPI
 	sendError bool
@@ -297,7 +297,7 @@ func (c *mockIamClient) GetPolicyVersion(in *iam.GetPolicyVersionInput) (*iam.Ge
 }
 
 // A type combining the capabilities of the iam.Policy and iam.PolicyDetail types so that we can manage
-// the identity and policy document information in a single place
+// the identity and policy document information in a single place.
 type mockIamPolicy struct {
 	*iam.Policy
 	*iam.PolicyDetail

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// DefaultIniLoader creates a default Loader type to gather configuration and credentials from ini-style data sources
+// DefaultIniLoader creates a default Loader type to gather configuration and credentials from ini-style data sources.
 var DefaultIniLoader = new(iniLoader)
 
 type iniLoader bool
@@ -100,7 +100,7 @@ func (l *iniLoader) Credentials(profile string, sources ...interface{}) (*AwsCre
 }
 
 // Roles enumerates the profile sections in the default configuration file and returns a list of section (profile)
-// names with contain the role_arn parameter
+// names with contain the role_arn parameter.
 func (l *iniLoader) Roles(sources ...interface{}) ([]string, error) {
 	file, err := resolveConfigSources(sources...)
 	if err != nil {

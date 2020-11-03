@@ -32,7 +32,7 @@ type ProcessCredentials struct {
 }
 
 // EC2 returns the credentials as JSON bytes which conform to the format used by the EC2 metadata service (IMDS)
-// More info can be found at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials
+// More info can be found at https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials.
 func (c *Credentials) EC2() ([]byte, error) {
 	// ideally is already set, but just to be sure
 	if len(c.Code) < 1 {
@@ -45,12 +45,12 @@ func (c *Credentials) EC2() ([]byte, error) {
 }
 
 // ECS returns the credentials as JSON bytes which conform to the format used by the ECS metadata service
-// More info can be found at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html
+// More info can be found at https://docs.aws.amazon.com/AmazonECS/latest/developerguide/task-iam-roles.html.
 func (c *Credentials) ECS() ([]byte, error) {
 	return json.Marshal(c)
 }
 
-// Env returns a map of environment variable names and values which can be used to set the credentials as environment variables
+// Env returns a map of environment variable names and values which can be used to set the credentials as environment variables.
 func (c *Credentials) Env() map[string]string {
 	m := make(map[string]string)
 	m["AWS_ACCESS_KEY_ID"] = c.AccessKeyId
@@ -65,7 +65,7 @@ func (c *Credentials) Env() map[string]string {
 
 // CredentialsProcess returns the credentials as JSON bytes which conform to the format used for the credential process feature.
 // If the Expiration field is not set, the credentials will be treated as non-expiring, and will not be automatically refreshed.
-// More info can be found at https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
+// More info can be found at https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html.
 func (c *Credentials) CredentialsProcess() ([]byte, error) {
 	pc := ProcessCredentials{
 		AccessKeyId:     c.AccessKeyId,
@@ -81,7 +81,7 @@ func (c *Credentials) CredentialsProcess() ([]byte, error) {
 	return json.Marshal(&pc)
 }
 
-// Value returns an AWS credentials.Value type for programmatic use
+// Value returns an AWS credentials.Value type for programmatic use.
 func (c *Credentials) Value() credentials.Value {
 	return credentials.Value{
 		AccessKeyID:     c.AccessKeyId,
@@ -91,7 +91,7 @@ func (c *Credentials) Value() credentials.Value {
 	}
 }
 
-// StsCredentials returns an AWS sts.Credentials type for programmatic use. Also suitable for long term caching
+// StsCredentials returns an AWS sts.Credentials type for programmatic use. Also suitable for long term caching.
 func (c *Credentials) StsCredentials() *sts.Credentials {
 	return &sts.Credentials{
 		AccessKeyId:     aws.String(c.AccessKeyId),

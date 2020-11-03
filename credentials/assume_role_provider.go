@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	// AssumeRoleProviderName is the name given to this AWS credential provider
+	// AssumeRoleProviderName is the name given to this AWS credential provider.
 	AssumeRoleProviderName = "AssumeRoleProvider"
-	// AssumeRoleDurationMin is the minimum allowed Assume Role credential duration by the AWS API
+	// AssumeRoleDurationMin is the minimum allowed Assume Role credential duration by the AWS API.
 	AssumeRoleDurationMin = 15 * time.Minute
-	// AssumeRoleDurationMax is the maximum allowed Assume Role credential duration by the AWS API
+	// AssumeRoleDurationMax is the maximum allowed Assume Role credential duration by the AWS API.
 	AssumeRoleDurationMax = 12 * time.Hour
-	// AssumeRoleDurationDefault is a sensible default value for Assume Role credential duration
+	// AssumeRoleDurationDefault is a sensible default value for Assume Role credential duration.
 	AssumeRoleDurationDefault = 1 * time.Hour
 )
 
@@ -72,11 +72,11 @@ func (p AssumeRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Va
 	}
 
 	// afaik, this can never happen
-	//if creds == nil {
+	// if creds == nil {
 	//	// something's wacky, expire existing provider creds, and retry
 	//	p.SetExpiration(time.Unix(0, 0), 0)
 	//	return p.Retrieve()
-	//}
+	// }
 
 	v := creds.Value()
 	v.ProviderName = AssumeRoleProviderName

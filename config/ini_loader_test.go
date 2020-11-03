@@ -23,7 +23,7 @@ func TestIniLoader_Config(t *testing.T) {
 	})
 
 	t.Run("bad profile", func(t *testing.T) {
-		if _, err := DefaultIniLoader.Config("non-existant", testConfig); err == nil {
+		if _, err := DefaultIniLoader.Config("non-existent", testConfig); err == nil {
 			t.Error("did not receive expected error")
 			return
 		}
@@ -181,7 +181,7 @@ func TestIniLoader_Credentials(t *testing.T) {
 	})
 
 	t.Run("bad profile", func(t *testing.T) {
-		if _, err := DefaultIniLoader.Credentials("non-existant", testCredentials); err == nil {
+		if _, err := DefaultIniLoader.Credentials("non-existent", testCredentials); err == nil {
 			t.Error("did not receive expected error")
 			return
 		}

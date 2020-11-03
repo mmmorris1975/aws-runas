@@ -39,7 +39,7 @@ type webIdentityCache struct {
 	cache map[string]*credentials.OidcIdentityToken
 }
 
-// force public access through WebIdentityCache() so we have better safety for concurrent access to individual files
+// force public access through WebIdentityCache() so we have better safety for concurrent access to individual files.
 func newWebIdentityCache(path string) (*webIdentityCache, error) {
 	// ensure all intermediate directories exist
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -55,7 +55,7 @@ func newWebIdentityCache(path string) (*webIdentityCache, error) {
 }
 
 // Load is the implementation of the IdentityTokenCacher interface to load data from the cache. If no token is found,
-// or the token is expired, nil will be returned
+// or the token is expired, nil will be returned.
 func (c *webIdentityCache) Load(url string) *credentials.OidcIdentityToken {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -81,7 +81,7 @@ func (c *webIdentityCache) Store(url string, token *credentials.OidcIdentityToke
 }
 
 // Clear is the implementation of the IdentityTokenCacher interface to clear data from the cache.  For this file-
-// backed implementation, this simply removes the cache file
+// backed implementation, this simply removes the cache file.
 func (c *webIdentityCache) Clear() error {
 	// RemoveAll handles single files too, but will not error if file not found
 	return os.RemoveAll(c.path)
@@ -130,7 +130,7 @@ func (c *webIdentityCache) flush() error {
 	return err
 }
 
-// The MD5 [16]byte hash isn't directly serializable, use hex string encoding
+// The MD5 [16]byte hash isn't directly serializable, use hex string encoding.
 func tokenCacheKey(url string) string {
 	sum := md5.Sum([]byte(url))
 	return hex.EncodeToString(sum[:])

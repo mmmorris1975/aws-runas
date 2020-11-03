@@ -160,9 +160,9 @@ func (c *mockSamlClient) Roles(...string) (*identity.Roles, error) {
 	return &r, nil
 }
 
-//func (c *mockSamlClient) RoleDetails() (*external.RoleDetails, error) {
+// func (c *mockSamlClient) RoleDetails() (*external.RoleDetails, error) {
 //	panic("implement me")
-//}
+// }
 
 func (c *mockSamlClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
@@ -176,7 +176,7 @@ func (c *mockSamlClient) AuthenticateWithContext(ctx context.Context) error {
 }
 
 func (c *mockSamlClient) SetCookieJar(http.CookieJar) {
-	//return
+	// return
 }
 
 func (c *mockSamlClient) SamlAssertion() (*credentials.SamlAssertion, error) {

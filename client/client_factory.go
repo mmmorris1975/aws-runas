@@ -18,7 +18,7 @@ import (
 	"strings"
 )
 
-// singleton cookie jar implementation
+// singleton cookie jar implementation.
 var cookieJar = cache.CookieJar(filepath.Join(cachePath(), ".aws_runas.cookies"))
 
 type Factory struct {

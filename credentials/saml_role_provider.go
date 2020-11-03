@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// SamlRoleProviderName is the name given to this AWS credential provider
+	// SamlRoleProviderName is the name given to this AWS credential provider.
 	SamlRoleProviderName = "samlRoleProvider"
 )
 
@@ -33,7 +33,7 @@ func NewSamlRoleProvider(cfg client.ConfigProvider, roleArn string, saml *SamlAs
 }
 
 // SamlAssertion is the implementation of the SamlRoleProvider interface for setting the SAML assertion used for the
-// Assume Role with SAML operation
+// Assume Role with SAML operation.
 func (p *samlRoleProvider) SamlAssertion(saml *SamlAssertion) {
 	p.samlAssertion = saml
 }
@@ -68,11 +68,11 @@ func (p *samlRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Val
 	}
 
 	// afaik, this can never happen
-	//if creds == nil {
+	// if creds == nil {
 	//	// something's wacky, expire existing provider creds, and retry
 	//	p.SetExpiration(time.Unix(0, 0), 0)
 	//	return p.Retrieve()
-	//}
+	// }
 
 	v := creds.Value()
 	v.ProviderName = SamlRoleProviderName

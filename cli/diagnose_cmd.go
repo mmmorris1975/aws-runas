@@ -241,7 +241,7 @@ func ntpTime() (time.Time, error) {
 	return t, nil
 }
 
-// REF: https://medium.com/learning-the-go-programming-language/lets-make-an-ntp-client-in-go-287c4b9a969f
+// REF: https://medium.com/learning-the-go-programming-language/lets-make-an-ntp-client-in-go-287c4b9a969f.
 func fetchTime(deadline time.Duration) (time.Time, error) {
 	// epoch times between NTP and Unix time are offset by this much
 	// REF: https://tools.ietf.org/html/rfc5905#section-6 (Figure 4)

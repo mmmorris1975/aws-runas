@@ -42,24 +42,24 @@ func NewSamlRoleClient(cfg client.ConfigProvider, url string, clientCfg *SamlRol
 	}
 }
 
-// Identity is the implementation of the IdentityClient interface for retrieving identity information from the external IdP
+// Identity is the implementation of the IdentityClient interface for retrieving identity information from the external IdP.
 func (c *samlRoleClient) Identity() (*identity.Identity, error) {
 	return c.samlClient.Identity()
 }
 
-// Roles is the implementation of the IdentityClient interface for retrieving IAM role information from the external IdP
+// Roles is the implementation of the IdentityClient interface for retrieving IAM role information from the external IdP.
 func (c *samlRoleClient) Roles() (*identity.Roles, error) {
 	return c.samlClient.Roles()
 }
 
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a
-// background context
+// background context.
 func (c *samlRoleClient) Credentials() (*credentials.Credentials, error) {
 	return c.CredentialsWithContext(aws.BackgroundContext())
 }
 
 // CredentialsWithContext is the implementation of the CredentialClient interface for retrieving temporary AWS
-// credentials using the Assume Role with SAML operation
+// credentials using the Assume Role with SAML operation.
 func (c *samlRoleClient) CredentialsWithContext(ctx awscred.Context) (*credentials.Credentials, error) {
 	saml, err := c.samlClient.SamlAssertion()
 	if err != nil {
@@ -83,12 +83,12 @@ func (c *samlRoleClient) CredentialsWithContext(ctx awscred.Context) (*credentia
 	return cred, nil
 }
 
-// ConfigProvider returns the AWS SDK client.ConfigProvider for this client
+// ConfigProvider returns the AWS SDK client.ConfigProvider for this client.
 func (c *samlRoleClient) ConfigProvider() client.ConfigProvider {
 	return c.session
 }
 
-// ClearCache cleans the cache for this client's AWS credential cache
+// ClearCache cleans the cache for this client's AWS credential cache.
 func (c *samlRoleClient) ClearCache() error {
 	return c.roleProvider.ClearCache()
 }

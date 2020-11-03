@@ -9,7 +9,7 @@ package shared
 //   * simple-logger 0.5.0+ (https://github.com/mmmorris1975/simple-logger) ... my unbiased favorite ;)
 //   * other logging frameworks shimmed to comply with the interface requirements
 //
-// Setup of the concrete logger type will be handled during program initialization
+// Setup of the concrete logger type will be handled during program initialization.
 type Logger interface {
 	Debugf(string, ...interface{})
 	Infof(string, ...interface{})
@@ -17,17 +17,17 @@ type Logger interface {
 	Errorf(string, ...interface{})
 }
 
-// DefaultLogger is a Logger-compatible implementation for use as a fallback/default logger.  It does nothing
+// DefaultLogger is a Logger-compatible implementation for use as a fallback/default logger.  It does nothing.
 type DefaultLogger bool
 
-// Debugf does nothing
+// Debugf does nothing.
 func (l *DefaultLogger) Debugf(string, ...interface{}) {}
 
-// Infof does nothing
+// Infof does nothing.
 func (l *DefaultLogger) Infof(string, ...interface{}) {}
 
-// Warningf does nothing
+// Warningf does nothing.
 func (l *DefaultLogger) Warningf(string, ...interface{}) {}
 
-// Errorf does nothing
+// Errorf does nothing.
 func (l *DefaultLogger) Errorf(string, ...interface{}) {}

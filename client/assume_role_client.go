@@ -15,7 +15,7 @@ type assumeRoleClient struct {
 }
 
 // AssumeRoleClientConfig is the configuration attributes for the STS Assume Role operation for either IAM identities,
-// or role chaining using SAML or OIDC Identity Tokens
+// or role chaining using SAML or OIDC Identity Tokens.
 type AssumeRoleClientConfig struct {
 	SessionTokenClientConfig
 	RoleArn         string
@@ -23,7 +23,7 @@ type AssumeRoleClientConfig struct {
 	ExternalId      string
 }
 
-// NewAssumeRoleClient is an AwsClient which knows how to do Assume Role operations
+// NewAssumeRoleClient is an AwsClient which knows how to do Assume Role operations.
 func NewAssumeRoleClient(cfg client.ConfigProvider, clientCfg *AssumeRoleClientConfig) *assumeRoleClient {
 	c := &assumeRoleClient{newBaseIamClient(cfg, clientCfg.Logger), nil}
 
@@ -53,7 +53,7 @@ func NewAssumeRoleClient(cfg client.ConfigProvider, clientCfg *AssumeRoleClientC
 	return c
 }
 
-// ClearCache cleans the cache for this client's AWS credential cache
+// ClearCache cleans the cache for this client's AWS credential cache.
 func (c *assumeRoleClient) ClearCache() error {
 	if c.provider.Cache != nil {
 		c.provider.Logger.Debugf("clearing cached assume role credentials")

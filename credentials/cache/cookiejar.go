@@ -41,7 +41,7 @@ type cookieJar struct {
 	jar  *cookiejar.Jar
 }
 
-// force public access through CookieJar() so we have better safety for concurrent access to individual files
+// force public access through CookieJar() so we have better safety for concurrent access to individual files.
 func newCookieJar(path string) (*cookieJar, error) {
 	// ensure all intermediate directories exist
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
@@ -50,9 +50,6 @@ func newCookieJar(path string) (*cookieJar, error) {
 
 	// this never errors
 	j, _ := cookiejar.New(&cookiejar.Options{PublicSuffixList: publicsuffix.List})
-	//if err != nil {
-	//	return nil, err
-	//}
 
 	cj := &cookieJar{path: path, jar: j}
 	if err := cj.loadCache(); err != nil {
@@ -63,7 +60,7 @@ func newCookieJar(path string) (*cookieJar, error) {
 }
 
 // SetCookies is the implementation of the http.CookieJar interface which will add cookies to the in-memory cache,
-// and flush that data to a file.  Invalid url or cookie information will not be written
+// and flush that data to a file.  Invalid url or cookie information will not be written.
 func (c *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	if u == nil || !strings.HasPrefix(u.Scheme, "http") || cookies == nil || len(cookies) < 1 {
 		// nothing worth storing
@@ -110,7 +107,7 @@ func (c *cookieJar) loadCache() error {
 	return nil
 }
 
-// WARNING - be sure to Lock() before calling this method
+// WARNING - be sure to Lock() before calling this method.
 func (c *cookieJar) flush(u *url.URL) error {
 	// we'll need this read-before-update step to ensure we have a complete view of the cookies in the
 	// in-momory jar implementation (since those details are hidden)

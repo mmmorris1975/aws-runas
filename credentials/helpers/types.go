@@ -1,7 +1,7 @@
 package helpers
 
 // CredentialInputProvider specifies the interface for gathering username and password credentials to use
-// with SAML and Oauth/OIDC clients when interacting with the identity provider
+// with SAML and Oauth/OIDC clients when interacting with the identity provider.
 type CredentialInputProvider interface {
 	ReadInput(user, password string) (string, string, error)
 }

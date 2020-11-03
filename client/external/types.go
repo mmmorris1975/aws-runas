@@ -10,15 +10,15 @@ import (
 )
 
 const (
-	// AwsSamlUrn is the well known SAML URL for AWS
+	// AwsSamlUrn is the well known SAML URL for AWS.
 	AwsSamlUrn = "urn:amazon:webservices"
-	// MfaTypeNone indicates that no MFA should be attempted regardless of the state of other MFA configuration
+	// MfaTypeNone indicates that no MFA should be attempted regardless of the state of other MFA configuration.
 	MfaTypeNone = "none"
-	// MfaTypeAuto indicates that the MFA type to use should be auto detected (as determined by each concrete provider)
+	// MfaTypeAuto indicates that the MFA type to use should be auto detected (as determined by each concrete provider).
 	MfaTypeAuto = "auto"
-	// MfaTypeCode indicates the use of MFA token/otp codes
+	// MfaTypeCode indicates the use of MFA token/otp codes.
 	MfaTypeCode = "code"
-	// MfaTypePush indicates the use of MFA push notifications
+	// MfaTypePush indicates the use of MFA push notifications.
 	MfaTypePush = "push"
 )
 
@@ -56,7 +56,7 @@ type WebIdentityClient interface {
 	IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error)
 }
 
-// AuthenticationClientConfig holds the properties used to authenticate an identity with an AuthenticationClient
+// AuthenticationClientConfig holds the properties used to authenticate an identity with an AuthenticationClient.
 type AuthenticationClientConfig struct {
 	// Username is the username of the principal to authenticate
 	Username string

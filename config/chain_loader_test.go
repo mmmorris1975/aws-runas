@@ -45,7 +45,7 @@ func TestChainLoader_Credentials(t *testing.T) {
 		l := NewChainLoader([]Loader{new(samlLoader), new(badLoader), new(simpleLoader)})
 		c, _ := l.Credentials("")
 
-		if len(c.SamlPassword) < 1 || len(c.WebIdentityPassword) < 0 {
+		if len(c.SamlPassword) < 1 || len(c.WebIdentityPassword) > 0 {
 			t.Error("data mismatch")
 		}
 	})

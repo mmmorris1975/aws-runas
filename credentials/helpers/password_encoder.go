@@ -13,7 +13,7 @@ import (
 	"strings"
 )
 
-// The base64 StdEncoding alphabet, copied from the base64 package
+// The base64 StdEncoding alphabet, copied from the base64 package.
 const encodeStd = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 type passwordEncoder struct {
@@ -25,7 +25,7 @@ type passwordEncoder struct {
 }
 
 // NewPasswordEncoder creates a new password encoder using the provided key for the encryption.
-// The password encoding logic is meant for obfuscation of the data and not a replacement for real encryption
+// The password encoding logic is meant for obfuscation of the data and not a replacement for real encryption.
 func NewPasswordEncoder(key []byte) *passwordEncoder {
 	return &passwordEncoder{
 		key:    key,
@@ -37,7 +37,7 @@ func NewPasswordEncoder(key []byte) *passwordEncoder {
 	}
 }
 
-// Encode takes the provided password data and creates an encrypted value of "cost" complexity
+// Encode takes the provided password data and creates an encrypted value of "cost" complexity.
 func (e *passwordEncoder) Encode(pw string, cost uint8) (string, error) {
 	enc := strings.Builder{}
 	enc.WriteString(e.encode(pw))
@@ -74,7 +74,7 @@ func (e *passwordEncoder) encode(s string) string {
 	return rot32(e.b64.EncodeToString([]byte(s)))
 }
 
-// Decode takes the string, which is the output from Encode() and decrypts the data
+// Decode takes the string, which is the output from Encode() and decrypts the data.
 func (e *passwordEncoder) Decode(s string) (string, error) {
 	sp := strings.Split(s, "$")
 	if len(sp) < 3 {
@@ -130,7 +130,7 @@ func (e *passwordEncoder) cipher(salt []byte, cost uint8) (cipher.Block, error) 
 	return aes.NewCipher(b)
 }
 
-// input value is a base64 string (ala passwordEncoder.encode())
+// input value is a base64 string (ala passwordEncoder.encode()).
 func rot32(s string) string {
 	return strings.Map(func(r rune) rune {
 		n := strings.IndexRune(encodeStd, r)

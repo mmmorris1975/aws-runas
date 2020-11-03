@@ -14,7 +14,7 @@ var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag,
 	jumpRoleFlag, samlUrlFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
 
 /*
- * Shortcut flags - perform some non-role credentialed action and exits
+ * Shortcut flags - perform some non-role credentialed action and exits.
  */
 var mfaFlag = &cli.BoolFlag{
 	Name:    "list-mfa",
@@ -41,7 +41,7 @@ var diagFlag = &cli.BoolFlag{
 }
 
 /*
- * Config flags - affect/override resolved configuration values
+ * Config flags - affect/override resolved configuration values.
  */
 var sessionDurationFlag = &cli.DurationFlag{
 	Name:        "duration",
@@ -126,7 +126,7 @@ var oidcClientIdFlag = &cli.StringFlag{
 }
 
 // Does not have a Destination, set in the App's Before attribute for both SAML and OIDC
-// remove the old --saml-user flag, but keep the env var for compatibility
+// remove the old --saml-user flag, but keep the env var for compatibility.
 var usernameFlag = &cli.StringFlag{
 	Name:    "username",
 	Aliases: []string{"U"},
@@ -135,7 +135,7 @@ var usernameFlag = &cli.StringFlag{
 }
 
 // Does not have a Destination, set in the App's Before attribute for both SAML and OIDC
-// remove the old --saml-password flag, but keep the env var for compatibility
+// remove the old --saml-password flag, but keep the env var for compatibility.
 var passwordFlag = &cli.StringFlag{
 	Name:    "password",
 	Aliases: []string{"P"},
@@ -144,7 +144,7 @@ var passwordFlag = &cli.StringFlag{
 }
 
 // Does not have a Destination, set in the App's Before attribute for both SAML and OIDC
-// remove the old --saml-provider flag, but keep the env var for compatibility
+// remove the old --saml-provider flag, but keep the env var for compatibility.
 var providerFlag = &cli.StringFlag{
 	Name:    "provider",
 	Aliases: []string{"R"},
@@ -153,12 +153,7 @@ var providerFlag = &cli.StringFlag{
 }
 
 /*
- * Other flags - ways to manipulate credential behavior (used with single-flight/non-metadata service commands)
- * X credential output format (use env var (-E), print json/env (-O)) exec only
- * X force session token (-s) exec (ssm?) with non-IAM creds, this will treat credentials from a "jump role" as session creds
- * X cred refresh (-r) part of App.Before() ... but should it be?
- * - show cred expiration (-e) exec, ssm
- * - whoami (GetCallerIdentity for retrieved credentials) (-w) exec, ssm (only operations which use a single profile/credential set)
+ * Other flags - ways to manipulate credential behavior (used with single-flight/non-metadata service commands).
  */
 var fmtFlag = &cli.StringFlag{
 	Name:        "output",

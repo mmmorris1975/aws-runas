@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	// WebRoleProviderName is the name given to this AWS credential provider
+	// WebRoleProviderName is the name given to this AWS credential provider.
 	WebRoleProviderName = "WebIdentityRoleProvider"
 )
 
@@ -30,7 +30,7 @@ func NewWebRoleProvider(cfg client.ConfigProvider, roleArn string) *webRoleProvi
 }
 
 // WebIdentityToken is the implementation of the WebRoleProvider interface for setting the Web (OIDC) Identity Token
-// used for the Assume Role with Web Identity operation
+// used for the Assume Role with Web Identity operation.
 func (p *webRoleProvider) WebIdentityToken(token *OidcIdentityToken) {
 	p.webIdentityToken = token
 }
@@ -65,11 +65,11 @@ func (p *webRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Valu
 	}
 
 	// afaik, this can never happen
-	//if creds == nil {
+	// if creds == nil {
 	//	// something's wacky, expire existing provider creds, and retry
 	//	p.SetExpiration(time.Unix(0, 0), 0)
 	//	return p.Retrieve()
-	//}
+	// }
 
 	v := creds.Value()
 	v.ProviderName = WebRoleProviderName

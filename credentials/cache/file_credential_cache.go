@@ -16,12 +16,13 @@ type fileCredentialCache struct {
 	mu   sync.RWMutex
 }
 
-// NewFileCredentialCache creates a file-backed credential cache at the specified path
+// NewFileCredentialCache creates a file-backed credential cache at the specified path.
 func NewFileCredentialCache(path string) *fileCredentialCache {
 	return &fileCredentialCache{path: path}
 }
 
-// Load the cached credentials from the file, if no cached credentials are found an expired set of credentials is returned
+// Load the cached credentials from the file, if no cached credentials are found an expired set of credentials
+// is returned.
 func (f *fileCredentialCache) Load() *credentials.Credentials {
 	f.mu.RLock()
 	defer f.mu.RUnlock()
@@ -46,7 +47,7 @@ func (f *fileCredentialCache) Load() *credentials.Credentials {
 	return creds
 }
 
-// Store the provided credentials to the file as a serialized JSON representation
+// Store the provided credentials to the file as a serialized JSON representation.
 func (f *fileCredentialCache) Store(creds *credentials.Credentials) error {
 	if creds == nil || !creds.Value().HasKeys() {
 		return credentials.ErrInvalidCredentials
@@ -56,7 +57,7 @@ func (f *fileCredentialCache) Store(creds *credentials.Credentials) error {
 }
 
 // Clear is the implementation of the CredentialCacher interface to clear data from the cache.  For this file-
-// backed implementation, this simply removes the cache file
+// backed implementation, this simply removes the cache file.
 func (f *fileCredentialCache) Clear() error {
 	// RemoveAll handles single files too, but will not error if file not found
 	return os.RemoveAll(f.path)

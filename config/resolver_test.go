@@ -109,7 +109,7 @@ func TestResolver_Credentials(t *testing.T) {
 			return
 		}
 
-		if len(c.SamlPassword) < 1 || len(c.WebIdentityPassword) < 0 {
+		if len(c.SamlPassword) < 1 || len(c.WebIdentityPassword) > 0 {
 			t.Error("data mismatch")
 		}
 	})

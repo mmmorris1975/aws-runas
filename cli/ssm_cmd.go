@@ -22,7 +22,7 @@ var ssmCmd = &cli.Command{
  *  Flags and functions defined below aren't used directly by the ssmCmd defined in this file, but are shared across
  *  the subcommands used to handle shell, port forwarding and ssh sessions.  Figured this would be a good common
  *  place to put these shared bits to avoid having to search through all of the ssm code files.  But let's be honest,
- *  you still will anyway :)
+ *  you still will anyway :).
  */
 
 var ssmUsePluginFlag = &cli.BoolFlag{

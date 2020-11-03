@@ -89,7 +89,7 @@ func (s *metadataCredentialService) Run() error {
 
 	// todo setup all handlers with logging
 	mux := http.NewServeMux()
-	//mux.HandleFunc("/", nil)
+	// mux.HandleFunc("/", nil)
 	mux.HandleFunc(authPath, logHandler(s.authHandler))
 	mux.HandleFunc(profilePath, logHandler(s.profileHandler))
 	mux.HandleFunc(listRolesPath, logHandler(s.listRolesHandler))

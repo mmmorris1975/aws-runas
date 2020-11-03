@@ -19,7 +19,7 @@ var vFlag = &verboseFlag{
 
 // It seems that only a Value type of bool will cause the help messaging to indicate that no value is required,
 // regardless of the setting of IsBoolFlag() in the Value type, or GetValue() or TakesValue() in the flag.
-// It's sort of annoying, but we'll live with it
+// It's sort of annoying, but we'll live with it.
 type verboseFlag struct {
 	Name        string
 	Aliases     []string
@@ -61,7 +61,7 @@ func (f *verboseFlag) GetUsage() string {
 	return f.Usage
 }
 
-// This apparently has no effect when displaying the help text (only when writing man or markdown formats)
+// This apparently has no effect when displaying the help text (only when writing man or markdown formats).
 func (f *verboseFlag) TakesValue() bool {
 	return false
 }

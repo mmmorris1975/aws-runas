@@ -26,7 +26,7 @@ type keycloakClient struct {
 //
 // The 'url' parameter expects the following forms:
 // __base URL part__/realms/__realm__ for OAuth/OIDC requests
-// __base URL part__/realms/__realm__/protocol/saml/clients/aws for SAML requests (must enable IdP initiated login for client, replace 'aws' part with the local saml client name)
+// __base URL part__/realms/__realm__/protocol/saml/clients/aws for SAML requests (must enable IdP initiated login for client, replace 'aws' part with the local saml client name).
 func NewKeycloakClient(url string) (*keycloakClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {
@@ -45,7 +45,7 @@ func NewKeycloakClient(url string) (*keycloakClient, error) {
 }
 
 // Authenticate performs authentication against Keycloak.  This delegates to AuthenticateWithContext using
-// context.Background()
+// context.Background().
 func (c *keycloakClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
@@ -60,7 +60,7 @@ func (c *keycloakClient) AuthenticateWithContext(ctx context.Context) error {
 	return c.auth(ctx)
 }
 
-// Identity returns the identity information for the user
+// Identity returns the identity information for the user.
 func (c *keycloakClient) Identity() (*identity.Identity, error) {
 	return c.identity(keycloakIdentityProvider), nil
 }
@@ -73,7 +73,7 @@ func (c *keycloakClient) IdentityToken() (*credentials.OidcIdentityToken, error)
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Keycloak. This method will automatically prompt for
 // authentication if a valid session is not detected.
 //
-// expected __base-url__/realms/__realm__/protocol/openid-connect/(auth|token)
+// expected __base-url__/realms/__realm__/protocol/openid-connect/(auth|token).
 func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	pkce, err := newPkceCode()
 	if err != nil {
@@ -107,7 +107,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	return token.IdToken, nil
 }
 
-// SamlAssertion calls SamlAssertionWithContext using a background context
+// SamlAssertion calls SamlAssertionWithContext using a background context.
 func (c *keycloakClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 	return c.SamlAssertionWithContext(context.Background())
 }
@@ -115,7 +115,7 @@ func (c *keycloakClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 // SamlAssertionWithContext retrieves the SAML Assertion from Keycloak.
 // Authentication will automatically be attempted, if required
 //
-// expected __base-url__/realms/__realm__/protocol/saml/clients/aws (replace 'aws' part with the local AWS saml client name)
+// expected __base-url__/realms/__realm__/protocol/saml/clients/aws (replace 'aws' part with the local AWS saml client name).
 func (c *keycloakClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
 	if err := c.samlRequest(ctx, c.authUrl); err != nil {
 		return nil, err
@@ -217,7 +217,7 @@ func (c *keycloakClient) parseForm(authUrl string) (*url.URL, url.Values, error)
 }
 
 // only a successful authentication attempt (single or multi factor) will set these cookies
-// they do not appear to be set during any intermediate steps
+// they do not appear to be set during any intermediate steps.
 func (c *keycloakClient) isAuthSuccess(cookies []*http.Cookie) bool {
 	for _, c := range cookies {
 		if c.Name == "KEYCLOAK_IDENTITY" || c.Name == "KEYCLOAK_SESSION" {
@@ -227,7 +227,7 @@ func (c *keycloakClient) isAuthSuccess(cookies []*http.Cookie) bool {
 	return false
 }
 
-// if there's an input tag with an id of "totp" or "otp", it's an MFA prompt, otherwise return authentication failed
+// if there's an input tag with an id of "totp" or "otp", it's an MFA prompt, otherwise return authentication failed.
 func (c *keycloakClient) handle200(data []byte) error {
 	doc, err := goquery.NewDocumentFromReader(bytes.NewReader(data))
 	if err != nil {

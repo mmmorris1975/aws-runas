@@ -25,7 +25,7 @@ func (s *SamlAssertion) RoleDetails() (*roleDetails, error) {
 	rd.details = make(map[string]string)
 
 	// static regex should never error
-	re, _ := regexp.Compile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
+	re := regexp.MustCompile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
 
 	m := re.FindAllStringSubmatch(saml, -1)
 	for _, r := range m {
@@ -46,7 +46,7 @@ func (s *SamlAssertion) RoleSessionName() (string, error) {
 	}
 
 	// static regex should never error
-	re, _ := regexp.Compile(`RoleSessionName.*?>([\w_=,.@-]+)<`)
+	re := regexp.MustCompile(`RoleSessionName.*?>([\w_=,.@-]+)<`)
 
 	m := re.FindStringSubmatch(saml)
 	if len(m) < 2 {
@@ -56,7 +56,7 @@ func (s *SamlAssertion) RoleSessionName() (string, error) {
 }
 
 // ExpiresAt returns the time at which this SAML Assertion is no longer valid.  AWS appears to enforce
-// a maximum limit of 5 minutes, so the value returned will be slightly less than that time
+// a maximum limit of 5 minutes, so the value returned will be slightly less than that time.
 func (s *SamlAssertion) ExpiresAt() (time.Time, error) {
 	t := time.Unix(0, 0)
 
@@ -66,7 +66,7 @@ func (s *SamlAssertion) ExpiresAt() (time.Time, error) {
 	}
 
 	// could be saml:Assertion, or saml2:Assertion, static regex should never error
-	re, _ := regexp.Compile(`<saml\d*:Assertion.*\sIssueInstant="([[:graph:]]+)"`)
+	re := regexp.MustCompile(`<saml\d*:Assertion.*\sIssueInstant="([[:graph:]]+)"`)
 
 	m := re.FindStringSubmatch(saml)
 	if m != nil {
@@ -80,7 +80,7 @@ func (s *SamlAssertion) ExpiresAt() (time.Time, error) {
 	return t, nil
 }
 
-// Decode converts the base64 encoded SAML Assertion to the XML text form
+// Decode converts the base64 encoded SAML Assertion to the XML text form.
 func (s *SamlAssertion) Decode() (string, error) {
 	if s == nil || len(*s) < 1 {
 		return "", errors.New("invalid saml assertion")
@@ -101,12 +101,12 @@ type roleDetails struct {
 }
 
 // RolePrincipal retruns the PrincipalARN strin for the specified role. The empty
-// string is returned if no match was found
+// string is returned if no match was found.
 func (r *roleDetails) RolePrincipal(role string) string {
 	return r.details[role]
 }
 
-// Roles will enumerate the list of IAM roles found in the SAMLResponse document
+// Roles will enumerate the list of IAM roles found in the SAMLResponse document.
 func (r *roleDetails) Roles() []string {
 	rd := make([]string, len(r.details))
 	i := 0
@@ -133,7 +133,7 @@ func (r *roleDetails) Principals() []string {
 }
 
 // String iterates over the configured role and principal ARNs and returns a line-based
-// string of the role/principal pairs
+// string of the role/principal pairs.
 func (r *roleDetails) String() string {
 	sb := new(strings.Builder)
 	for k, v := range r.details {

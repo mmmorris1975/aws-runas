@@ -17,7 +17,7 @@ func NewMfaTokenProvider(in io.Reader) *mfaTokenProvider {
 }
 
 // ReadInput gathers the MFA token value in a way which is compatible with the AWS SDK MFA TokenProvider requirements.
-// The prompt will be printed on os.Stderr, and the value will be read from the reader supplied with NewMfaTokenProvider
+// The prompt will be printed on os.Stderr, and the value will be read from the reader supplied with NewMfaTokenProvider.
 func (p *mfaTokenProvider) ReadInput() (string, error) {
 	var val string
 

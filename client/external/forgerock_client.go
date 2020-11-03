@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	// please be constant ... please be constant ... please be constant
+	// please be constant ... please be constant ... please be constant.
 	frOathSvcName = "mfa_oath_authentication"
 	frPushSvcName = "mfa_push_authentication"
 
@@ -36,7 +36,7 @@ type forgerockClient struct {
 //
 // The 'url' parameter expects the following forms:
 // __base URL part__/oauth2/realms/__realm__ for OAuth/OIDC requests
-// __base URL part__/json/realms/__realm__ for SAML bits
+// __base URL part__/json/realms/__realm__ for SAML bits.
 func NewForgerockClient(url string) (*forgerockClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {
@@ -56,7 +56,7 @@ func NewForgerockClient(url string) (*forgerockClient, error) {
 }
 
 // Authenticate performs authentication against Forgerock.  This delegates to AuthenticateWithContext using
-// context.Background()
+// context.Background().
 func (c *forgerockClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
@@ -71,7 +71,7 @@ func (c *forgerockClient) AuthenticateWithContext(ctx context.Context) error {
 	return c.auth(ctx)
 }
 
-// Identity returns the identity information for the user
+// Identity returns the identity information for the user.
 func (c *forgerockClient) Identity() (*identity.Identity, error) {
 	return c.identity(forgerockIdentityProvider), nil
 }
@@ -107,13 +107,13 @@ func (c *forgerockClient) IdentityTokenWithContext(ctx context.Context) (*creden
 	return token.IdToken, nil
 }
 
-// SamlAssertion calls SamlAssertionWithContext using a background context
+// SamlAssertion calls SamlAssertionWithContext using a background context.
 func (c *forgerockClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 	return c.SamlAssertionWithContext(context.Background())
 }
 
 // SamlAssertionWithContext retrieves the SAML Assertion from Forgerock.
-// Authentication will automatically be attempted, if required
+// Authentication will automatically be attempted, if required.
 func (c *forgerockClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
 	u, err := url.Parse(fmt.Sprintf("%s/idpssoinit?metaAlias=/%s/saml-idp&spEntityID=%s", c.baseUrl, c.realm, AwsSamlUrn))
 	if err != nil {
@@ -173,7 +173,7 @@ func (c *forgerockClient) parseBaseUrl() error {
 	return errors.New("invalid Forgerock Url, unable to find base url")
 }
 
-// REF: https://backstage.forgerock.com/docs/am/6.5/authorization-guide/index.html#sec-rest-authentication
+// REF: https://backstage.forgerock.com/docs/am/6.5/authorization-guide/index.html#sec-rest-authentication.
 func (c *forgerockClient) auth(ctx context.Context) error {
 	frAuthUrl := fmt.Sprintf("%s/json/realms/%s/authenticate", c.baseUrl.String(), c.realm)
 

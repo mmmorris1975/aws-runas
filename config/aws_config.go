@@ -36,14 +36,14 @@ type AwsConfig struct {
 	sourceProfile          *AwsConfig
 }
 
-// SourceProfile returns a resolved AwsConfig object for the SrcProfile field in the AwsConfig object
+// SourceProfile returns a resolved AwsConfig object for the SrcProfile field in the AwsConfig object.
 func (c *AwsConfig) SourceProfile() *AwsConfig {
 	return c.sourceProfile
 }
 
 // RoleCredentialDuration normalizes the selection of the Assume Role credential duration.  If the CredentialsDuration
 // field has a value greater than 0, it will return that value directly.  Otherwise the value of the DurationSeconds
-// field will be converted to a time.Duration type and returned
+// field will be converted to a time.Duration type and returned.
 func (c *AwsConfig) RoleCredentialDuration() time.Duration {
 	if c.CredentialsDuration > 0 {
 		return c.CredentialsDuration
@@ -52,22 +52,22 @@ func (c *AwsConfig) RoleCredentialDuration() time.Duration {
 	}
 }
 
-// RoleARN returns the arn.ARN value for the RoleArn field in the AwsConfig object
+// RoleARN returns the arn.ARN value for the RoleArn field in the AwsConfig object.
 func (c *AwsConfig) RoleARN() (arn.ARN, error) {
 	return arn.Parse(c.RoleArn)
 }
 
-// JumpRoleARN returns the arn.ARN value for the JumpRoleArn field in the AwsConfig object
+// JumpRoleARN returns the arn.ARN value for the JumpRoleArn field in the AwsConfig object.
 func (c *AwsConfig) JumpRoleARN() (arn.ARN, error) {
 	return arn.Parse(c.JumpRoleArn)
 }
 
-// SamlURL returns the url.URL value for the SamlUrl field in the AwsConfig object
+// SamlURL returns the url.URL value for the SamlUrl field in the AwsConfig object.
 func (c *AwsConfig) SamlURL() (*url.URL, error) {
 	return c.handleUrl(c.SamlUrl)
 }
 
-// WebIdentityURL returns the url.URL value for the WebIdentityUrl field in the AwsConfig object
+// WebIdentityURL returns the url.URL value for the WebIdentityUrl field in the AwsConfig object.
 func (c *AwsConfig) WebIdentityURL() (*url.URL, error) {
 	return c.handleUrl(c.WebIdentityUrl)
 }
@@ -164,7 +164,7 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 //  * Check that sourceProfile != nil if SrcProfile is set
 //  * Check that only one of SamlUrl or WebIdentityUrl is set
 //  * Check that all required Web Identity fields (WebIdentityClientId, WebIdentityRedirectUri)
-//    are configured if WebIdentityUrl is set
+//    are configured if WebIdentityUrl is set.
 func (c *AwsConfig) Validate() error {
 	if len(c.SrcProfile) > 0 && c.sourceProfile == nil {
 		return errors.New("found source profile name but no source profile data")

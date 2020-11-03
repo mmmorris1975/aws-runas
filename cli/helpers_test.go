@@ -26,10 +26,10 @@ func TestHelpers_printCredIdentity(t *testing.T) {
 }
 
 func TestHelpers_printCredExpiration(t *testing.T) {
-	//if _, err := io.Copy(os.Stdout, os.Stderr); err != nil {
+	// if _, err := io.Copy(os.Stdout, os.Stderr); err != nil {
 	//	t.Error(err)
 	//	return
-	//}
+	// }
 
 	t.Run("never", func(t *testing.T) {
 		creds := &credentials.Credentials{Expiration: time.Time{}}

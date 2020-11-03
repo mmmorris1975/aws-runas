@@ -9,13 +9,13 @@ import (
 )
 
 const (
-	// SessionTokenProviderName is the name given to this AWS credential provider
+	// SessionTokenProviderName is the name given to this AWS credential provider.
 	SessionTokenProviderName = "SessionTokenProvider"
-	// SessionTokenDurationMin is the minimum allowed Session Token credential duration by the AWS API
+	// SessionTokenDurationMin is the minimum allowed Session Token credential duration by the AWS API.
 	SessionTokenDurationMin = 15 * time.Minute
-	// SessionTokenDurationMax is the maximum allowed Session Token credential duration by the AWS API
+	// SessionTokenDurationMax is the maximum allowed Session Token credential duration by the AWS API.
 	SessionTokenDurationMax = 36 * time.Hour
-	// SessionTokenDurationDefault is a sensible default value for Session Token credential duration
+	// SessionTokenDurationDefault is a sensible default value for Session Token credential duration.
 	SessionTokenDurationDefault = 12 * time.Hour
 )
 
@@ -66,11 +66,11 @@ func (p *SessionTokenProvider) RetrieveWithContext(ctx aws.Context) (credentials
 	}
 
 	// afaik, this can never happen
-	//if creds == nil {
+	// if creds == nil {
 	//	// something's wacky, expire existing provider creds, and retry
 	//	p.SetExpiration(time.Unix(0, 0), 0)
 	//	return p.Retrieve()
-	//}
+	// }
 
 	v := creds.Value()
 	v.ProviderName = SessionTokenProviderName

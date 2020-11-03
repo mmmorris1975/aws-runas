@@ -47,7 +47,7 @@ var mfaCmd = &cli.Command{
 }
 
 // possibly reusable? may only be used with mfa lookup, since it should be the only place we need a hand-rolled
-// session. All others should(?) be relying on the client factory
+// session. All others should(?) be relying on the client factory.
 func sessionOptions(cfg *config.AwsConfig) session.Options {
 	return session.Options{
 		SharedConfigState: session.SharedConfigEnable,
@@ -76,7 +76,7 @@ func sessionOptions(cfg *config.AwsConfig) session.Options {
 	}
 }
 
-// mfa command-specific? really just to wrap multiple error paths to a single return value
+// mfa command-specific? really just to wrap multiple error paths to a single return value.
 func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
 	c, err := clientFactory.Get(cfg)
 	if err != nil {
@@ -86,7 +86,7 @@ func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
 	return c.Identity()
 }
 
-// mfa command-specific, but set as a distinct function so it's testable with a mock iamiface.IAMAPI
+// mfa command-specific, but set as a distinct function so it's testable with a mock iamiface.IAMAPI.
 func listMfa(i iamiface.IAMAPI, id *identity.Identity) error {
 	if id.IdentityType == "user" {
 		res, err := i.ListMFADevices(new(iam.ListMFADevicesInput))

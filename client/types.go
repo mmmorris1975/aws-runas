@@ -40,7 +40,7 @@ type IdentityClient interface {
 }
 
 // AwsClient is a super-interface which combines the functions of the CredentialClient and IdentityClient to provide a
-// cohesive solution for obtaining credentials and identity information from various sources
+// cohesive solution for obtaining credentials and identity information from various sources.
 type AwsClient interface {
 	IdentityClient
 	CredentialClient
