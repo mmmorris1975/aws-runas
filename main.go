@@ -7,7 +7,7 @@ import (
 )
 
 // managed at compile-time
-var Version = "0.0.1"
+var Version = "0.0.0"
 
 func main() {
 	cli.App.Version = Version
