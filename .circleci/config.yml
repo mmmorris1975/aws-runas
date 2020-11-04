@@ -13,8 +13,6 @@ jobs:
 
     steps:
       - checkout
-      - run: pwd
-      - run: ls
       - run: golangci-lint run -v
 
   build:
@@ -71,6 +69,7 @@ jobs:
 workflows:
   version: 2
 
+  # So far we don't have a 'requires' in build for lint, maybe something to change? I mean, who doesn't like clean code?
   build_and_test:
     jobs:
       - lint
