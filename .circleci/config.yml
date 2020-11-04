@@ -7,6 +7,16 @@ orbs:
   aws-cli: circleci/aws-cli@0.1.16
 
 jobs:
+  lint:
+    docker:
+      - image: "golangci/golangci-lint:v1.32.2"
+
+    steps:
+      - checkout
+      - run: pwd
+      - run: ls
+      - run: golangci-lint run -v
+
   build:
     docker:
       # specify the version
@@ -63,6 +73,7 @@ workflows:
 
   build_and_test:
     jobs:
+      - lint
       - build
       - test:
           requires:
