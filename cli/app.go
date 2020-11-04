@@ -16,12 +16,15 @@ import (
 	"strings"
 )
 
-var log = logger.StdLogger
-var opts = client.DefaultOptions
-var configResolver config.Resolver = config.DefaultResolver.WithLogger(log)
-var clientFactory = client.NewClientFactory(configResolver, opts)
-var cmdlineCfg = new(config.AwsConfig)
-var cmdlineCreds = new(config.AwsCredentials)
+var (
+	log           = logger.StdLogger
+	opts          = client.DefaultOptions
+	clientFactory = client.NewClientFactory(configResolver, opts)
+	cmdlineCfg    = new(config.AwsConfig)
+	cmdlineCreds  = new(config.AwsCredentials)
+
+	configResolver config.Resolver = config.DefaultResolver.WithLogger(log)
+)
 
 var App = &cli.App{
 	Usage:     "Create an environment for interacting with the AWS API using an assumed role",
@@ -89,6 +92,7 @@ var App = &cli.App{
 	},
 }
 
+//nolint:gochecknoinits // kinda need this here
 func init() {
 	// override built-in version flag to use -V instead of -v (which we want to use for the verbose flag)
 	// maintains consistency with older aws-runas versions
@@ -99,6 +103,7 @@ func init() {
 	}
 }
 
+//nolint:funlen,gocognit,gocyclo // he's just a long boi ... you should have seen the older versions!
 func execCmd(ctx *cli.Context) error {
 	profile, cfg, err := resolveConfig(ctx, guessNArgs(ctx.NArg()))
 	if err != nil {
@@ -133,7 +138,8 @@ func execCmd(ctx *cli.Context) error {
 		// truly a one-shot operation, the credentials_process logic will re-exec the command to refresh credentials
 		// don't handle any other formatting options, or do any thing else, just poop out json formatted credentials
 		// REF: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
-		out, err := creds.CredentialsProcess()
+		var out []byte
+		out, err = creds.CredentialsProcess()
 		if err != nil {
 			// error will be json marshaling failure
 			return err
@@ -181,7 +187,7 @@ func execCmd(ctx *cli.Context) error {
 		installSignalHandler()
 		if err = c.Run(); err != nil {
 			log.Debug("Error running command")
-			log.Fatalf("%v", err)
+			return err
 		}
 	} else {
 		printCreds(env)
@@ -235,7 +241,11 @@ func printCreds(env map[string]string) {
 
 func runEcsSvc(profile string) error {
 	// modify the execution environment to force use of ECS credential URL
-	unsetEnv := []string{"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY", "AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY", "AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"}
+	unsetEnv := []string{
+		"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY",
+		"AWS_SECRET_ACCESS_KEY", "AWS_SECRET_KEY",
+		"AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN",
+	}
 	for _, e := range unsetEnv {
 		_ = os.Unsetenv(e)
 	}
@@ -266,6 +276,7 @@ func runEcsSvc(profile string) error {
 
 // If on a non-windows platform, with the SHELL environment variable set, and a call to exec.LookPath()
 // for 1st element of the command fails, run the command in a sub-shell so we can support shell aliases.
+//nolint:gocognit
 func wrapCmd(cmd []string) []string {
 	var newCmd []string
 	if cmd == nil || len(cmd) < 1 {

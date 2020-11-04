@@ -152,7 +152,8 @@ func (c *oneloginClient) apiAccessToken() error {
 	u := fmt.Sprintf("%s/auth/oauth2/v2/token", c.apiBaseUrl)
 	body := strings.NewReader(`{"grant_type": "client_credentials"}`)
 
-	req, err := http.NewRequest(http.MethodPost, u, body)
+	var req *http.Request
+	req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, u, body)
 	if err != nil {
 		return err
 	}
@@ -160,7 +161,8 @@ func (c *oneloginClient) apiAccessToken() error {
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
 
-	data, err := c.sendApiRequest(req)
+	var data []byte
+	data, err = c.sendApiRequest(req)
 	if err != nil {
 		return err
 	}
@@ -207,13 +209,14 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 		return err
 	}
 
-	data, err := c.sendApiRequest(req)
+	var data []byte
+	data, err = c.sendApiRequest(req)
 	if err != nil {
 		return err
 	}
 
 	authReply := new(oneloginAuthReply)
-	if err := json.Unmarshal(data, authReply); err != nil {
+	if err = json.Unmarshal(data, authReply); err != nil {
 		return err
 	}
 	sessionToken := authReply.Data[0].SessionToken
@@ -228,6 +231,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 	return c.exchangeToken(sessionToken)
 }
 
+//nolint:gocognit // won't simplify
 func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) (string, error) {
 	factors, err := c.activeMfaFactors(data.User.Id)
 	if err != nil {
@@ -279,13 +283,14 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 
 func (c *oneloginClient) activeMfaFactors(userId int) ([]*oneloginMfaFactor, error) {
 	u := fmt.Sprintf("%s/api/1/users/%d/otp_devices", c.apiBaseUrl, userId)
-	req, err := http.NewRequest(http.MethodGet, u, http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, u, http.NoBody)
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Authorization", fmt.Sprintf("bearer:%s", c.apiToken.AccessToken))
 
-	data, err := c.sendApiRequest(req)
+	var data []byte
+	data, err = c.sendApiRequest(req)
 	if err != nil {
 		return nil, err
 	}
@@ -341,15 +346,15 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 
 func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest) (string, error) {
 	if len(c.MfaTokenCode) < 1 {
-		if c.MfaTokenProvider != nil {
-			t, err := c.MfaTokenProvider()
-			if err != nil {
-				return "", err
-			}
-			c.MfaTokenCode = t
-		} else {
+		if c.MfaTokenProvider == nil {
 			return "", errMfaNotConfigured
 		}
+
+		t, err := c.MfaTokenProvider()
+		if err != nil {
+			return "", err
+		}
+		c.MfaTokenCode = t
 	}
 	req.OtpToken = c.MfaTokenCode
 
@@ -370,14 +375,12 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 	}
 
 	ar := new(oneloginAuthReply)
-	if err := json.Unmarshal(body, ar); err != nil {
+	if err = json.Unmarshal(body, ar); err != nil {
 		return "", err
 	}
 
-	if strings.EqualFold(ar.Status.Message, "success") {
-		if len(ar.Data) > 0 && len(ar.Data[0].SessionToken) > 0 {
-			return ar.Data[0].SessionToken, nil
-		}
+	if strings.EqualFold(ar.Status.Message, "success") && len(ar.Data) > 0 && len(ar.Data[0].SessionToken) > 0 {
+		return ar.Data[0].SessionToken, nil
 	}
 
 	c.MfaTokenCode = ""
@@ -389,7 +392,14 @@ func (c *oneloginClient) exchangeToken(st string) error {
 	body := url.Values{}
 	body.Set("session_token", st)
 
-	res, err := c.httpClient.Post(u, "application/x-www-form-urlencoded", strings.NewReader(body.Encode()))
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u, strings.NewReader(body.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	var res *http.Response
+	res, err = c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}

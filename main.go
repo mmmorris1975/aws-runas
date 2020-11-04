@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-// managed at compile-time.
+// Version is managed at compile-time.
 var Version = "0.0.0"
 
 func main() {

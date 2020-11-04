@@ -77,6 +77,7 @@ func getEnvVar(tag string) string {
 func setVal(field reflect.Value, value string) error {
 	var err error
 
+	//nolint:exhaustive // we don't use the other Kinds
 	switch field.Type().Kind() {
 	case reflect.String:
 		field.SetString(value)

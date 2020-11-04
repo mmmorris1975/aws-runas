@@ -17,6 +17,7 @@ import (
 
 var oneloginMock *httptest.Server
 
+//nolint:gochecknoinits // too lazy to figure out a better way
 func init() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", olDefaultHandler)
@@ -396,7 +397,7 @@ func olOauthTokenHandler(w http.ResponseWriter, r *http.Request) {
 func olSamlHandler(w http.ResponseWriter, r *http.Request) {
 	// SAML assertion fetching URL
 	defer r.Body.Close()
-
+	//nolint:lll
 	body := `
 <html>
 <head></head>
@@ -658,18 +659,18 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 			w.Header().Set("Content-Type", "application/json")
 			_, _ = w.Write(data)
 			return
-		} else {
-			reply := &oneloginApiError{Status: &oneloginApiStatus{
-				Error:   true,
-				Code:    http.StatusUnauthorized,
-				Message: "Failed authentication with this factor",
-			}}
-			msg, _ := json.Marshal(reply)
-
-			w.Header().Set("Content-Type", "application/json")
-			http.Error(w, string(msg), http.StatusUnauthorized)
-			return
 		}
+
+		reply := &oneloginApiError{Status: &oneloginApiStatus{
+			Error:   true,
+			Code:    http.StatusUnauthorized,
+			Message: "Failed authentication with this factor",
+		}}
+		msg, _ := json.Marshal(reply)
+
+		w.Header().Set("Content-Type", "application/json")
+		http.Error(w, string(msg), http.StatusUnauthorized)
+		return
 	case r.DeviceId == "666":
 		// push mfa
 		reply := new(oneloginAuthReply)

@@ -50,7 +50,7 @@ var ssmSshCmd = &cli.Command{
 			// could be just tag_key:tag_value using default port, all other supported formats have
 			// port as the final element.  If Atoi can convert the string to a number, assume it's
 			// supposed to be a port, otherwise we'll use the default
-			if _, err := strconv.Atoi(parts[1]); err == nil {
+			if _, err = strconv.Atoi(parts[1]); err == nil {
 				target = parts[0]
 				port = parts[1]
 			}

@@ -112,7 +112,8 @@ func (s *metadataCredentialService) Run() error {
 
 	if len(s.options.Profile) > 0 {
 		// since we don't have a valid http server yet, we need to bang on profileHandler() directly
-		r, _ := http.NewRequest(http.MethodPost, profilePath, strings.NewReader(s.options.Profile))
+		r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, profilePath,
+			strings.NewReader(s.options.Profile))
 		s.profileHandler(httptest.NewRecorder(), r)
 		logger.Infof("Using initial profile '%s'", s.options.Profile)
 	} else {
@@ -149,7 +150,8 @@ func (s *metadataCredentialService) RunHeadless() error {
 
 	if len(s.options.Profile) > 0 {
 		// since we don't have a valid http server yet, we need to bang on profileHandler() directly
-		r, _ := http.NewRequest(http.MethodPost, profilePath, strings.NewReader(s.options.Profile))
+		r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, profilePath,
+			strings.NewReader(s.options.Profile))
 		s.profileHandler(httptest.NewRecorder(), r)
 		logger.Debugf("Using initial profile '%s'", s.options.Profile)
 	}
@@ -168,11 +170,9 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		buf := make([]byte, 256) // if there's a profile name longer than this ... I mean, really
 		n, err := r.Body.Read(buf)
 
-		if err != nil {
-			if !errors.Is(err, io.EOF) {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
+		if err != nil && !errors.Is(err, io.EOF) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
 		}
 
 		profile := string(buf[:n])

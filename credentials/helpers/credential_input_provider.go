@@ -1,6 +1,7 @@
 package helpers
 
 import (
+	"errors"
 	"fmt"
 	"golang.org/x/crypto/ssh/terminal"
 	"io"
@@ -25,34 +26,46 @@ func (p *userPasswordInputProvider) ReadInput(user, password string) (string, st
 	var err error
 
 	if len(user) < 1 {
-		fmt.Fprint(os.Stderr, "Username: ")
-		_, err = fmt.Fscanln(p.input, &user)
-		if err != nil && err != io.EOF {
+		_, _ = fmt.Fprint(os.Stderr, "Username: ")
+		if err = readInput(p.input, &user); err != nil {
 			return "", "", err
 		}
 	}
 
 	if len(password) < 1 {
-		fmt.Fprint(os.Stderr, "Password: ")
+		_, _ = fmt.Fprint(os.Stderr, "Password: ")
 
 		if f, ok := p.input.(*os.File); ok {
-			fd := int(f.Fd())
-			if terminal.IsTerminal(fd) {
-				b, err := terminal.ReadPassword(int(f.Fd()))
-				if err != nil && err != io.EOF {
-					return "", "", err
-				}
-
-				return user, string(b), nil
+			password, err = trySecureRead(f)
+			if err != nil {
+				return "", "", err
 			}
-		}
-
-		_, err = fmt.Fscanln(p.input, &password)
-		if err != nil && err != io.EOF {
+		} else if err = readInput(p.input, &password); err != nil {
 			return "", "", err
 		}
 		fmt.Println()
 	}
 
 	return user, password, nil
+}
+
+func readInput(input io.Reader, dst *string) error {
+	_, err := fmt.Fscanln(input, dst)
+	if err != nil && !errors.Is(err, io.EOF) {
+		return err
+	}
+	return nil
+}
+
+func trySecureRead(f *os.File) (string, error) {
+	var val string
+	fd := int(f.Fd())
+	if terminal.IsTerminal(fd) {
+		b, err := terminal.ReadPassword(int(f.Fd()))
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		val = string(b)
+	}
+	return val, nil
 }

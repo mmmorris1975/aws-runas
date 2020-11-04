@@ -90,6 +90,7 @@ func TestPasswordEncoder_Decode(t *testing.T) {
 	})
 
 	t.Run("long password", func(t *testing.T) {
+		//nolint:lll
 		s, err := p.Decode("14$HZRAUH2IBDVKW$RQGvVSJo8ldii4Q6dMqUMk85Y9odLyJmrVPssWBt1zk9tlcuvM8Gs0ARo3f5J+TJVokRas03m60uCWpucyepJreNRRtEUHanqRTNDnon7g4BOoeHIkFd2htQgrrviLiP")
 		if err != nil {
 			t.Error(err)

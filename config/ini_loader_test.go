@@ -16,10 +16,8 @@ func TestIniLoader_Config(t *testing.T) {
 				t.Error("unexpected error type received (was not *os.PathError)")
 			}
 			return
-		} else {
-			t.Error("did not receive expected error")
-			return
 		}
+		t.Error("did not receive expected error")
 	})
 
 	t.Run("bad profile", func(t *testing.T) {
@@ -174,10 +172,8 @@ func TestIniLoader_Credentials(t *testing.T) {
 				t.Error("unexpected error type received (was not *os.PathError)")
 			}
 			return
-		} else {
-			t.Error("did not receive expected error")
-			return
 		}
+		t.Error("did not receive expected error")
 	})
 
 	t.Run("bad profile", func(t *testing.T) {

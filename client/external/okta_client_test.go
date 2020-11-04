@@ -15,6 +15,7 @@ import (
 
 var oktaMock *httptest.Server
 
+//nolint:gochecknoinits // too lazy to figure out a better way
 func init() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/v1/authorize", oktaOauthAuthHandler)
@@ -264,7 +265,6 @@ func newMockOktaClient() *oktaClient {
 	c.authUrl, _ = url.Parse(oktaMock.URL)
 	c.httpClient = oktaMock.Client()
 	return c
-
 }
 
 func oktaOauthAuthHandler(w http.ResponseWriter, r *http.Request) {
@@ -303,7 +303,7 @@ func oktaOauthTokenHandler(w http.ResponseWriter, r *http.Request) {
 func oktaSamlHandler(w http.ResponseWriter, r *http.Request) {
 	// SAML assertion fetching URL
 	defer r.Body.Close()
-
+	//nolint:lll
 	body := `
 <html>
 <head></head>

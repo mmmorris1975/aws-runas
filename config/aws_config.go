@@ -47,9 +47,8 @@ func (c *AwsConfig) SourceProfile() *AwsConfig {
 func (c *AwsConfig) RoleCredentialDuration() time.Duration {
 	if c.CredentialsDuration > 0 {
 		return c.CredentialsDuration
-	} else {
-		return time.Duration(c.DurationSeconds) * time.Second
 	}
+	return time.Duration(c.DurationSeconds) * time.Second
 }
 
 // RoleARN returns the arn.ARN value for the RoleArn field in the AwsConfig object.
@@ -74,6 +73,7 @@ func (c *AwsConfig) WebIdentityURL() (*url.URL, error) {
 
 // MergeIn takes the settings in the provided "config" argument and applies them to the existing AwsConfig object.
 // New values are applied only if they are not the field type's zero value, the last (non-zero) value take priority.
+//nolint:funlen,gocognit,gocyclo // couldn't make this shorter if we tried
 func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 	for _, cfg := range config {
 		if cfg.CredentialsDuration > 0 {

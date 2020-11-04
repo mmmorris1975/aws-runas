@@ -84,7 +84,8 @@ func TestCredentials_EC2(t *testing.T) {
 			return
 		}
 
-		if !matches(j, `"AccessKeyId"`, `"SecretAccessKey"`, `"Token"`, `"Expiration"`, `"Code"`, `"Type"`, `"LastUpdated"`) {
+		if !matches(j, `"AccessKeyId"`, `"SecretAccessKey"`, `"Token"`, `"Expiration"`, `"Code"`,
+			`"Type"`, `"LastUpdated"`) {
 			t.Error("invalid credentials")
 		}
 
@@ -102,7 +103,8 @@ func TestCredentials_EC2(t *testing.T) {
 			return
 		}
 
-		if !matches(j, `"AccessKeyId"`, `"SecretAccessKey"`, `"Token"`, `"Expiration"`, `"Code"`, `"Type"`, `"LastUpdated"`) {
+		if !matches(j, `"AccessKeyId"`, `"SecretAccessKey"`, `"Token"`, `"Expiration"`, `"Code"`,
+			`"Type"`, `"LastUpdated"`) {
 			t.Error("invalid credentials")
 		}
 
@@ -168,14 +170,16 @@ func TestCredentials_Env(t *testing.T) {
 		defer func() { c.Token = "" }()
 
 		m := c.Env()
-		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey || m["AWS_SESSION_TOKEN"] != c.Token {
+		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey ||
+			m["AWS_SESSION_TOKEN"] != c.Token {
 			t.Error("invalid credentials")
 		}
 	})
 
 	t.Run("no token", func(t *testing.T) {
 		m := c.Env()
-		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey || m["AWS_SESSION_TOKEN"] != "" {
+		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey ||
+			m["AWS_SESSION_TOKEN"] != "" {
 			t.Error("invalid credentials")
 		}
 
@@ -199,14 +203,16 @@ func TestCredentials_Value(t *testing.T) {
 		defer func() { c.Token = "" }()
 
 		v := c.Value()
-		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey || v.SessionToken != c.Token || v.ProviderName != c.ProviderName {
+		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey ||
+			v.SessionToken != c.Token || v.ProviderName != c.ProviderName {
 			t.Error("invalid credentials")
 		}
 	})
 
 	t.Run("no token", func(t *testing.T) {
 		v := c.Value()
-		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey || v.SessionToken != "" || v.ProviderName != c.ProviderName {
+		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey ||
+			v.SessionToken != "" || v.ProviderName != c.ProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -262,7 +268,8 @@ func TestCredentials_FromValue(t *testing.T) {
 
 	c := FromValue(v)
 
-	if c.AccessKeyId != v.AccessKeyID || c.SecretAccessKey != v.SecretAccessKey || c.Token != v.SessionToken || c.ProviderName != v.ProviderName {
+	if c.AccessKeyId != v.AccessKeyID || c.SecretAccessKey != v.SecretAccessKey ||
+		c.Token != v.SessionToken || c.ProviderName != v.ProviderName {
 		t.Error("data mismatch")
 	}
 

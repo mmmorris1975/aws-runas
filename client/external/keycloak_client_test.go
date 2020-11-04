@@ -336,7 +336,8 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 	switch p := r.URL.Path; {
 	case strings.HasSuffix(p, "/openid-connect/auth"):
 		// Oauth authorization URL
-		// this url participates in the user authentication flow, so we'll need to distinguish between a user who is logged in and one that isn't
+		// this url participates in the user authentication flow, so we'll need to distinguish between a user who
+		// is logged in and one that isn't
 		// 200 status sends login form (like the SAML ep does)
 		// 302 is the authorization token
 		_, err := r.Cookie("KEYCLOAK_SESSION")
@@ -376,6 +377,7 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 		var body string
 		_, err := r.Cookie("KEYCLOAK_SESSION")
 		if err == nil {
+			//nolint:lll
 			body = `
 <html>
 <head></head>

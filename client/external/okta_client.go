@@ -81,14 +81,15 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 		authzQS.Set("sessionToken", c.sessionToken) // okta specific requirement
 	}
 
-	vals, err := c.oauthAuthorize(fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
+	var vals url.Values
+	vals, err = c.oauthAuthorize(fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(vals.Get("fromURI")) > 0 {
 		// This is an indication that an unauthenticated (or expired session) request was attempted
-		if err := c.AuthenticateWithContext(ctx); err != nil {
+		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
 		}
 		return c.IdentityToken()
@@ -241,7 +242,8 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 		time.Sleep(1250 * time.Millisecond)
 		fmt.Print(".")
 
-		r, err := c.sendApiRequst(ctx, nextUrl, bytes.NewReader(body))
+		var r *http.Response
+		r, err = c.sendApiRequst(ctx, nextUrl, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}

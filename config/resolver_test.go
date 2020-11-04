@@ -54,6 +54,7 @@ func TestNewResolver(t *testing.T) {
 	})
 }
 
+//nolint:gocyclo
 func TestResolver_Config(t *testing.T) {
 	t.Run("error", func(t *testing.T) {
 		r := NewResolver(new(badLoader), false)

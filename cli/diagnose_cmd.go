@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/defaults"
@@ -103,48 +104,63 @@ func checkProfileCfg(cfg *config.AwsConfig) {
 
 	if len(cfg.ProfileName) > 0 {
 		if len(cfg.SamlUrl) > 0 || len(cfg.WebIdentityUrl) > 0 {
-			if len(cfg.RoleArn) < 1 {
-				log.Error("role_arn is a required parameter when using external identity providers")
-			}
-
-			if len(cfg.SamlUrl) > 0 {
-				checkProvider(cfg.SamlUrl)
-			} else {
-				checkProvider(cfg.WebIdentityUrl)
-				if len(cfg.WebIdentityClientId) < 1 || len(cfg.WebIdentityRedirectUri) < 1 {
-					log.Error("missing web_identity_client_id and/or web_identity_redirect_uri configuration")
-				}
-			}
+			checkExternalProviderConfig(cfg)
 		} else {
-			// iam profile checks
-			var cfgCreds bool
-
-			if len(cfg.RoleArn) > 0 {
-				if len(cfg.SrcProfile) < 1 || cfg.SourceProfile() == nil {
-					log.Errorf("missing source_profile configuration for profile '%s'", cfg.ProfileName)
-					return
-				}
-
-				// source_profile name must exist in the credentials file when using IAM profiles
-				cfgCreds = checkCredentialProfile(cfg.SrcProfile)
-			} else {
-				// not a profile with a role, must have matching section in creds file
-				cfgCreds = checkCredentialProfile(cfg.ProfileName)
-			}
-
-			// check for profile creds and env var creds at the same time
-			envAk := os.Getenv("AWS_ACCESS_KEY_ID")
-			if cfgCreds && len(envAk) > 0 {
-				log.Error("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
-			} else {
-				log.Info("credentials appear sane")
-			}
+			checkIamConfig(cfg)
 		}
 	}
 }
 
+func checkExternalProviderConfig(cfg *config.AwsConfig) {
+	if len(cfg.RoleArn) < 1 {
+		log.Error("role_arn is a required parameter when using external identity providers")
+	}
+
+	if len(cfg.SamlUrl) > 0 {
+		checkProvider(cfg.SamlUrl)
+	} else {
+		checkProvider(cfg.WebIdentityUrl)
+		if len(cfg.WebIdentityClientId) < 1 || len(cfg.WebIdentityRedirectUri) < 1 {
+			log.Error("missing web_identity_client_id and/or web_identity_redirect_uri configuration")
+		}
+	}
+}
+
+func checkIamConfig(cfg *config.AwsConfig) {
+	// iam profile checks
+	var cfgCreds bool
+
+	if len(cfg.RoleArn) > 0 {
+		if len(cfg.SrcProfile) < 1 || cfg.SourceProfile() == nil {
+			log.Errorf("missing source_profile configuration for profile '%s'", cfg.ProfileName)
+			return
+		}
+
+		// source_profile name must exist in the credentials file when using IAM profiles
+		cfgCreds = checkCredentialProfile(cfg.SrcProfile)
+	} else {
+		// not a profile with a role, must have matching section in creds file
+		cfgCreds = checkCredentialProfile(cfg.ProfileName)
+	}
+
+	// check for profile creds and env var creds at the same time
+	envAk := os.Getenv("AWS_ACCESS_KEY_ID")
+	if cfgCreds && len(envAk) > 0 {
+		log.Error("detected AWS credential environment variables and profile credentials, this may confuse aws-runas")
+	} else {
+		log.Info("credentials appear sane")
+	}
+}
+
 func checkProvider(url string) {
-	res, err := http.Head(url) //nolint:gosec
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, url, http.NoBody) //nolint:gosec
+	if err != nil {
+		log.Errorf("error creating http request: %v", err)
+		return
+	}
+
+	var res *http.Response
+	res, err = http.DefaultClient.Do(req)
 	if err != nil {
 		log.Errorf("error communicating with external provider endpoint: %v", err)
 	}

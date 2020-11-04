@@ -109,7 +109,13 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 	//	},
 	// }
 
-	res, err := c.httpClient.Get(u.String())
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), http.NoBody)
+	if err != nil {
+		return err
+	}
+
+	var res *http.Response
+	res, err = c.httpClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -190,14 +196,12 @@ func (c *baseClient) oauthAuthorize(ep string, data url.Values, followRedirect b
 			httpClient = new(http.Client)
 			httpClient.Jar = c.httpClient.Jar
 		}
-	} else {
-		if httpClient.CheckRedirect == nil {
-			httpClient = &http.Client{
-				CheckRedirect: func(req *http.Request, via []*http.Request) error {
-					return http.ErrUseLastResponse
-				},
-				Jar: c.httpClient.Jar,
-			}
+	} else if httpClient.CheckRedirect == nil {
+		httpClient = &http.Client{
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				return http.ErrUseLastResponse
+			},
+			Jar: c.httpClient.Jar,
 		}
 	}
 
@@ -207,7 +211,14 @@ func (c *baseClient) oauthAuthorize(ep string, data url.Values, followRedirect b
 	}
 	u.RawQuery = data.Encode()
 
-	res, err := httpClient.Get(u.String())
+	var req *http.Request
+	req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), http.NoBody)
+	if err != nil {
+		return url.Values{}, err
+	}
+
+	var res *http.Response
+	res, err = httpClient.Do(req)
 	if err != nil {
 		// if followRedirect == true, and the IdP is (correctly!) configured to return an invalid/unreachable value
 		// for the redirect URI, we'll end up here.  Intercept the error and return the token data.  Anything not
@@ -243,7 +254,14 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	data.Set("grant_type", "authorization_code")
 	data.Set("redirect_uri", c.RedirectUri)
 
-	res, err := c.httpClient.PostForm(ep, data)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ep, http.NoBody)
+	if err != nil {
+		return nil, err
+	}
+	req.PostForm = data
+
+	var res *http.Response
+	res, err = c.httpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}

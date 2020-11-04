@@ -38,6 +38,7 @@ func TestNewSessionTokenProvider(t *testing.T) {
 	})
 }
 
+//nolint:gocyclo
 func TestSessionTokenProvider_Retrieve(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		v, err := newSessionTokenProvider().Retrieve()

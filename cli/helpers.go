@@ -26,37 +26,12 @@ import (
 // resolved AwsConfig object for the discovered profile (or source profile, if requested).
 // Error will be returned for a failure of configuration resolution.
 func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfig, error) {
-	// if we got here via a top-level flag, ctx.Args() could be empty,
-	// must check 1 level up via ctx.Lineage() for the value
-	//
-	// profile might possibly be omitted from the command line as well, in
-	// which case, we'll check the environment for the standard AWS env vars
-	// for profile values
-	var profile string
-	if ctx.NArg() >= expectedArgs {
-		profile = ctx.Args().First()
-	} else if ctx.NArg() == 0 && len(ctx.Lineage()) > 2 {
-		next := ctx.Lineage()[1]
-		if next.NArg() >= expectedArgs {
-			profile = next.Args().First()
-		}
-	}
+	profile := checkProfileArgs(ctx, expectedArgs)
 
+	// profile might possibly be omitted from the command line as well, in which case, we'll check the
+	// environment for the standard AWS env vars for profile values
 	if len(profile) < 1 {
-		// Check for AWS profile env vars if nothing was found on the command line.  This must be done because we
-		// need to know the source profile setting if any of these env vars specify a profile which uses a role.
-		profile = os.Getenv("AWS_PROFILE")
-		if len(profile) < 1 {
-			profile = os.Getenv("AWS_DEFAULT_PROFILE")
-		}
-
-		// explicitly unset AWS profile env vars so they don't get in the way of AWS Session setup
-		_ = os.Unsetenv("AWS_PROFILE")
-		_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
-
-		if len(profile) > 0 && !arn.IsARN(profile) {
-			_ = os.Setenv("AWSRUNAS_PROFILE", profile)
-		}
+		profile = checkProfileEnv()
 	}
 
 	cfg, err := configResolver.Config(profile)
@@ -78,6 +53,39 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 
 	cfg.MergeIn(cmdlineCfg) // I think this is a good idea??
 	return profile, cfg, nil
+}
+
+func checkProfileArgs(ctx *cli.Context, expectedArgs int) string {
+	// if we got here via a top-level flag, ctx.Args() could be empty, must check 1 level up via
+	// ctx.Lineage() for the value
+	var profile string
+	if ctx.NArg() >= expectedArgs {
+		profile = ctx.Args().First()
+	} else if ctx.NArg() == 0 && len(ctx.Lineage()) > 2 {
+		next := ctx.Lineage()[1]
+		if next.NArg() >= expectedArgs {
+			profile = next.Args().First()
+		}
+	}
+	return profile
+}
+
+// Check for AWS profile env vars if nothing was found on the command line.  This must be done because we
+// need to know the source profile setting if any of these env vars specify a profile which uses a role.
+func checkProfileEnv() string {
+	profile := os.Getenv("AWS_PROFILE")
+	if len(profile) < 1 {
+		profile = os.Getenv("AWS_DEFAULT_PROFILE")
+	}
+
+	// explicitly unset AWS profile env vars so they don't get in the way of AWS Session setup
+	_ = os.Unsetenv("AWS_PROFILE")
+	_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
+
+	if len(profile) > 0 && !arn.IsARN(profile) {
+		_ = os.Setenv("AWSRUNAS_PROFILE", profile)
+	}
+	return profile
 }
 
 // configure signal handler to make runas ignore (pass through) the below signals.
@@ -146,7 +154,8 @@ func printCredIdentity(cfg awsclient.ConfigProvider, creds *credentials.Credenti
 
 // this may(?) not get called if coming in via the top-level flags (only subcommand paths).
 func bashCompleteProfile(ctx *cli.Context) {
-	// todo - profile name lookup (just iam profiles? ... could be tricky) ... do same for roles command (or any command which accepts a profile arg?)
+	// todo - profile name lookup (just iam profiles? ... could be tricky)
+	//  ... do same for roles command (or any command which accepts a profile arg?)
 	if ctx.NArg() > 0 {
 		fmt.Print("no ")
 	}

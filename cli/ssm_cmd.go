@@ -79,12 +79,13 @@ func execSsmPlugin(cfg awsclient.ConfigProvider, in *ssm.StartSessionInput) erro
 		return err
 	}
 
-	outJ, err := json.Marshal(out)
+	var inJ, outJ []byte
+	outJ, err = json.Marshal(out)
 	if err != nil {
 		return err
 	}
 
-	inJ, err := json.Marshal(in)
+	inJ, err = json.Marshal(in)
 	if err != nil {
 		return err
 	}

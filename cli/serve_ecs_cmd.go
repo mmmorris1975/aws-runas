@@ -37,7 +37,8 @@ var ecsCmd = &cli.Command{
 
 		if env, ok := os.LookupEnv("AWS_CONTAINER_CREDENTIALS_FULL_URI"); ok {
 			log.Debugf("found ECS credential env var")
-			if u, err := url.Parse(env); err == nil {
+			var u *url.URL
+			if u, err = url.Parse(env); err == nil {
 				addr = u.Host
 
 				// only use env var path if it's not "/" (we're reserving that)

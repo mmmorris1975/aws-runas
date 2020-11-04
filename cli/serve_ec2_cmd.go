@@ -38,7 +38,8 @@ var ec2Cmd = &cli.Command{
 		// env var must specify the protocol, so we should parse as a URL
 		if env, ok := os.LookupEnv("AWS_EC2_METADATA_SERVICE_ENDPOINT"); ok {
 			log.Debugf("found EC2 IMDS env var")
-			if u, err := url.Parse(env); err == nil {
+			var u *url.URL
+			if u, err = url.Parse(env); err == nil {
 				addr = u.Host
 			}
 		}

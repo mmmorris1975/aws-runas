@@ -63,7 +63,12 @@ func TestAwsIdentityProvider_Identity(t *testing.T) {
 }
 
 func TestAwsIdentityProvider_Roles(t *testing.T) {
-	p := &awsIdentityProvider{stsClient: new(mockStsClient), iamClient: new(mockIamClient), wg: new(sync.WaitGroup), logger: new(shared.DefaultLogger)}
+	p := &awsIdentityProvider{
+		stsClient: new(mockStsClient),
+		iamClient: new(mockIamClient),
+		wg:        new(sync.WaitGroup),
+		logger:    new(shared.DefaultLogger),
+	}
 
 	t.Run("no user", func(t *testing.T) {
 		r, err := p.Roles()
@@ -99,7 +104,12 @@ func TestAwsIdentityProvider_Roles(t *testing.T) {
 }
 
 func Example_awsIdentityProvider_Roles() {
-	p := &awsIdentityProvider{stsClient: new(mockStsClient), iamClient: new(mockIamClient), wg: new(sync.WaitGroup), logger: new(shared.DefaultLogger)}
+	p := &awsIdentityProvider{
+		stsClient: new(mockStsClient),
+		iamClient: new(mockIamClient),
+		wg:        new(sync.WaitGroup),
+		logger:    new(shared.DefaultLogger),
+	}
 
 	r, _ := p.Roles()
 	if r != nil {
@@ -189,7 +199,8 @@ func (c *mockIamClient) lookupPolicy(f *string) *mockIamPolicy {
 	return nil
 }
 
-func (c *mockIamClient) ListGroupsForUserPages(_ *iam.ListGroupsForUserInput, fn func(*iam.ListGroupsForUserOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupsForUserPages(_ *iam.ListGroupsForUserInput,
+	fn func(*iam.ListGroupsForUserOutput, bool) bool) error {
 	if c.sendError {
 		return errors.New("error: ListGroupsForUserPages()")
 	}
@@ -199,7 +210,8 @@ func (c *mockIamClient) ListGroupsForUserPages(_ *iam.ListGroupsForUserInput, fn
 	return nil
 }
 
-func (c *mockIamClient) ListUserPoliciesPages(_ *iam.ListUserPoliciesInput, fn func(*iam.ListUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListUserPoliciesPages(_ *iam.ListUserPoliciesInput,
+	fn func(*iam.ListUserPoliciesOutput, bool) bool) error {
 	if c.sendError {
 		return errors.New("error: ListUserPoliciesPages()")
 	}
@@ -223,7 +235,8 @@ func (c *mockIamClient) GetUserPolicy(in *iam.GetUserPolicyInput) (*iam.GetUserP
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedUserPoliciesPages(_ *iam.ListAttachedUserPoliciesInput, fn func(*iam.ListAttachedUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedUserPoliciesPages(_ *iam.ListAttachedUserPoliciesInput,
+	fn func(*iam.ListAttachedUserPoliciesOutput, bool) bool) error {
 	if c.sendError {
 		return errors.New("error: ListAttachedUserPoliciesPages()")
 	}
@@ -233,7 +246,8 @@ func (c *mockIamClient) ListAttachedUserPoliciesPages(_ *iam.ListAttachedUserPol
 	return nil
 }
 
-func (c *mockIamClient) ListGroupPoliciesPages(_ *iam.ListGroupPoliciesInput, fn func(*iam.ListGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupPoliciesPages(_ *iam.ListGroupPoliciesInput,
+	fn func(*iam.ListGroupPoliciesOutput, bool) bool) error {
 	if c.sendError {
 		return errors.New("error: ListGroupPoliciesPages()")
 	}
@@ -257,7 +271,8 @@ func (c *mockIamClient) GetGroupPolicy(in *iam.GetGroupPolicyInput) (*iam.GetGro
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedGroupPoliciesPages(_ *iam.ListAttachedGroupPoliciesInput, fn func(*iam.ListAttachedGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedGroupPoliciesPages(_ *iam.ListAttachedGroupPoliciesInput,
+	fn func(*iam.ListAttachedGroupPoliciesOutput, bool) bool) error {
 	if c.sendError {
 		return errors.New("error: ListAttachedGroupPoliciesPages()")
 	}
@@ -291,7 +306,8 @@ func (c *mockIamClient) GetPolicyVersion(in *iam.GetPolicyVersionInput) (*iam.Ge
 		return nil, fmt.Errorf(iam.ErrCodeNoSuchEntityException)
 	}
 
-	ver := new(iam.PolicyVersion).SetVersionId(*p.DefaultVersionId).SetIsDefaultVersion(true).SetDocument(*p.PolicyDocument)
+	ver := new(iam.PolicyVersion).SetVersionId(*p.DefaultVersionId).SetIsDefaultVersion(true).
+		SetDocument(*p.PolicyDocument)
 	out := new(iam.GetPolicyVersionOutput).SetPolicyVersion(ver)
 	return out, nil
 }

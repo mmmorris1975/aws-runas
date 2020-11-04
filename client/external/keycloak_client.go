@@ -26,7 +26,8 @@ type keycloakClient struct {
 //
 // The 'url' parameter expects the following forms:
 // __base URL part__/realms/__realm__ for OAuth/OIDC requests
-// __base URL part__/realms/__realm__/protocol/saml/clients/aws for SAML requests (must enable IdP initiated login for client, replace 'aws' part with the local saml client name).
+// __base URL part__/realms/__realm__/protocol/saml/clients/aws for SAML requests
+//   (must enable IdP initiated login for client, replace 'aws' part with the local saml client name).
 func NewKeycloakClient(url string) (*keycloakClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {
@@ -87,7 +88,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		// an error here means we might need to (re-)authenticate
 		if strings.Contains(err.Error(), "status 200") {
 			u := fmt.Sprintf("%s?%s", authUrl, authzQS.Encode())
-			if err := c.formAuth(u); err != nil {
+			if err = c.formAuth(u); err != nil {
 				return nil, err
 			}
 			return c.IdentityTokenWithContext(ctx)
@@ -152,7 +153,8 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 		return err
 	}
 
-	res, err := c.httpClient.PostForm(submitUrl.String(), creds)
+	var res *http.Response
+	res, err = c.httpClient.PostForm(submitUrl.String(), creds) //nolint:noctx
 	if err != nil {
 		return err
 	}
@@ -176,7 +178,13 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 }
 
 func (c *keycloakClient) parseForm(authUrl string) (*url.URL, url.Values, error) {
-	res, err := c.httpClient.Get(authUrl)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, authUrl, http.NoBody)
+	if err != nil {
+		return nil, url.Values{}, err
+	}
+
+	var res *http.Response
+	res, err = c.httpClient.Do(req)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -265,7 +273,7 @@ func (c keycloakClient) doMfa(submitUrl, mfaField string) error {
 	form := url.Values{}
 	form.Set(mfaField, c.MfaTokenCode)
 
-	res, err := c.httpClient.PostForm(submitUrl, form)
+	res, err := c.httpClient.PostForm(submitUrl, form) //nolint:noctx
 	if err != nil {
 		return err
 	}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"github.com/urfave/cli/v2"
@@ -31,7 +32,13 @@ func versionCheck(ghUrl, ver string) error {
 		return http.ErrUseLastResponse
 	}
 
-	res, err := http.Head(ghUrl) //nolint:gosec
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodHead, ghUrl, http.NoBody) //nolint:gosec
+	if err != nil {
+		return err
+	}
+
+	var res *http.Response
+	res, err = http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}

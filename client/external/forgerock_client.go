@@ -174,15 +174,14 @@ func (c *forgerockClient) parseBaseUrl() error {
 }
 
 // REF: https://backstage.forgerock.com/docs/am/6.5/authorization-guide/index.html#sec-rest-authentication.
-func (c *forgerockClient) auth(ctx context.Context) error {
+func (c *forgerockClient) auth(ctx context.Context) (err error) {
 	frAuthUrl := fmt.Sprintf("%s/json/realms/%s/authenticate", c.baseUrl.String(), c.realm)
 
 	switch c.MfaType {
 	case MfaTypeNone:
 		// no mfa ... require that someone explicitly requests no MFA, instead of this being the default case
-		if _, err := c.doAuth(ctx, frAuthUrl); err != nil {
-			return err
-		}
+		_, err = c.doAuth(ctx, frAuthUrl)
+		return
 	case MfaTypePush:
 		return c.authMfaPush(ctx, frAuthUrl)
 	case MfaTypeCode:
@@ -190,14 +189,12 @@ func (c *forgerockClient) auth(ctx context.Context) error {
 	default:
 		// attempt some type of MFA, push 1st, then code, if all else fails try no MFA auth and hope for the best
 		c.MfaType = MfaTypePush
-		if err := c.auth(ctx); err != nil && c.isNoFactorErr(err) {
+		if err = c.auth(ctx); err != nil && c.isNoFactorErr(err) {
 			c.MfaType = MfaTypeCode
 			if err = c.auth(ctx); err != nil && c.isNoFactorErr(err) {
 				c.MfaType = MfaTypeNone
 				// this may or may not be a good idea
 				return c.auth(ctx)
-			} else {
-				return err
 			}
 		} else {
 			return err
@@ -250,6 +247,7 @@ func (c *forgerockClient) authMfaPush(ctx context.Context, u string) error {
 	}
 }
 
+//nolint:gocognit // won't simplify
 func (c *forgerockClient) authMfaCode(ctx context.Context, u string) error {
 	qs := url.Values{}
 	qs.Set("authIndexType", "service")
@@ -262,15 +260,16 @@ func (c *forgerockClient) authMfaCode(ctx context.Context, u string) error {
 		}
 
 		if len(c.MfaTokenCode) < 1 {
-			if c.MfaTokenProvider != nil {
-				t, err := c.MfaTokenProvider()
-				if err != nil {
-					return err
-				}
-				c.MfaTokenCode = t
-			} else {
+			if c.MfaTokenProvider == nil {
 				return errMfaNotConfigured
 			}
+
+			var t string
+			t, err = c.MfaTokenProvider()
+			if err != nil {
+				return err
+			}
+			c.MfaTokenCode = t
 		}
 
 		body, err := c.handleMfaForm(data)

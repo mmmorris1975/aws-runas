@@ -115,6 +115,7 @@ func TestBaseClient_Roles(t *testing.T) {
 	})
 
 	t.Run("good", func(t *testing.T) {
+		//nolint:lll
 		data := `<someTag>arn:aws:iam::01234567890:role/mockRole1,arn:aws:iam::01234567890:saml-provider/mockPrincipal1</someTag>`
 		b64 := base64.StdEncoding.EncodeToString([]byte(data))
 		a := credentials.SamlAssertion(b64)

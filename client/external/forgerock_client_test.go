@@ -383,6 +383,7 @@ func mockForgerockHandler(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write(body)
 	case strings.HasSuffix(p, "/idpssoinit"):
 		// SAML assertion fetching URL
+		//nolint:lll
 		body := `
 <html>
 <head></head>
