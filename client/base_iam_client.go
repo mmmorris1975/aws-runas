@@ -5,6 +5,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	awscred "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
@@ -63,5 +65,9 @@ func (c *baseIamClient) CredentialsWithContext(ctx awscred.Context) (*credential
 }
 
 func (c *baseIamClient) ConfigProvider() client.ConfigProvider {
-	return c.session
+	// Don't simply return c.session, since that will only get the credentials which underpin the actual
+	// credentials we're looking for. Return a new session object with the credentials set to our internal
+	// AWS Credentials resource so the returned client.ConfigProvider will fetch the correct credentials.
+	cfg := c.session.ClientConfig(sts.ServiceName, new(aws.Config).WithCredentials(c.creds)).Config
+	return session.Must(session.NewSession(cfg))
 }
