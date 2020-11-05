@@ -287,9 +287,27 @@ func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.R
 
 func configureListener(addr string) (net.Listener, error) {
 	if strings.HasPrefix(addr, DefaultEc2ImdsAddr) {
-		// todo
-		//  using default EC2 IMDS address, need to configure a network interface (eww)
-		//  do drop privilege here too, since this requires root/admin authority
+		// DefaultEc2ImdsAddr requires that we setup the address on an interface. (eww, root/admin is required!)
+		// Under the covers, it relies on OS-specific commands, but it avoids a bunch of other ugliness to make
+		// things work (iptables for linux, not sure about others ... maybe the route command?)
+		iface, err := discoverLoopback()
+		if err != nil {
+			return nil, err
+		}
+
+		if err = addAddress(iface, DefaultEc2ImdsAddr+"/22"); err != nil {
+			return nil, err
+		}
+
+		var lsnr net.Listener
+		lsnr, err = net.Listen("tcp", addr)
+		if err != nil {
+			return nil, err
+		}
+
+		// drop privilege after configuring interface and binding to privileged port so we avoid running
+		// the rest of the process with elevated privileges
+		return lsnr, dropPrivileges()
 	}
 
 	return net.Listen("tcp", addr)
@@ -299,7 +317,7 @@ func cleanup(srv *http.Server) {
 	_ = srv.Shutdown(context.Background())
 
 	if os.Getuid() == 0 && strings.HasPrefix(srv.Addr, DefaultEc2ImdsAddr) {
-		// todo attempt DefaultEc2ImdsAddr teardown
+		_ = removeAddress(DefaultEc2ImdsAddr)
 	}
 }
 

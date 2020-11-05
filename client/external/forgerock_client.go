@@ -120,12 +120,12 @@ func (c *forgerockClient) SamlAssertionWithContext(ctx context.Context) (*creden
 		return nil, err
 	}
 
-	if err := c.samlRequest(ctx, u); err != nil {
+	if err = c.samlRequest(ctx, u); err != nil {
 		return nil, err
 	}
 
 	if c.saml == nil || len(*c.saml) < 1 {
-		if err := c.AuthenticateWithContext(ctx); err != nil {
+		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
 		}
 		return c.SamlAssertionWithContext(ctx)
