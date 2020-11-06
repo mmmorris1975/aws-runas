@@ -40,7 +40,7 @@ jobs:
 
   test:
     docker:
-      - image: "circleci/ruby:2.6-stretch"
+      - image: "circleci/ruby:2.7-buster"
 
     steps:
       - checkout
