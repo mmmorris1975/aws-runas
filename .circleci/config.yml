@@ -51,12 +51,14 @@ jobs:
       - attach_workspace:
           at: build
 
-      # This is only really useful for configuring IAM credentials.  The advanced config file setup
-      # required to test aws-runas can't be easily handled with the orb. Use non-default env var names
-      # to avoid confusing aws-runas when we're running the tests
+      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
+      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
+      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
+      # a similar configuration can be used locally and with CI
       - aws-cli/setup:
           skip-install-check: false
-          aws-region: AWS_DEFAULTREGION
+          configure-default-region: false
+          profile-name: circleci
           aws-access-key-id: AWS_ACCESSKEY
           aws-secret-access-key: AWS_SECRETKEY
 
