@@ -18,16 +18,9 @@ jobs:
       - run: golangci-lint run -v
 
   build:
-    #    docker:
-    #      - image: "cimg/go:1.15"
     executor:
       name: go/default
       tag: '1.15'
-
-    #    working_directory: /go/src/github.com/mmmorris1975/aws-runas
-
-    environment:
-      GO111MODULE: "on"
 
     steps:
       - checkout
@@ -38,10 +31,8 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go vet -tests=false ./...
-      #- run: go test -v ./...
       - go/test:
-          covermode: atomic
-          failfast: true
+          #covermode: atomic
           race: true
 
       - run: mkdir -p build
@@ -52,8 +43,6 @@ jobs:
           paths: aws-runas
 
   test:
-    #    docker:
-    #      - image: "cimg/ruby:2.7"
     executor:
       name: ruby/default
       tag: '2.7'

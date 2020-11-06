@@ -6,7 +6,7 @@ GOARCH ?= $(shell go env GOARCH)
 
 .PHONY: darwin linux windows release clean dist-clean test docs
 
-$(EXE): go.mod *.go lib/*/*.go
+$(EXE): go.mod *.go **/*.go
 	go build -v -ldflags '-X main.Version=$(VER)' -o $@
 
 release: $(EXE) darwin windows linux
