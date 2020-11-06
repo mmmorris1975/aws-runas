@@ -31,9 +31,9 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go vet -tests=false ./...
-      - go/test:
+      - go/test
           #covermode: atomic
-          race: true
+          #race: true
 
       - run: mkdir -p build
       - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
