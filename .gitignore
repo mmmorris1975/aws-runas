@@ -28,8 +28,7 @@ vendor/
 .history
 .DS_Store
 
-*.lock
-
+# Other stuff we probably don't want leaking out
 .aws/
 .bundle/
 .ca/
