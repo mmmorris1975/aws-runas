@@ -1,13 +1,13 @@
 require 'spec_helper'
 
-describe command ('aws-runas --help') do
-  its(:exit_status) { should eq 0 }
-  its(:stderr) { should match /^usage:\s+aws-runas/ }
+describe command('aws-runas --help') do
+    its(:exit_status) { should eq 0 }
+    its(:stdout) { should match /^USAGE:\s+aws-runas/m }
 end
 
 describe command ('aws-runas --version') do
   its(:exit_status) { should eq 0 }
-  its(:stderr) { should match /^\d+\.\d+\.\d+(-\d+-\w+)?/ }
+  its(:stdout) { should match /\d+\.\d+(\.\d+)?(-\d+-\w+)?/ }
 end
 
 describe command ('aws-runas -vu') do
