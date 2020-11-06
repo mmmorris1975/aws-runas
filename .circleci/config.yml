@@ -55,11 +55,12 @@ jobs:
           aws-region: AWS_DEFAULTREGION
           aws-access-key-id: AWS_ACCESSKEY
           aws-secret-access-key: AWS_SECRETKEY
-      - aws-cli/setup:
-          profile-name: circle-iam
-          configure-default-region: false
-          role-arn: arn:aws:iam::686784119290:role/aws-runas-testing
+#      - aws-cli/setup:
+#          profile-name: circle-iam
+#          configure-default-region: false
+#          role-arn: arn:aws:iam::686784119290:role/aws-runas-testing
 
+      - run: env
       - run: cat $HOME/.aws/config
       - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
       - run: mkdir -p /var/tmp/rspec
