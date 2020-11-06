@@ -60,8 +60,8 @@ jobs:
 #      - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
 #      - run: mkdir -p /var/tmp/rspec
       - ruby/install-deps
-      - ruby/rspec-test:
-          out-path: /var/tmp/rspec
+      - ruby/rspec-test
+#          out-path: /var/tmp/rspec
 #      - run:
 #          command: bundle exec rspec
 #          when: always
