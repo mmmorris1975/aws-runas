@@ -32,8 +32,6 @@ jobs:
       # specify any bash command here prefixed with `run: `
       - run: go vet -tests=false ./...
       - go/test
-          #covermode: atomic
-          #race: true
 
       - run: mkdir -p build
       - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
@@ -54,7 +52,8 @@ jobs:
           at: build
 
       # This is only really useful for configuring IAM credentials.  The advanced config file setup
-      # required to test aws-runas can't be easily handled with the orb.
+      # required to test aws-runas can't be easily handled with the orb. Use non-default env var names
+      # to avoid confusing aws-runas when we're running the tests
       - aws-cli/setup:
           skip-install-check: false
           aws-region: AWS_DEFAULTREGION

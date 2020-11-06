@@ -31,7 +31,7 @@ dist-clean: clean
 
 test: $(EXE)
 	mv $(EXE) build
-	go test -count 1 -v ./...
+	go test -race -count 1 -v ./...
 	bundle install
 	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
 
