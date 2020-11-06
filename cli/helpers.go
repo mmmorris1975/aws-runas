@@ -65,6 +65,14 @@ func checkProfileArgs(ctx *cli.Context, expectedArgs int) string {
 		next := ctx.Lineage()[1]
 		if next.NArg() >= expectedArgs {
 			profile = next.Args().First()
+
+			// the 1st arg of the parent context matches our current command name.  It's entirely
+			// possible that someone names a profile the same as the subcommand name, but we'll go
+			// on the assumption that what really happened is that the profile is coming in via an
+			// environment variable, and we should return and allow the env var to be used
+			if profile == ctx.Command.Name {
+				return ""
+			}
 		}
 	}
 	return profile

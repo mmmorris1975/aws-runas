@@ -102,7 +102,7 @@ func (p *samlRoleProvider) retrieve(ctx aws.Context) (*Credentials, error) {
 }
 
 func (p *samlRoleProvider) getAssumeRoleWithSamlInput() (*sts.AssumeRoleWithSAMLInput, error) {
-	if p.samlAssertion != nil && len(*p.samlAssertion) < 20 {
+	if p.samlAssertion == nil || len(*p.samlAssertion) < 20 {
 		return nil, errors.New("invalid SAML Assertion detected, check your local SAML and identity provider configuration")
 	}
 
