@@ -5,6 +5,7 @@ version: 2.1
 
 orbs:
   aws-cli: circleci/aws-cli@1.3.0
+  ruby: circleci/ruby@1.1.2
 
 jobs:
   lint:
@@ -48,22 +49,26 @@ jobs:
       - attach_workspace:
           at: build
 
-      #- aws-cli/install
+      # This is only really useful for configuring IAM credentials.  The advanced config file setup
+      # required to test aws-runas can't be easily handled with the orb.
       - aws-cli/setup:
           skip-install-check: false
           aws-region: AWS_DEFAULTREGION
           aws-access-key-id: AWS_ACCESSKEY
           aws-secret-access-key: AWS_SECRETKEY
 
-      - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
-      - run: mkdir -p /var/tmp/rspec
-      - run:
-          command: bundle exec rspec
-          when: always
-          environment:
+#      - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
+#      - run: mkdir -p /var/tmp/rspec
+      - ruby/install-deps
+      - ruby/rspec-test
+          out-path: /var/tmp/rspec
+#      - run:
+#          command: bundle exec rspec
+#          when: always
+#          environment:
 
-      - store_test_results:
-          path: /var/tmp/rspec
+#      - store_test_results:
+#          path: /var/tmp/rspec
 
 workflows:
   version: 2
