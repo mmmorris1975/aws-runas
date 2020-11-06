@@ -1,9 +1,11 @@
 require 'spec_helper'
 
+# let's leave AWS_SECURITY_TOKEN (legacy env var) out of the credentials, and see if anyone complains
+
 shared_examples_for 'iam session credentials' do |profile|
     describe command ("aws-runas -vs #{profile}") do
       its(:exit_status) { should eq 0 }
-      #its(:stdout) { should match /^export AWS_REGION='.+'$/ }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
@@ -13,7 +15,7 @@ shared_examples_for 'iam session credentials' do |profile|
 
     describe command ("aws-runas -vse #{profile}") do
       its(:exit_status) { should eq 0 }
-      #its(:stdout) { should match /^export AWS_REGION='.+'$/ }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stderr) { should match /^Credentials will expire on/ }
     end
 
@@ -32,7 +34,7 @@ end
 shared_examples_for 'iam session credentials with short duration' do |profile, duration|
     describe command ("aws-runas -vsr #{duration} #{profile}") do
       its(:exit_status) { should eq 0 }
-      #its(:stdout) { should match /^export AWS_REGION='.+'$/ }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
@@ -45,7 +47,7 @@ end
 shared_examples_for 'iam session credentials with long duration' do |profile, duration|
     describe command ("aws-runas -vsr #{duration} #{profile}") do
       its(:exit_status) { should eq 0 }
-      #its(:stdout) { should match /^export AWS_REGION='.+'$/ }
+      its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
       its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
       its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
