@@ -1,6 +1,6 @@
 require 'spec_helper'
 
-# let's leave AWS_SECURITY_TOKEN (legacy env var) out of the credentials, and see if anyone complains
+# let's leave AWS_SECURITY_TOKEN (legacy env var) out of the credentials and see if anyone complains
 
 shared_examples_for 'iam session credentials' do |profile|
     describe command ("aws-runas -vs #{profile}") do
@@ -65,6 +65,10 @@ shared_examples_for 'iam session credentials with invalid duration' do |profile,
 end
 
 describe 'tests using IAM user session token credentials' do
+    after(:each) do
+        FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_session_token_*")))
+    end
+
     describe 'with default duration' do
         describe 'using profile command argument' do
           it_should_behave_like 'iam session credentials', 'circleci'

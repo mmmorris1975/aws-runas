@@ -1,0 +1,10 @@
+[default]
+session_token_duration = 20m
+credentials_duration = 15m
+
+[profile circleci]
+region = us-east-2
+
+[profile iam-role]
+source_profile = circleci
+role_arn = arn:aws:iam::686784119290:role/aws-runas-testing

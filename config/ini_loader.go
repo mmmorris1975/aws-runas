@@ -35,12 +35,12 @@ func (l *iniLoader) Config(profile string, sources ...interface{}) (*AwsConfig, 
 
 	s, err := lookupProfile(file, profile)
 	if err != nil {
-		return nil, err
+		return c, err
 	}
 
 	pc := new(AwsConfig)
 	if err := s.MapTo(pc); err != nil {
-		return nil, err
+		return c, err
 	}
 	c.MergeIn(pc)
 
