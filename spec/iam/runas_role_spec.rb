@@ -114,7 +114,7 @@ describe 'tests using IAM user role credentials' do
 
             describe 'using ARN profile environment variable' do
                 before(:all) do
-                  ENV['AWS_PROFILE']='arn:aws:iam::686784119290:role/iam-role'
+                  ENV['AWS_PROFILE']='arn:aws:iam::686784119290:role/aws-runas-testing'
                 end
 
                 after(:all) do
