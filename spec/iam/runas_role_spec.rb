@@ -84,11 +84,6 @@ describe 'tests using IAM user role credentials' do
             it_should_behave_like 'iam role credentials', 'iam-role'
         end
 
-# fixme - using ARN profile requires that we supply credentials in the environment or default profile
-#         describe 'using ARN profile command argument' do
-#             it_should_behave_like 'iam role credentials', 'arn:aws:iam::686784119290:role/aws-runas-testing'
-#         end
-
         describe 'using named profile environment variable' do
             before(:all) do
               ENV['AWS_PROFILE']='iam-role'
@@ -101,17 +96,34 @@ describe 'tests using IAM user role credentials' do
             it_should_behave_like 'iam role credentials'
         end
 
-#         describe 'using ARN profile environment variable' do
-#             before(:all) do
-#               ENV['AWS_PROFILE']='arn:aws:iam::686784119290:role/iam-role'
-#             end
-#
-#             after(:all) do
-#               ENV.delete('AWS_PROFILE')
-#             end
-#
-#             it_should_behave_like 'iam role credentials'
-#         end
+        # using ARN profile requires that we supply credentials in the environment or default profile
+        if ENV.fetch("CIRCLECI", false).to_s === "true"; then
+            before(:all) do
+                ENV['AWS_ACCESS_KEY_ID'] = ENV['AWS_ACCESSKEY']
+                ENV['AWS_SECRET_ACCESS_KEY'] = ENV['AWS_SECRETKEY']
+            end
+
+            after(:all) do
+                ENV.delete('AWS_ACCESS_KEY_ID')
+                ENV.delete('AWS_SECRET_ACCESS_KEY')
+            end
+
+            describe 'using ARN profile command argument' do
+                it_should_behave_like 'iam role credentials', 'arn:aws:iam::686784119290:role/aws-runas-testing'
+            end
+
+            describe 'using ARN profile environment variable' do
+                before(:all) do
+                  ENV['AWS_PROFILE']='arn:aws:iam::686784119290:role/iam-role'
+                end
+
+                after(:all) do
+                  ENV.delete('AWS_PROFILE')
+                end
+
+                it_should_behave_like 'iam role credentials'
+            end
+        end
     end
 
     describe 'with non-default duration' do
