@@ -28,7 +28,7 @@ func dropPrivileges() (err error) {
 	logger.Debugf("Error checking sudo env vars: %v", err)
 
 	uid, gid, err = stat(defaults.SharedConfigFilename())
-	if err != nil {
+	if err == nil {
 		logger.Debugf("Found UID/GID from cache directory ownership: UID: %d, GID: %d", uid, gid)
 		return setPrivileges(uid, gid)
 	}

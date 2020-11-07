@@ -38,7 +38,6 @@ shared_examples_for 'iam role credentials' do |profile|
     describe command ("aws-runas -Ev #{profile} true") do
       its(:exit_status) { should eq 0 }
       its(:stderr) { should match /\s+ASSUME ROLE CREDENTIALS: \{AccessKeyID:\s*\w+/ }
-      #its(:stderr) { should_not match /\s+DEBUG found loopback interface:\s+/ } # message no longer used
       its(:stderr) { should_not match /\s+DEBUG ECS credential endpoint set to http:\/\/127\.0\.0\.1:\d{4,5}\/credentials$/ }
       its(:stderr) { should match /\s+DEBUG WRAPPED CMD: \[true\]$/ }
     end
