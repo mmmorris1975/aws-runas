@@ -55,5 +55,6 @@ func doCommand(cmd []string) error {
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr
 
+	logger.Debugf("configuring interface with command: %s", c.String())
 	return c.Run()
 }

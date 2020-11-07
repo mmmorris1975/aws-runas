@@ -2,15 +2,17 @@
 
 package metadata
 
-import "net"
+import (
+	"net"
+)
 
 func addAddress(iface *net.Interface, cidrAddr string) error {
-	ip, mask, err := net.ParseCIDR(cidrAddr)
+	ip, subnet, err := net.ParseCIDR(cidrAddr)
 	if err != nil {
 		return err
 	}
 
-	cmd := []string{"netsh", "interface", "ipv4", "add", "address", iface.Name, ip.String(), mask.To4().String()}
+	cmd := []string{"netsh", "interface", "ipv4", "add", "address", iface.Name, ip.String(), net.IP(subnet.Mask).String()}
 	return doCommand(cmd)
 }
 
