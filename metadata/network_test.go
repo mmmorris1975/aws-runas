@@ -16,8 +16,13 @@ func Test_findInterfaceByAddress(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		i, err := findInterfaceByAddress(net.IPv6loopback.String())
 		if err != nil {
-			t.Error(err)
-			return
+			// try IPv4 loopback before failing, since the IPv6 address fails in CI
+			// never understood why this isn't a language constant like IPv6 loopback
+			i, err = findInterfaceByAddress("127.0.0.1")
+			if err != nil {
+				t.Error(err)
+				return
+			}
 		}
 
 		if i == nil {
