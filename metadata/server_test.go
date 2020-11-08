@@ -275,12 +275,36 @@ func TestMetadataCredentialService_ec2CredHandler(t *testing.T) {
 
 func TestMetadataCredentialService_ecsCredHandler(t *testing.T) {
 	mcs := mockMetadataCredentialService()
+	mcs.options = &Options{Path: DefaultEcsCredPath}
 
 	t.Run("good", func(t *testing.T) {
 		mcs.awsClient = new(mockAwsClient)
 
 		rec := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/", http.NoBody)
+		req := httptest.NewRequest(http.MethodGet, mcs.options.Path, http.NoBody)
+
+		mcs.ecsCredHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		buf := make([]byte, rec.Body.Len())
+		_, _ = rec.Body.Read(buf)
+
+		var creds map[string]string
+		if err := json.Unmarshal(buf, &creds); err != nil {
+			t.Error(err)
+			return
+		}
+	})
+
+	t.Run("with profile", func(t *testing.T) {
+		mcs.awsClient = new(mockAwsClient)
+
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, mcs.options.Path+"/my_profile", http.NoBody)
 
 		mcs.ecsCredHandler(rec, req)
 

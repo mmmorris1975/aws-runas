@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
@@ -98,8 +99,9 @@ func (s *metadataCredentialService) Run() error {
 	mux.HandleFunc(ec2CredPath, logHandler(s.ec2CredHandler))
 
 	if len(s.options.Path) > 0 {
-		// configure ECS http handler with logging
+		// configure ECS http handlers with logging
 		mux.HandleFunc(s.options.Path, logHandler(s.ecsCredHandler))
+		mux.HandleFunc(s.options.Path+`/`, logHandler(s.ecsCredHandler))
 
 		// print ECS credential endpoint message
 		logger.Infof("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
@@ -141,8 +143,9 @@ func (s *metadataCredentialService) RunHeadless() error {
 	mux.HandleFunc(ec2CredPath, s.ec2CredHandler)
 
 	if len(s.options.Path) > 0 {
-		// configure ECS http handler without request logging
+		// configure ECS http handlers without request logging
 		mux.HandleFunc(s.options.Path, s.ecsCredHandler)
+		mux.HandleFunc(s.options.Path+`/`, s.ecsCredHandler)
 		logger.Debugf("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
 	} else if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
 		logger.Debugf("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
@@ -175,23 +178,13 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 			return
 		}
 
-		profile := string(buf[:n])
-		cfg, err := s.configResolver.Config(profile)
+		s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		cl, err := s.clientFactory.Get(cfg)
-		if err != nil {
-			// fixme - this could possibly be an auth error trying to initialize a saml or oidc client
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-
-		s.awsConfig = cfg
-		s.awsClient = cl
-
-		logger.Debugf("updated profile to %s", cfg.ProfileName)
+		logger.Debugf("updated profile to %s", s.awsConfig.ProfileName)
 		_, _ = w.Write(nil)
 	} else {
 		if s.awsConfig == nil || len(s.awsConfig.ProfileName) < 1 {
@@ -236,13 +229,54 @@ func (s *metadataCredentialService) ec2CredHandler(w http.ResponseWriter, r *htt
 	}
 }
 
-func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, _ *http.Request) {
-	creds, err := s.awsClient.Credentials()
+// Extend the behavior of the ECS credential endpoint so it accepts additional path elements beyond the
+// base path configured for the handler.  Any extra path information is interpreted as a profile name
+// for fetching credentials.  The "standard" behavior still works as expected, and calls to the base path
+// will return credentials for the profile specified at startup, or the profile configured via the /profile
+// endpoint.  But now something like: http://127.0.0.1:54321/credentials/my_profile will get credentials
+// for 'my_profile', instead of the "global" profile.  This will enable folks to set the
+// AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable to context-specific profiles without needing to
+// run dedicated services for each profile.
+func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *http.Request) {
+	var creds *credentials.Credentials
+	var err error
+
+	if s.options.Path == r.URL.Path {
+		// use "global" profile
+		creds, err = s.awsClient.Credentials()
+	} else {
+		// use requested profile
+		// I can't think of a good way to avoid needing to resolve the profile configuration and client
+		// with each request (aside from implementing an internal mapping of profile to config and client,
+		// which feels like a premature optimization at this point)
+		parts := strings.Split(r.URL.Path, `/`)
+		profile := parts[len(parts)-1]
+
+		var cl client.AwsClient
+		var cfg *config.AwsConfig
+		cfg, cl, err = s.getConfigAndClient(profile)
+
+		// this really only exists to facilitate testing, since clientFactory is a concrete type
+		// ideally, we make it an interface and mock it, but for the 1 case we need it for, this is sufficient
+		if cfg.SamlProvider == "mock" {
+			cl = s.awsClient
+		}
+
+		if err != nil {
+			logger.Errorf("Client fetch: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		creds, err = cl.Credentials()
+	}
+
 	if err != nil {
 		logger.Errorf("Credentials: %v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
+
 	ecsCreds, _ := creds.ECS() // error would only ever be json marshal failure
 	logger.Debugf("ECS CREDS: %s", ecsCreds)
 
@@ -283,6 +317,21 @@ func (s *metadataCredentialService) listRolesHandler(w http.ResponseWriter, _ *h
 func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.Request) {
 	// todo
 	http.NotFound(w, r)
+}
+
+func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
+	cfg, err = s.configResolver.Config(profile)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	cl, err = s.clientFactory.Get(cfg)
+	if err != nil {
+		// fixme - this could possibly be an auth error trying to initialize a saml or oidc client
+		return nil, nil, err
+	}
+
+	return cfg, cl, err
 }
 
 func configureListener(addr string) (net.Listener, error) {
