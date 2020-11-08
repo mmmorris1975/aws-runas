@@ -86,6 +86,7 @@ jobs:
   test-windows:
     executor:
       name: windows/default
+      shell: bash.exe # required to make ruby orb work
 
     steps:
       - checkout
