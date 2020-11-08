@@ -7,6 +7,7 @@ orbs:
   go: circleci/go@1.5.0
   aws-cli: circleci/aws-cli@1.3.0
   ruby: circleci/ruby@1.1.2
+  windows: circleci/windows@2.4.0
 
 jobs:
   lint:
@@ -65,13 +66,26 @@ jobs:
             - aws-runas*
             - aws_credentials
 
-  test:
+  test-linux:
     executor:
       name: ruby/default
       tag: '2.7'
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: build
+
+      - ruby/install-deps
+      - ruby/rspec-test
+
+  test-windows:
+    executor:
+      name: windows/default
 
     steps:
       - checkout
@@ -93,6 +107,9 @@ workflows:
       - build:
           requires:
             - preflight
-      - test:
+      - test-linux:
+          requires:
+            - build
+      - test-windows:
           requires:
             - build
