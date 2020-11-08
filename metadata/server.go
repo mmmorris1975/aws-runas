@@ -256,16 +256,16 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 		var cfg *config.AwsConfig
 		cfg, cl, err = s.getConfigAndClient(profile)
 
-		// this really only exists to facilitate testing, since clientFactory is a concrete type
-		// ideally, we make it an interface and mock it, but for the 1 case we need it for, this is sufficient
-		if cfg.SamlProvider == "mock" {
-			cl = s.awsClient
-		}
-
 		if err != nil {
 			logger.Errorf("Client fetch: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		}
+
+		// this really only exists to facilitate testing, since clientFactory is a concrete type
+		// ideally, we make it an interface and mock it, but for the 1 case we need it for, this is sufficient
+		if cfg.SamlProvider == "mock" {
+			cl = s.awsClient
 		}
 
 		creds, err = cl.Credentials()
