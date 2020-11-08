@@ -88,6 +88,9 @@ jobs:
       name: windows/default
       shell: bash.exe # required to make ruby orb work
 
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+
     steps:
       - checkout
 
