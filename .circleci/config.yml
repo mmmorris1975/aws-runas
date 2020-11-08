@@ -17,7 +17,7 @@ jobs:
       - checkout
       - run: golangci-lint run -v
 
-  build:
+  preflight:
     executor:
       name: go/default
       tag: '1.15'
@@ -33,34 +33,51 @@ jobs:
       - run: go vet -tests=false ./...
       - go/test
 
-      - run: mkdir -p build
-      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
-
-      - persist_to_workspace:
-          root: build
-          paths: aws-runas
-
-  test:
+  build:
     executor:
-      name: ruby/default
-      tag: '2.7'
+      name: go/default
+      tag: '1.15'
+
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
 
     steps:
       - checkout
 
-      - attach_workspace:
-          at: build
+      - run: mkdir -p build
+      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
+      - run: GOOS=windows go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas.exe
 
-      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
-      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
-      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
-      # a similar configuration can be used locally and with CI
+        # This is only really useful for configuring base IAM credentials, as the advanced config file setup
+        # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
+        # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
+        # a similar configuration can be used locally and with CI
       - aws-cli/setup:
           skip-install-check: false
           configure-default-region: false
           profile-name: circleci
           aws-access-key-id: AWS_ACCESSKEY
           aws-secret-access-key: AWS_SECRETKEY
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - aws-runas*
+            - aws_credentials
+
+  test:
+    executor:
+      name: ruby/default
+      tag: '2.7'
+
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: build
 
       - ruby/install-deps
       - ruby/rspec-test
@@ -72,7 +89,10 @@ workflows:
   build_and_test:
     jobs:
       - lint
+      - preflight
       - build
+          requires:
+            - preflight
       - test:
           requires:
             - build
