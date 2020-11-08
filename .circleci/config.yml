@@ -86,10 +86,10 @@ jobs:
   test-windows:
     executor:
       name: windows/default
-      shell: bash.exe # required to make ruby orb work
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+      AWS_CONFIG_FILE: testdata/aws_config
 
     steps:
       - checkout
@@ -97,8 +97,16 @@ jobs:
       - attach_workspace:
           at: build
 
-      - ruby/install-deps
-      - ruby/rspec-test
+        # was hoping to run the serverspec tests, but things were weird on Windows, just
+        # run a few commands instead just to verify things happen without blowing up
+      - run: build/aws-runas --help
+      - run: build/aws-runas -lv iam-role
+      - run: build/aws-runas -mv iam-role
+      - run: build/aws-runas -uv
+      - run: build/aws-runas -v --whoami circleci
+      - run: build/aws-runas -vse iam-role
+      - run: build/aws-runas -v --whoami iam-role
+      - run: build/aws-runas -ve iam-role
 
 workflows:
   version: 2
