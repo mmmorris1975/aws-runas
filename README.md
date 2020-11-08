@@ -14,6 +14,8 @@ Version 3.0 is a ground-up rewrite of the tool with a number of behind the scene
 to make interacting with AWS role credentials easier
   * Added support for Web Identity credentials in addition to SAML credentials
   * The ECS metadata credential service is now feature-comparable to the EC2 metadata credential service
+  * The ECS metadata credential service allows dynamic profile credential fetching when a profile name gets appended
+    to the service endpoint URL path
   * The EC2 metadata credential service supports using a custom port, which permits the service to run without
     root/admin privileges. Running using the "traditional" 169.254.169.254 address is still supported.
   * The EC2 metadata credential service now supports the IMDSv2 token path, and still handles IMDSv1
