@@ -1,6 +1,7 @@
 package external
 
 import (
+	"bytes"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -129,6 +130,8 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 }
 
 func (c *baseClient) handleSamlResponse(r io.Reader) error {
+	b, _ := ioutil.ReadAll(r)
+	r = bytes.NewReader(b)
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
 		return err
@@ -253,12 +256,14 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	data.Set("code_verifier", verifier)
 	data.Set("grant_type", "authorization_code")
 	data.Set("redirect_uri", c.RedirectUri)
+	sb := bytes.NewBufferString(data.Encode())
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ep, http.NoBody)
+	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ep, sb)
 	if err != nil {
 		return nil, err
 	}
 	req.PostForm = data
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var res *http.Response
 	res, err = c.httpClient.Do(req)
