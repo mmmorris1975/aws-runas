@@ -2,17 +2,21 @@ require 'spec_helper'
 require_relative 'shared_examples'
 
 describe 'okta saml credentials' do
+    before(:all) do
+        # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
+        ENV['SAML_PASSWORD'] = ENV['OKTA_PASSWORD']
+        ENV['WEB_PASSWORD'] = ENV['OKTA_PASSWORD']
+    end
+
     after(:each) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_saml_role_*")))
     end
 
     after(:all) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_runas.cookies")))
+        ENV.delete('SAML_PASSWORD')
+        ENV.delete('WEB_PASSWORD')
     end
-
-    # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
-    ENV['SAML_PASSWORD'] = ENV['OKTA_PASSWORD']
-    ENV['WEB_PASSWORD'] = ENV['OKTA_PASSWORD']
 
     describe 'with command line config' do
         if ENV.has_key?('OKTA_SAML_URL')
@@ -41,7 +45,7 @@ describe 'okta saml credentials' do
     end
 end
 
-describe 'OKTA web identity credentials' do
+describe 'okta web identity credentials' do
     after(:each) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_web_role_*")))
     end

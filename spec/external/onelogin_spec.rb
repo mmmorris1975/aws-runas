@@ -2,17 +2,21 @@ require 'spec_helper'
 require_relative 'shared_examples'
 
 describe 'onelogin saml credentials' do
+    before(:all) do
+        # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
+        ENV['SAML_PASSWORD'] = ENV['ONELOGIN_PASSWORD']
+        ENV['WEB_PASSWORD'] = ENV['ONELOGIN_PASSWORD']
+    end
+
     after(:each) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_saml_role_*")))
     end
 
     after(:all) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_runas.cookies")))
+        ENV.delete('SAML_PASSWORD')
+        ENV.delete('WEB_PASSWORD')
     end
-
-    # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
-    ENV['SAML_PASSWORD'] = ENV['ONELOGIN_PASSWORD']
-    ENV['WEB_PASSWORD'] = ENV['ONELOGIN_PASSWORD']
 
     describe 'with command line config' do
         if ENV.has_key?('ONELOGIN_SAML_URL')
