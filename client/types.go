@@ -4,6 +4,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/client"
 	awscred "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/identity"
@@ -54,4 +55,5 @@ type Options struct {
 	CredentialInputProvider func(string, string) (string, string, error)
 	Logger                  shared.Logger
 	AwsLogLevel             aws.LogLevelType
+	CommandCredentials      *config.AwsCredentials
 }

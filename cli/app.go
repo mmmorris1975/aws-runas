@@ -60,6 +60,7 @@ var App = &cli.App{
 		password := ctx.String(passwordFlag.Name)
 		cmdlineCreds.SamlPassword = password
 		cmdlineCreds.WebIdentityPassword = password
+		opts.CommandCredentials = cmdlineCreds
 
 		return nil
 	},

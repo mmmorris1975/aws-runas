@@ -41,8 +41,9 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  rspec-core
   rspec_junit_formatter (~> 0.3.0)
   serverspec (~> 2.41.0)
 
 BUNDLED WITH
-   2.1.2
+   2.1.4

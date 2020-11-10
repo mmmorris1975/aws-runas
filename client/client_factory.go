@@ -70,12 +70,15 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		SharedConfigState: session.SharedConfigEnable,
 	}
 
+	f.options.Logger.Debugf("CLIENT CONFIG: %+v", cfg)
+
 	if len(cfg.SamlUrl) > 0 {
 		creds, err := f.resolver.Credentials(cfg.SamlUrl)
 		if err != nil {
 			// non-fatal error, just set empty creds
 			creds = new(config.AwsCredentials)
 		}
+		creds.MergeIn(f.options.CommandCredentials)
 
 		return f.samlClient(cfg, creds, opts), nil
 	}
@@ -86,6 +89,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 			// non-fatal error, just set empty creds
 			creds = new(config.AwsCredentials)
 		}
+		creds.MergeIn(f.options.CommandCredentials)
 
 		return f.webClient(cfg, creds, opts), nil
 	}

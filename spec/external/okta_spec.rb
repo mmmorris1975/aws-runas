@@ -5,7 +5,6 @@ describe 'okta saml credentials' do
     before(:all) do
         # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
         ENV['SAML_PASSWORD'] = ENV['OKTA_PASSWORD']
-        ENV['WEB_PASSWORD'] = ENV['OKTA_PASSWORD']
     end
 
     after(:each) do
@@ -15,7 +14,6 @@ describe 'okta saml credentials' do
     after(:all) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_runas.cookies")))
         ENV.delete('SAML_PASSWORD')
-        ENV.delete('WEB_PASSWORD')
     end
 
     describe 'with command line config' do
@@ -46,6 +44,11 @@ describe 'okta saml credentials' do
 end
 
 describe 'okta web identity credentials' do
+    before(:all) do
+        # !!!! command to test is echoed in the output, don't put password as a cmdline option !!!!
+        ENV['WEB_PASSWORD'] = ENV['OKTA_PASSWORD']
+    end
+
     after(:each) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_web_role_*")))
     end
@@ -53,6 +56,8 @@ describe 'okta web identity credentials' do
     after(:all) do
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_runas.cookies")))
         FileUtils.rm_f(Pathname.glob(Pathname($config_path).join(".aws_runas_identity_token.cache")))
+
+        ENV.delete('WEB_PASSWORD')
     end
 
     describe 'with command line config' do
