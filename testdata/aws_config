@@ -8,3 +8,25 @@ region = us-east-2
 [profile iam-role]
 source_profile = circleci
 role_arn = arn:aws:iam::686784119290:role/aws-runas-testing
+
+[profile okta-oidc]
+source_profile = circleci
+role_arn = arn:aws:iam::686784119290:role/aws-runas-testing
+web_identity_username = okta@aws-runas.test.local
+web_identity_redirect_uri = app:/callback
+
+[profile okta-saml]
+source_profile = circleci
+role_arn = arn:aws:iam::686784119290:role/aws-runas-testing
+saml_username = okta@aws-runas.test.local
+
+[profile onelogin-oidc]
+source_profile = circleci
+role_arn = arn:aws:iam::686784119290:role/aws-runas-testing
+web_identity_username = onelogin.aws-runas
+web_identity_redirect_uri = http://localhost:12345/login
+
+[profile onelogin-saml]
+source_profile = circleci
+role_arn = arn:aws:iam::686784119290:role/aws-runas-testing
+saml_username = onelogin.aws-runas
