@@ -226,10 +226,10 @@ func TestEnvLoader_Credentials(t *testing.T) {
 
 	t.Run("all", func(t *testing.T) {
 		_ = os.Setenv("SAML_PASSWORD", "mockSamlPassword")
-		_ = os.Setenv("WEB_IDENTITY_PASSWORD", "mockWebIdPassword")
+		_ = os.Setenv("WEB_PASSWORD", "mockWebIdPassword")
 		defer func() {
 			_ = os.Unsetenv("SAML_PASSWORD")
-			_ = os.Unsetenv("WEB_IDENTITY_PASSWORD")
+			_ = os.Unsetenv("WEB_PASSWORD")
 		}()
 
 		c, err := DefaultEnvLoader.Credentials("")

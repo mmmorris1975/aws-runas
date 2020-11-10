@@ -21,6 +21,7 @@ var (
 		CredentialInputProvider: helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput,
 		Logger:                  new(shared.DefaultLogger),
 		AwsLogLevel:             aws.LogOff,
+		CommandCredentials:      new(config.AwsCredentials),
 	}
 )
 

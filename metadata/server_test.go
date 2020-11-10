@@ -488,6 +488,7 @@ func mockMetadataCredentialService() *metadataCredentialService {
 	factoryOptions.EnableCache = false
 	factoryOptions.AwsLogLevel = aws.LogOff
 	factoryOptions.Logger = new(shared.DefaultLogger)
+	factoryOptions.CommandCredentials = new(config.AwsCredentials)
 
 	mcs.clientFactory = client.NewClientFactory(mcs.configResolver, factoryOptions)
 
