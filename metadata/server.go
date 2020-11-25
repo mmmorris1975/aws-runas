@@ -422,6 +422,11 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 		return nil, nil, err
 	}
 
+	// ewww, testing-specific code in actual code
+	if cfg.SamlProvider == "mock" && s.awsClient != nil {
+		return cfg, s.awsClient, nil
+	}
+
 	cl, err = s.clientFactory.Get(cfg)
 	if err != nil {
 		return cfg, nil, err

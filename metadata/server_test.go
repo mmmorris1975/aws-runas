@@ -91,6 +91,7 @@ func TestMetadataCredentialService_profileHandler(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, profilePath, bytes.NewBufferString("mockUpdate"))
 
+		mcs.awsClient = new(mockAwsClient)
 		mcs.profileHandler(rec, req)
 
 		if rec.Code != http.StatusOK {
