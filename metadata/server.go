@@ -12,7 +12,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/metadata/templates"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -388,11 +387,16 @@ func (s *metadataCredentialService) listRolesHandler(w http.ResponseWriter, _ *h
 }
 
 func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.Request) {
-	// don't clear username or password after completing this handler, we may need them later (mfa)
+	// don't clear username or password from config state after completing this handler, we may need them later (mfa)
 	defer r.Body.Close()
 	var err error
 
-	_ = r.ParseMultipartForm(10240)
+	if err = r.ParseForm(); err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
 	user := r.Form.Get("username")
 	pass := r.Form.Get("password")
 	s.awsConfig.SamlUsername = user
@@ -422,23 +426,23 @@ func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.R
 func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	defer func() { s.awsConfig.MfaCode = "" }()
+	var err error
 
-	mfa, err := ioutil.ReadAll(r.Body)
+	if err = r.ParseForm(); err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	s.awsConfig.MfaCode = r.Form.Get("mfa")
+	s.awsClient, err = s.clientFactory.Get(s.awsConfig)
 	if err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
 	}
 
-	s.awsConfig.MfaCode = string(mfa)
-	cl, err := s.clientFactory.Get(s.awsConfig)
-	if err != nil {
-		s.options.Logger.Errorf("%v", err)
-		http.Error(w, err.Error(), http.StatusUnauthorized)
-		return
-	}
-
-	if _, err = cl.Credentials(); err != nil {
+	if _, err = s.awsClient.Credentials(); err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return

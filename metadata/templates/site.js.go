@@ -53,10 +53,17 @@ roleList.addEventListener("change", function () {
 				document.getElementById("roles").value = profile;
 			} else if (this.status === 401) {
 				let o = JSON.parse(this.responseText);
-				if (o.username) {
-					document.getElementById("username").value = o.username;
+				if (o.username || o.username === "") {
+					let elems = document.getElementById("cred-form").elements;
+					elems["username"].value = o.username;
+
 					//document.getElementById("cred-type").value = o.type;
 					document.getElementById("cred-modal").style.display = 'block';
+
+					elems["username"].focus();
+					if (o.username.length > 0) {
+						elems["password"].focus();
+					}
 				} else {
 					//document.getElementById("mfa-type").value = o.type;
 					document.getElementById("mfa-modal").style.display = 'block';
@@ -88,12 +95,11 @@ document.getElementById("mfa-close").addEventListener("click", function () {
 	document.getElementById("mfa-modal").style.display = "none";
 });
 
-document.getElementById('mfa-form').addEventListener('submit', function (evt) {
+let mfa_form = document.getElementById('mfa-form');
+mfa_form.addEventListener('submit', function (evt) {
 	evt.preventDefault();
 
-	const code = document.getElementById('mfa').value;
 	const xhr = new XMLHttpRequest();
-
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
 			if (this.status === 200) {
@@ -109,9 +115,12 @@ document.getElementById('mfa-form').addEventListener('submit', function (evt) {
 			}
 		}
 	};
-	
+
 	xhr.open("POST", "{{.mfa_ep}}");
-	xhr.send(code);
+	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+	let data = new URLSearchParams(new FormData(mfa_form));
+	xhr.send(data.toString());
 	return false;
 });
 
@@ -122,16 +131,12 @@ document.getElementById("cred-close").addEventListener("click", function () {
 let cred_form = document.getElementById('cred-form'); 
 cred_form.addEventListener('submit', function (evt) {
 	evt.preventDefault();
-	new FormData(cred_form); // fires formdata event
-});
 
-cred_form.addEventListener('formdata', function (evt) {
 	const xhr = new XMLHttpRequest();
-
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
-			document.getElementById("username").value = "";
-			document.getElementById("password").value = "";
+			document.getElementById("cred-form").elements["username"].value = "";
+			document.getElementById("cred-form").elements["password"].value = "";
 
 			if (this.status === 200) {
 				document.getElementById("cred-modal").style.display = 'none';
@@ -143,9 +148,12 @@ cred_form.addEventListener('formdata', function (evt) {
 			}
 		}
 	};
-	
+
 	xhr.open("POST", "{{.auth_ep}}");
-	xhr.send(evt.formData);
+	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+	let data = new URLSearchParams(new FormData(cred_form));
+	xhr.send(data.toString());
 	return false;
 });
 
