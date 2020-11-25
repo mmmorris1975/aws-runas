@@ -80,7 +80,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.samlClient(cfg, creds, opts), nil
+		return f.samlClient(cfg, creds, opts)
 	}
 
 	if len(cfg.WebIdentityUrl) > 0 {
@@ -91,7 +91,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.webClient(cfg, creds, opts), nil
+		return f.webClient(cfg, creds, opts)
 	}
 
 	if len(cfg.RoleArn) > 0 {
@@ -101,7 +101,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 	return f.sessionClient(cfg, opts), nil
 }
 
-func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) AwsClient {
+func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring SAML client")
 
@@ -143,7 +143,10 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		baseCl.samlClient.SetCookieJar(cookieJar)
 
 		logger.Debugf("fetching initial SAML assertion")
-		saml, _ := baseCl.samlClient.SamlAssertion()
+		saml, err := baseCl.samlClient.SamlAssertion()
+		if err != nil {
+			return nil, err
+		}
 		baseCl.roleProvider.SamlAssertion(saml)
 
 		ses.Config.Credentials = awscred.NewCredentials(baseCl.roleProvider)
@@ -163,7 +166,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		logger.Debugf("configuring assume role client as role client")
 		roleCl := NewAssumeRoleClient(ses, roleCfg)
 		roleCl.ident = baseCl.samlClient
-		return roleCl
+		return roleCl, nil
 	}
 
 	logger.Debugf("no jump role found, only configuring SAML client")
@@ -173,10 +176,10 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 	logger.Debugf("fetching initial SAML assertion")
 	saml, _ := cl.samlClient.SamlAssertion()
 	cl.roleProvider.SamlAssertion(saml)
-	return cl
+	return cl, nil
 }
 
-func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) AwsClient {
+func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Web Identity client")
 
@@ -221,7 +224,10 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		baseCl.webClient.SetCookieJar(cookieJar)
 
 		logger.Debugf("fetching initial Web Identity token")
-		tokBytes, _ := baseCl.FetchToken(aws.BackgroundContext()) // fixme - handle error (reauth?)
+		tokBytes, err := baseCl.FetchToken(aws.BackgroundContext())
+		if err != nil {
+			return nil, err
+		}
 		idToken := credentials.OidcIdentityToken(tokBytes)
 		baseCl.roleProvider.WebIdentityToken(&idToken)
 
@@ -242,13 +248,13 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		logger.Debugf("configuring assume role client as role client")
 		roleCl := NewAssumeRoleClient(ses, roleCfg)
 		roleCl.ident = baseCl.webClient
-		return roleCl
+		return roleCl, nil
 	}
 
 	logger.Debugf("no jump role found, only configuring Web Identity client")
 	cl := NewWebRoleClient(ses, cfg.WebIdentityUrl, webCfg)
 	cl.webClient.SetCookieJar(cookieJar)
-	return cl
+	return cl, nil
 }
 
 func (f *Factory) roleClient(cfg *config.AwsConfig, opts session.Options) *assumeRoleClient {

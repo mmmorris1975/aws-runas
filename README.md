@@ -17,17 +17,19 @@ to make interacting with AWS role credentials easier
   * The ECS metadata credential service allows dynamic profile credential fetching when a profile name gets appended
     to the service endpoint URL path
   * The EC2 metadata credential service supports using a custom port, which permits the service to run without
-    root/admin privileges. Running using the "traditional" 169.254.169.254 address is still supported.
+    root/admin privileges. Running using the "traditional" 169.254.169.254 address is still supported, but will always
+    require elevated privileges for configuring the IP address on a network interface, and running on a privileged port.
   * The EC2 metadata credential service now supports the IMDSv2 token path, and still handles IMDSv1
   * Use a baked-in SSM session client to remove the requirement to install the AWS ssm session plugin, a CLI option
     is provided if use of the plugin is necessary or desired.
   * Add support for SSH over SSM sessions in the build-in client, and via the plugin
   * More coherent and expansive use of subcommands in the CLI to make separation of the various functions in the tool
     clearer. (See Usage section below)
+  * Integration/functional tests now include testing SAML and Web Identity functionality with external public IdPs
+    (currently Okta and Onelogin)
 
 Version 3.0 TODO list (in no particular order)
   * Add the web interface for the EC2 and ECS metadata credential service
-  * Working integration/functional tests
   * Enhancements and fixes from collected feedback
   * Possibly add support for other SAML and OIDC identity provider
   * Smarter bash (and other popular *nix shell) completion support

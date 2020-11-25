@@ -9,8 +9,10 @@ import (
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
+	"github.com/mmmorris1975/aws-runas/metadata/templates"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -18,6 +20,7 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"text/template"
 )
 
 const (
@@ -26,6 +29,7 @@ const (
 
 	ec2CredPath   = "/latest/meta-data/iam/security-credentials/"
 	authPath      = "/auth"
+	mfaPath       = "/mfa"
 	profilePath   = "/profile"
 	listRolesPath = "/list-roles"
 	refreshPath   = "/refresh"
@@ -82,16 +86,20 @@ func (s *metadataCredentialService) Addr() net.Addr {
 }
 
 func (s *metadataCredentialService) Run() error {
-	// todo set these to web-aware providers
-	s.clientOptions.MfaInputProvider = nil
-	s.clientOptions.CredentialInputProvider = nil
+	s.clientOptions.MfaInputProvider = func() (string, error) {
+		return "", NewWebMfaRequiredError()
+	}
+
+	s.clientOptions.CredentialInputProvider = func(_ string, _ string) (string, string, error) {
+		return "", "", NewWebAuthenticationError()
+	}
 
 	s.clientFactory = client.NewClientFactory(s.configResolver, s.clientOptions)
 
-	// todo setup all handlers with logging
 	mux := http.NewServeMux()
-	// mux.HandleFunc("/", nil)
+	mux.HandleFunc("/", logHandler(s.rootHandler))
 	mux.HandleFunc(authPath, logHandler(s.authHandler))
+	mux.HandleFunc(mfaPath, logHandler(s.mfaHandler))
 	mux.HandleFunc(profilePath, logHandler(s.profileHandler))
 	mux.HandleFunc(listRolesPath, logHandler(s.listRolesHandler))
 	mux.HandleFunc(refreshPath, logHandler(s.refreshHandler))
@@ -166,6 +174,32 @@ func (s *metadataCredentialService) RunHeadless() error {
 	return srv.Serve(s.listener)
 }
 
+func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.Request) {
+	switch r.URL.Path {
+	case "/", "/index.html", "index.htm":
+		w.Header().Set("Content-Type", "text/html")
+		_, _ = w.Write([]byte(templates.IndexHtml))
+	case "/site.js":
+		params := map[string]string{
+			"profile_ep": profilePath,
+			"roles_ep":   listRolesPath,
+			"auth_ep":    authPath,
+			"mfa_ep":     mfaPath,
+		}
+
+		tmpl := template.Must(template.New("").Parse(templates.SiteJs))
+		w.Header().Set("Content-Type", "application/javascript")
+		if err := tmpl.Execute(w, params); err != nil {
+			logger.Errorf("error executing template: %v", err)
+		}
+	case "/site.css":
+		w.Header().Set("Content-Type", "text/css")
+		_, _ = w.Write([]byte(templates.SiteCss))
+	default:
+		http.NotFound(w, r)
+	}
+}
+
 func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -180,6 +214,49 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 
 		s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
 		if err != nil {
+			// this could possibly be an auth error trying to initialize a saml or oidc client
+			if e, ok := err.(WebAuthenticationError); ok {
+				m := make(map[string]string)
+				switch e.Error() {
+				case "MFA":
+				default:
+					m["username"] = ""
+					if s.awsConfig != nil {
+						m["username"] = s.awsConfig.SamlUsername
+					}
+				}
+
+				body, _ := json.Marshal(m)
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
+				_, _ = w.Write(body)
+				return
+			}
+
+			logger.Errorf("Credentials: %v", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		// fetch credentials after switching profile to see if we should re-auth while we have their attention
+		// fixme - there's a few other places we call Credentials() and they should probably follow this process too
+		if _, err = s.awsClient.Credentials(); err != nil {
+			if e, ok := err.(WebAuthenticationError); ok {
+				m := make(map[string]string)
+				switch e.Error() {
+				case "MFA":
+				default:
+					m["username"] = s.awsConfig.SamlUsername
+				}
+
+				body, _ := json.Marshal(m)
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
+				_, _ = w.Write(body)
+				return
+			}
+
+			logger.Errorf("Credentials: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
@@ -241,10 +318,10 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 	var creds *credentials.Credentials
 	var err error
 
-	if s.options.Path == r.URL.Path {
-		// use "global" profile
-		creds, err = s.awsClient.Credentials()
-	} else {
+	cl := s.awsClient
+	cfg := s.awsConfig
+
+	if s.options.Path != r.URL.Path {
 		// use requested profile
 		// I can't think of a good way to avoid needing to resolve the profile configuration and client
 		// with each request (aside from implementing an internal mapping of profile to config and client,
@@ -252,25 +329,21 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 		parts := strings.Split(r.URL.Path, `/`)
 		profile := parts[len(parts)-1]
 
-		var cl client.AwsClient
-		var cfg *config.AwsConfig
 		cfg, cl, err = s.getConfigAndClient(profile)
-
 		if err != nil {
 			logger.Errorf("Client fetch: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		// this really only exists to facilitate testing, since clientFactory is a concrete type
-		// ideally, we make it an interface and mock it, but for the 1 case we need it for, this is sufficient
+		// this really only exists to facilitate testing, since clientFactory is a concrete type.
+		// Ideally, we make it an interface and mock it, but for the 1 case we need it for, this is sufficient
 		if cfg.SamlProvider == "mock" {
 			cl = s.awsClient
 		}
-
-		creds, err = cl.Credentials()
 	}
 
+	creds, err = cl.Credentials()
 	if err != nil {
 		logger.Errorf("Credentials: %v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -315,8 +388,63 @@ func (s *metadataCredentialService) listRolesHandler(w http.ResponseWriter, _ *h
 }
 
 func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.Request) {
-	// todo
-	http.NotFound(w, r)
+	// don't clear username or password after completing this handler, we may need them later (mfa)
+	defer r.Body.Close()
+	var err error
+
+	_ = r.ParseMultipartForm(10240)
+	user := r.Form.Get("username")
+	pass := r.Form.Get("password")
+	s.awsConfig.SamlUsername = user
+	s.awsConfig.WebIdentityUsername = user
+
+	creds := new(config.AwsCredentials)
+	creds.SamlPassword = pass
+	creds.WebIdentityPassword = pass
+
+	s.clientOptions.CommandCredentials = creds
+	s.awsClient, err = s.clientFactory.Get(s.awsConfig)
+	if err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if _, err = s.awsClient.Credentials(); err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	_, _ = w.Write(nil)
+}
+
+func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+	defer func() { s.awsConfig.MfaCode = "" }()
+
+	mfa, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	s.awsConfig.MfaCode = string(mfa)
+	cl, err := s.clientFactory.Get(s.awsConfig)
+	if err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	if _, err = cl.Credentials(); err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusUnauthorized)
+		return
+	}
+
+	_, _ = w.Write(nil)
 }
 
 func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
@@ -327,8 +455,7 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 
 	cl, err = s.clientFactory.Get(cfg)
 	if err != nil {
-		// fixme - this could possibly be an auth error trying to initialize a saml or oidc client
-		return nil, nil, err
+		return cfg, nil, err
 	}
 
 	return cfg, cl, err
