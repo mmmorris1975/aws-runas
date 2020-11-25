@@ -214,49 +214,14 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
 		if err != nil {
 			// this could possibly be an auth error trying to initialize a saml or oidc client
-			if e, ok := err.(WebAuthenticationError); ok {
-				m := make(map[string]string)
-				switch e.Error() {
-				case "MFA":
-				default:
-					m["username"] = ""
-					if s.awsConfig != nil {
-						m["username"] = s.awsConfig.SamlUsername
-					}
-				}
-
-				body, _ := json.Marshal(m)
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
-				_, _ = w.Write(body)
-				return
-			}
-
-			logger.Errorf("Credentials: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.handleAuthError(err, w)
 			return
 		}
 
 		// fetch credentials after switching profile to see if we should re-auth while we have their attention
 		// fixme - there's a few other places we call Credentials() and they should probably follow this process too
 		if _, err = s.awsClient.Credentials(); err != nil {
-			if e, ok := err.(WebAuthenticationError); ok {
-				m := make(map[string]string)
-				switch e.Error() {
-				case "MFA":
-				default:
-					m["username"] = s.awsConfig.SamlUsername
-				}
-
-				body, _ := json.Marshal(m)
-				w.WriteHeader(http.StatusUnauthorized)
-				w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
-				_, _ = w.Write(body)
-				return
-			}
-
-			logger.Errorf("Credentials: %v", err)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			s.handleAuthError(err, w)
 			return
 		}
 
@@ -318,7 +283,6 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 	var err error
 
 	cl := s.awsClient
-	cfg := s.awsConfig
 
 	if s.options.Path != r.URL.Path {
 		// use requested profile
@@ -328,6 +292,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 		parts := strings.Split(r.URL.Path, `/`)
 		profile := parts[len(parts)-1]
 
+		var cfg *config.AwsConfig
 		cfg, cl, err = s.getConfigAndClient(profile)
 		if err != nil {
 			logger.Errorf("Client fetch: %v", err)
@@ -463,6 +428,29 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 	}
 
 	return cfg, cl, err
+}
+
+func (s *metadataCredentialService) handleAuthError(err error, w http.ResponseWriter) {
+	if e, ok := err.(WebAuthenticationError); ok {
+		m := make(map[string]string)
+		switch e.Error() {
+		case "MFA":
+		default:
+			m["username"] = ""
+			if s.awsConfig != nil {
+				m["username"] = s.awsConfig.SamlUsername
+			}
+		}
+
+		body, _ := json.Marshal(m)
+		w.WriteHeader(http.StatusUnauthorized)
+		w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
+		_, _ = w.Write(body)
+		return
+	}
+
+	logger.Errorf("handleAuthError: %v", err)
+	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
 func configureListener(addr string) (net.Listener, error) {
