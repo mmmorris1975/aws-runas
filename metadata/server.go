@@ -26,13 +26,14 @@ const (
 	DefaultEcsCredPath = "/credentials"
 	DefaultEc2ImdsAddr = "169.254.169.254"
 
-	ec2CredPath   = "/latest/meta-data/iam/security-credentials/"
-	authPath      = "/auth"
-	mfaPath       = "/mfa"
-	profilePath   = "/profile"
-	listRolesPath = "/list-roles"
-	refreshPath   = "/refresh"
-	imdsTokenPath = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
+	imdsTokenPath  = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
+	ec2CredPath    = "/latest/meta-data/iam/security-credentials/"
+	authPath       = "/auth"
+	mfaPath        = "/mfa"
+	profilePath    = "/profile"
+	newProfilePath = "/profile/custom"
+	listRolesPath  = "/list-roles"
+	refreshPath    = "/refresh"
 )
 
 var (
@@ -104,6 +105,7 @@ func (s *metadataCredentialService) Run() error {
 	mux.HandleFunc(refreshPath, logHandler(s.refreshHandler))
 	mux.HandleFunc(imdsTokenPath, logHandler(s.imdsV2TokenHandler))
 	mux.HandleFunc(ec2CredPath, logHandler(s.ec2CredHandler))
+	mux.HandleFunc(newProfilePath, logHandler(s.customProfileHandler))
 
 	if len(s.options.Path) > 0 {
 		// configure ECS http handlers with logging
@@ -219,7 +221,6 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		}
 
 		// fetch credentials after switching profile to see if we should re-auth while we have their attention
-		// fixme - there's a few other places we call Credentials() and they should probably follow this process too
 		if _, err = s.awsClient.Credentials(); err != nil {
 			s.handleAuthError(err, w)
 			return
@@ -258,8 +259,7 @@ func (s *metadataCredentialService) ec2CredHandler(w http.ResponseWriter, r *htt
 	} else {
 		creds, err := s.awsClient.Credentials()
 		if err != nil {
-			logger.Errorf("Credentials: %v", err)
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			s.handleAuthError(err, w)
 			return
 		}
 		ec2Creds, _ := creds.EC2() // error would only ever be json marshal failure
@@ -309,8 +309,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 
 	creds, err = cl.Credentials()
 	if err != nil {
-		logger.Errorf("Credentials: %v", err)
-		http.Error(w, err.Error(), http.StatusUnauthorized)
+		s.handleAuthError(err, w)
 		return
 	}
 
@@ -414,6 +413,20 @@ func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	_, _ = w.Write(nil)
+}
+
+func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, r *http.Request) {
+	defer r.Body.Close()
+
+	// todo
+	switch r.Method {
+	case http.MethodGet:
+	case http.MethodPost:
+	case http.MethodPut:
+	default:
+		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
+		return
+	}
 }
 
 func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {

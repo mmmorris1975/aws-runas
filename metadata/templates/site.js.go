@@ -57,7 +57,6 @@ roleList.addEventListener("change", function () {
 					let elems = document.getElementById("cred-form").elements;
 					elems["username"].value = o.username;
 
-					//document.getElementById("cred-type").value = o.type;
 					document.getElementById("cred-modal").style.display = 'block';
 
 					elems["username"].focus();
@@ -65,7 +64,6 @@ roleList.addEventListener("change", function () {
 						elems["password"].focus();
 					}
 				} else {
-					//document.getElementById("mfa-type").value = o.type;
 					document.getElementById("mfa-modal").style.display = 'block';
 					document.getElementById("mfa").focus();
 				}
@@ -135,8 +133,9 @@ cred_form.addEventListener('submit', function (evt) {
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
-			document.getElementById("cred-form").elements["username"].value = "";
-			document.getElementById("cred-form").elements["password"].value = "";
+			let elems = document.getElementById("cred-form").elements;
+			elems["username"].value = "";
+			elems["password"].value = "";
 
 			if (this.status === 200) {
 				document.getElementById("cred-modal").style.display = 'none';
@@ -174,6 +173,64 @@ acc.addEventListener("click", function () {
     } else {
         panel.style.display = "block";
     }
+});
+
+let adv_form = document.getElementById('role-form');
+adv_form.addEventListener("submit", function() {
+	evt.preventDefault();
+
+	const xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (this.readyState === 4) {
+			if (this.status === 200) {
+				
+			} else {
+				console.log("advanced form POST returned " + this.status + ": " + this.responseText);
+			}
+		}
+	};
+
+	xhr.open("POST", "{{.auth_ep}}");
+	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+	let data = new URLSearchParams(new FormData(adv_form));
+	xhr.send(data.toString());
+	return false;
+});
+
+document.getElementById("info").addEventListener("click", function() {
+	const xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (this.readyState === 4) {
+			if (this.status === 200) {
+				
+			} else {
+				console.log("advanced form GET returned " + this.status + ": " + this.responseText);
+			}
+		}
+	};
+
+	xhr.open("GET", "{{.auth_ep}}");
+});
+
+document.getElementById("save-as").addEventListener("click", function() {
+	const xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (this.readyState === 4) {
+			if (this.status === 200) {
+				
+			} else {
+				console.log("advanced form PUT returned " + this.status + ": " + this.responseText);
+			}
+		}
+	};
+
+	xhr.open("PUT", "{{.auth_ep}}");
+	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+
+	let data = new URLSearchParams(new FormData(adv_form));
+	xhr.send(data.toString());
+	return false;
 });
 
 function updateAdvancedForm(obj) {
