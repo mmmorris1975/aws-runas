@@ -20,11 +20,13 @@ const IndexHtml = `
                     title="Profile name of the role to use">
                 <option value="">-- Select Role --</option>
             </select>
+<!--
             <button type="button" id="refresh" name="refresh"
                     class="w3-button w3-round-large w3-red w3-border w3-border-red w3-hover-white w3-margin-left"
                     title="Force a refresh of the credentials, may require re-authentication or re-entering MFA code">
                 Refresh Now
             </button>
+-->
         </div>
         <button type="button"
                 class="w3-button w3-padding-small w3-block w3-left-align w3-white w3-hover-white accordion"
@@ -89,11 +91,13 @@ const IndexHtml = `
                        title="OIDC redirect URI required for Web Identity roles">
             </div>
             <span class="w3-left w3-margin-top w3-margin-bottom">
+<!--
             <button type="button" id="info"
                     class="w3-button w3-round-large w3-blue w3-border w3-border-blue w3-hover-white w3-margin-right"
                     title="Show details about current configuration">
                 Info
             </button>
+-->
             <button type="button" id="save-as"
                     class="w3-button w3-round-large w3-blue w3-border w3-border-blue w3-hover-white w3-margin-right"
                     title="Save configuration to new profile">

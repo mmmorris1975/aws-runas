@@ -41,6 +41,8 @@ roleList.addEventListener("change", function () {
 
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
+			document.getElementById("roles").value = profile;
+
 			if (this.status === 200) {
 				// data is empty, and message element doesn't exist
 				// maybe we should just kill this? we can only know the AWS STS cred expiration, but I can already
@@ -50,7 +52,25 @@ roleList.addEventListener("change", function () {
 				//let data = this.responseText;
 				//document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
 
-				document.getElementById("roles").value = profile;
+				let o = JSON.parse(this.responseText);
+				document.getElementById("role-arn").value = o.role_arn;
+				document.getElementById("source-profile").value = o.source_profile;
+				document.getElementById("external-id").value = o.external_id;
+				document.getElementById("auth-url").value = o.auth_url;
+				document.getElementById("username").value = o.username;
+				document.getElementById("jump-role").value = o.jump_role;
+				document.getElementById("client-id").value = o.client_id;
+				document.getElementById("redirect-uri").value = o.redirect_uri;
+
+				if (o.client_id !== "") {
+					document.getElementById("adv-type").value = "oidc";
+				} else if (o.auth_url !== "") {
+					document.getElementById("adv-type").value = "saml";
+				} else {
+					document.getElementById("adv-type").value = "iam";
+				}
+
+				updateAdvancedForm(document.getElementById("adv-type").selectedOptions);
 			} else if (this.status === 401) {
 				let o = JSON.parse(this.responseText);
 				if (o.username || o.username === "") {
@@ -78,11 +98,13 @@ roleList.addEventListener("change", function () {
 	return false
 })
 
+/*
 document.getElementById("refresh").addEventListener("click", function () {
     // todo - handle profile credential refresh
     // maybe this dies too? it can only ever handle AWS STS creds, and will never
     // refresh/handle an external auth provider session
 })
+*/
 
 let advType = document.getElementById("adv-type")
 advType.addEventListener("change", function () {
@@ -176,7 +198,7 @@ acc.addEventListener("click", function () {
 });
 
 let adv_form = document.getElementById('role-form');
-adv_form.addEventListener("submit", function() {
+adv_form.addEventListener("submit", function(evt) {
 	evt.preventDefault();
 
 	const xhr = new XMLHttpRequest();
@@ -190,7 +212,7 @@ adv_form.addEventListener("submit", function() {
 		}
 	};
 
-	xhr.open("POST", "{{.auth_ep}}");
+	xhr.open("POST", "{{.custom_ep}}");
 	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
 	let data = new URLSearchParams(new FormData(adv_form));
@@ -198,6 +220,7 @@ adv_form.addEventListener("submit", function() {
 	return false;
 });
 
+/*
 document.getElementById("info").addEventListener("click", function() {
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
@@ -212,6 +235,7 @@ document.getElementById("info").addEventListener("click", function() {
 
 	xhr.open("GET", "{{.auth_ep}}");
 });
+*/
 
 document.getElementById("save-as").addEventListener("click", function() {
 	const xhr = new XMLHttpRequest();
@@ -225,7 +249,7 @@ document.getElementById("save-as").addEventListener("click", function() {
 		}
 	};
 
-	xhr.open("PUT", "{{.auth_ep}}");
+	xhr.open("PUT", "{{.custom_ep}}");
 	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
 	let data = new URLSearchParams(new FormData(adv_form));

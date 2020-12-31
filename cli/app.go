@@ -271,7 +271,7 @@ func runEcsSvc(profile string) error {
 
 	ep := fmt.Sprintf("http://%s%s", mcs.Addr().String(), in.Path)
 	_ = os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", ep)
-	go mcs.RunHeadless() //nolint:errcheck
+	go mcs.RunNoApi() //nolint:errcheck
 	return nil
 }
 

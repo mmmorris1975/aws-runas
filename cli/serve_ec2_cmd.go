@@ -25,7 +25,7 @@ var ec2Cmd = &cli.Command{
 	ArgsUsage:   "[profile_name]",
 	Description: ec2CmdDesc,
 
-	Flags: []cli.Flag{ec2PortFlag},
+	Flags: []cli.Flag{ec2PortFlag, headlessFlag},
 
 	Action: func(ctx *cli.Context) error {
 		profile, _, err := resolveConfig(ctx, 0)
@@ -58,6 +58,7 @@ var ec2Cmd = &cli.Command{
 			Profile:     profile,
 			Logger:      log,
 			AwsLogLevel: opts.AwsLogLevel,
+			Headless:    ctx.Bool(headlessFlag.Name),
 		}
 
 		mcs, err := metadata.NewMetadataCredentialService(addr, in)

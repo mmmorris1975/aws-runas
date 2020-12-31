@@ -119,7 +119,8 @@ func TestMetadataCredentialService_profileHandler(t *testing.T) {
 		buf := make([]byte, rec.Body.Len())
 		_, _ = rec.Body.Read(buf)
 
-		if string(buf) != cfg.ProfileName {
+		// expect something that resembles a json object
+		if !bytes.HasPrefix(buf, []byte(`{`)) || !bytes.HasSuffix(buf, []byte(`}`)) {
 			t.Error("profile retrieval failed")
 		}
 	})

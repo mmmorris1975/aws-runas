@@ -9,3 +9,11 @@ var serveCmd = &cli.Command{
 	ArgsUsage:   " ", // this hides the default '[arguments...]' help text output, since we don't use command args here
 	Subcommands: []*cli.Command{ec2Cmd, ecsCmd},
 }
+
+var headlessFlag = &cli.BoolFlag{
+	Name:        "headless",
+	Aliases:     []string{"H"},
+	Usage:       "Do not require use of browser",
+	Value:       false,
+	DefaultText: "",
+}

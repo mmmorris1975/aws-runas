@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
@@ -45,6 +46,7 @@ type Options struct {
 	Profile     string
 	Logger      shared.Logger
 	AwsLogLevel aws.LogLevelType
+	Headless    bool
 }
 
 type metadataCredentialService struct {
@@ -123,14 +125,16 @@ func (s *metadataCredentialService) Run() error {
 		logger.Infof("Access the web interface at http://%s and select a profile to begin", s.listener.Addr().String())
 	}
 
-	// install web-aware credential and mfa handlers after calling profileHandler() so that initial prompting for
-	// missing authentication information is sent to the command line during startup.
-	s.clientOptions.MfaInputProvider = func() (string, error) {
-		return "", NewWebMfaRequiredError()
-	}
+	if !s.options.Headless {
+		// install web-aware credential and mfa handlers after calling profileHandler() so that initial prompting for
+		// missing authentication information is sent to the command line during startup.
+		s.clientOptions.MfaInputProvider = func() (string, error) {
+			return "", NewWebMfaRequiredError()
+		}
 
-	s.clientOptions.CredentialInputProvider = func(_ string, _ string) (string, string, error) {
-		return "", "", NewWebAuthenticationError()
+		s.clientOptions.CredentialInputProvider = func(_ string, _ string) (string, string, error) {
+			return "", "", NewWebAuthenticationError()
+		}
 	}
 
 	srv := new(http.Server)
@@ -141,7 +145,7 @@ func (s *metadataCredentialService) Run() error {
 	return srv.Serve(s.listener)
 }
 
-func (s *metadataCredentialService) RunHeadless() error {
+func (s *metadataCredentialService) RunNoApi() error {
 	s.clientOptions.MfaInputProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
 	s.clientOptions.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput
 
@@ -188,6 +192,7 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 			"roles_ep":   listRolesPath,
 			"auth_ep":    authPath,
 			"mfa_ep":     mfaPath,
+			"custom_ep":  newProfilePath,
 		}
 
 		tmpl := template.Must(template.New("").Parse(templates.SiteJs))
@@ -229,15 +234,37 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		}
 
 		logger.Debugf("updated profile to %s", s.awsConfig.ProfileName)
-		_, _ = w.Write(nil)
 	} else {
 		if s.awsConfig == nil || len(s.awsConfig.ProfileName) < 1 {
 			http.Error(w, "profile not set", http.StatusInternalServerError)
 			return
 		}
 		logger.Debugf("profile: %s", s.awsConfig.ProfileName)
-		_, _ = w.Write([]byte(s.awsConfig.ProfileName))
 	}
+
+	authUrl := s.awsConfig.SamlUrl
+	username := s.awsConfig.SamlUsername
+	if len(s.awsConfig.WebIdentityClientId) > 0 {
+		authUrl = s.awsConfig.WebIdentityUsername
+		username = s.awsConfig.WebIdentityUsername
+	}
+
+	profile := map[string]string{
+		"role_arn":     s.awsConfig.RoleArn,
+		"external_id":  s.awsConfig.ExternalId,
+		"auth_url":     authUrl,
+		"username":     username,
+		"jump_role":    s.awsConfig.JumpRoleArn,
+		"client_id":    s.awsConfig.WebIdentityClientId,
+		"redirect_uri": s.awsConfig.WebIdentityRedirectUri,
+	}
+
+	if s.awsConfig.SourceProfile() != nil {
+		profile["source_profile"] = s.awsConfig.SourceProfile().ProfileName
+	}
+
+	j, _ := json.Marshal(profile)
+	_, _ = w.Write(j)
 }
 
 func (s *metadataCredentialService) imdsV2TokenHandler(w http.ResponseWriter, r *http.Request) {
@@ -426,12 +453,56 @@ func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Re
 
 func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
+	var err error
 
-	// todo
+	if err = r.ParseForm(); err != nil {
+		s.options.Logger.Errorf("%v", err)
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	var newCred *config.AwsCredentials
+	newCfg := new(config.AwsConfig)
+	newCfg.RoleArn = r.Form.Get("role-arn")
+
+	switch r.Form.Get("adv-type") {
+	case "iam":
+		newCfg.ExternalId = r.Form.Get("external-id")
+		newCfg.SrcProfile = r.Form.Get("source-profile")
+	case "saml":
+		newCfg.SamlUrl = r.Form.Get("auth-url")
+		newCfg.SamlUsername = r.Form.Get("username")
+		newCfg.JumpRoleArn = r.Form.Get("jump-role")
+
+		newCred = new(config.AwsCredentials)
+		newCred.SamlPassword = r.Form.Get("password")
+	case "oidc":
+		newCfg.WebIdentityUrl = r.Form.Get("auth-url")
+		newCfg.WebIdentityUsername = r.Form.Get("username")
+		newCfg.WebIdentityClientId = r.Form.Get("client-id")
+		newCfg.WebIdentityRedirectUri = r.Form.Get("redirect-uri")
+		newCfg.JumpRoleArn = r.Form.Get("jump-role")
+
+		newCred = new(config.AwsCredentials)
+		newCred.WebIdentityPassword = r.Form.Get("password")
+	default:
+		http.Error(w, "Invalid Configuration Type", http.StatusBadRequest)
+		return
+	}
+
 	switch r.Method {
-	case http.MethodGet:
 	case http.MethodPost:
+		// update running config without persisting to config file
+		// clear ProfileName so we don't whack (or possibly use?) the cache for an existing profile
+		s.awsConfig.MergeIn(newCfg)
+		s.awsConfig.ProfileName = ""
+
+		if err = s.awsConfig.Validate(); err != nil {
+			http.Error(w, fmt.Sprintf("Invalid Configuration: %v", err), http.StatusBadRequest)
+			return
+		}
 	case http.MethodPut:
+		// todo - save as new profile in config file (switch to profile after save?)
 	default:
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return

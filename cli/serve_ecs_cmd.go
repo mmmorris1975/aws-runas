@@ -24,7 +24,7 @@ var ecsCmd = &cli.Command{
 	ArgsUsage:   "[profile_name]",
 	Description: ecsCmdDesc,
 
-	Flags: []cli.Flag{ecsPortFlag},
+	Flags: []cli.Flag{ecsPortFlag, headlessFlag},
 
 	Action: func(ctx *cli.Context) error {
 		profile, _, err := resolveConfig(ctx, 0)
@@ -58,6 +58,7 @@ var ecsCmd = &cli.Command{
 			Profile:     profile,
 			Logger:      log,
 			AwsLogLevel: opts.AwsLogLevel,
+			Headless:    ctx.Bool(headlessFlag.Name),
 		}
 
 		mcs, err := metadata.NewMetadataCredentialService(addr, in)
