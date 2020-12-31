@@ -267,7 +267,7 @@ func TestMetadataCredentialService_ec2CredHandler(t *testing.T) {
 
 		mcs.ec2CredHandler(rec, req)
 
-		if rec.Code != http.StatusUnauthorized {
+		if rec.Code != http.StatusInternalServerError {
 			t.Errorf("unexpected http status code: %d", rec.Code)
 			return
 		}
@@ -333,7 +333,7 @@ func TestMetadataCredentialService_ecsCredHandler(t *testing.T) {
 
 		mcs.ecsCredHandler(rec, req)
 
-		if rec.Code != http.StatusUnauthorized {
+		if rec.Code != http.StatusInternalServerError {
 			t.Errorf("unexpected http status code: %d", rec.Code)
 			return
 		}
