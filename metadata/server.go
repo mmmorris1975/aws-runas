@@ -86,14 +86,6 @@ func (s *metadataCredentialService) Addr() net.Addr {
 }
 
 func (s *metadataCredentialService) Run() error {
-	s.clientOptions.MfaInputProvider = func() (string, error) {
-		return "", NewWebMfaRequiredError()
-	}
-
-	s.clientOptions.CredentialInputProvider = func(_ string, _ string) (string, string, error) {
-		return "", "", NewWebAuthenticationError()
-	}
-
 	s.clientFactory = client.NewClientFactory(s.configResolver, s.clientOptions)
 
 	mux := http.NewServeMux()
@@ -129,6 +121,16 @@ func (s *metadataCredentialService) Run() error {
 		logger.Infof("Using initial profile '%s'", s.options.Profile)
 	} else {
 		logger.Infof("Access the web interface at http://%s and select a profile to begin", s.listener.Addr().String())
+	}
+
+	// install web-aware credential and mfa handlers after calling profileHandler() so that initial prompting for
+	// missing authentication information is sent to the command line during startup.
+	s.clientOptions.MfaInputProvider = func() (string, error) {
+		return "", NewWebMfaRequiredError()
+	}
+
+	s.clientOptions.CredentialInputProvider = func(_ string, _ string) (string, string, error) {
+		return "", "", NewWebAuthenticationError()
 	}
 
 	srv := new(http.Server)
@@ -283,6 +285,13 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 	var err error
 
 	cl := s.awsClient
+	if cl == nil {
+		cl, err = s.clientFactory.Get(s.awsConfig)
+		if err != nil {
+			s.handleAuthError(err, w)
+			return
+		}
+	}
 
 	if s.options.Path != r.URL.Path {
 		// use requested profile
