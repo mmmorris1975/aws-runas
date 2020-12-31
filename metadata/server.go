@@ -242,29 +242,33 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		logger.Debugf("profile: %s", s.awsConfig.ProfileName)
 	}
 
-	authUrl := s.awsConfig.SamlUrl
-	username := s.awsConfig.SamlUsername
-	if len(s.awsConfig.WebIdentityClientId) > 0 {
-		authUrl = s.awsConfig.WebIdentityUsername
-		username = s.awsConfig.WebIdentityUsername
+	_, _ = w.Write(marshalProfile(s.awsConfig))
+}
+
+func marshalProfile(cfg *config.AwsConfig) []byte {
+	authUrl := cfg.SamlUrl
+	username := cfg.SamlUsername
+	if len(cfg.WebIdentityClientId) > 0 {
+		authUrl = cfg.WebIdentityUsername
+		username = cfg.WebIdentityUsername
 	}
 
 	profile := map[string]string{
-		"role_arn":     s.awsConfig.RoleArn,
-		"external_id":  s.awsConfig.ExternalId,
+		"role_arn":     cfg.RoleArn,
+		"external_id":  cfg.ExternalId,
 		"auth_url":     authUrl,
 		"username":     username,
-		"jump_role":    s.awsConfig.JumpRoleArn,
-		"client_id":    s.awsConfig.WebIdentityClientId,
-		"redirect_uri": s.awsConfig.WebIdentityRedirectUri,
+		"jump_role":    cfg.JumpRoleArn,
+		"client_id":    cfg.WebIdentityClientId,
+		"redirect_uri": cfg.WebIdentityRedirectUri,
 	}
 
-	if s.awsConfig.SourceProfile() != nil {
-		profile["source_profile"] = s.awsConfig.SourceProfile().ProfileName
+	if cfg.SourceProfile() != nil {
+		profile["source_profile"] = cfg.SourceProfile().ProfileName
 	}
 
 	j, _ := json.Marshal(profile)
-	_, _ = w.Write(j)
+	return j
 }
 
 func (s *metadataCredentialService) imdsV2TokenHandler(w http.ResponseWriter, r *http.Request) {
