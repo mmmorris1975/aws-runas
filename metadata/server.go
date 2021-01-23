@@ -497,6 +497,15 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 	case "iam":
 		newCfg.ExternalId = r.Form.Get("external-id")
 		newCfg.SrcProfile = r.Form.Get("source-profile")
+
+		var sp *config.AwsConfig
+		sp, err = s.configResolver.Config(r.Form.Get("source-profile"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+
+		newCfg.SetSourceProfile(sp)
 	case "saml":
 		newCfg.SamlUrl = url
 		newCfg.SamlUsername = r.Form.Get("username")
@@ -529,6 +538,14 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 			http.Error(w, fmt.Sprintf("Invalid Configuration: %v", err), http.StatusBadRequest)
 			return
 		}
+
+		var cl client.AwsClient
+		cl, err = s.clientFactory.Get(s.awsConfig)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Invalid Configuration: %v", err), http.StatusBadRequest)
+			return
+		}
+		s.awsClient = cl
 	case http.MethodPut:
 		newCfg.ProfileName = r.Form.Get("profile-name")
 

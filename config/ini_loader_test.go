@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -279,7 +280,6 @@ func TestIniLoader_Profiles(t *testing.T) {
 }
 
 func TestIniLoader_SaveProfile(t *testing.T) {
-	// todo
 	tf, err := ioutil.TempFile(t.TempDir(), t.Name())
 	if err != nil {
 		t.Error(err)
@@ -308,7 +308,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 			return
 		}
 
-		if s := f.Section(cfg.ProfileName); s != nil {
+		if s := f.Section(fmt.Sprintf("profile %s", cfg.ProfileName)); s != nil {
 			if s.HasKey("saml_auth_url") || s.HasKey("web_identity_auth_url") {
 				t.Error("invalid profile returned")
 			}
@@ -319,7 +319,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 				return
 			}
 
-			if cfg.ProfileName != "iam" || cfg.RoleArn != "testrole" || cfg.ExternalId != "testiam" {
+			if cfg.RoleArn != "testrole" || cfg.ExternalId != "testiam" {
 				t.Error("data mismatch")
 			}
 		} else {
@@ -345,7 +345,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 			return
 		}
 
-		if s := f.Section(cfg.ProfileName); s != nil {
+		if s := f.Section(fmt.Sprintf("profile %s", cfg.ProfileName)); s != nil {
 			if s.HasKey("external_id") || s.HasKey("web_identity_auth_url") {
 				t.Error("invalid profile returned")
 			}
@@ -356,7 +356,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 				return
 			}
 
-			if cfg.ProfileName != "saml" || cfg.RoleArn != "testrole" || cfg.SamlUrl != "testsaml" {
+			if cfg.RoleArn != "testrole" || cfg.SamlUrl != "testsaml" {
 				t.Error("data mismatch")
 			}
 		} else {
@@ -384,7 +384,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 			return
 		}
 
-		if s := f.Section(cfg.ProfileName); s != nil {
+		if s := f.Section(fmt.Sprintf("profile %s", cfg.ProfileName)); s != nil {
 			if s.HasKey("external_id") || s.HasKey("saml_auth_url") {
 				t.Error("invalid profile returned")
 			}
@@ -395,7 +395,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 				return
 			}
 
-			if cfg.ProfileName != "oidc" || cfg.RoleArn != "testrole" || cfg.WebIdentityUrl != "testoidc" ||
+			if cfg.RoleArn != "testrole" || cfg.WebIdentityUrl != "testoidc" ||
 				cfg.WebIdentityClientId != "testclient" || cfg.WebIdentityRedirectUri != "app:/callback" {
 				t.Error("data mismatch")
 			}

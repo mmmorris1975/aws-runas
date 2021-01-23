@@ -32,13 +32,19 @@ type AwsConfig struct {
 	WebIdentityTokenFile   string        `ini:"web_identity_token_file,omitempty" env:"AWS_WEB_IDENTITY_TOKEN_FILE"`
 	WebIdentityClientId    string        `ini:"web_identity_client_id,omitempty" env:"WEB_IDENTITY_CLIENT_ID"`
 	WebIdentityRedirectUri string        `ini:"web_identity_redirect_uri,omitempty" env:"WEB_IDENTITY_REDIRECT_URI"`
-	ProfileName            string        // does not participate in value Marshal/Unmarshal, explicitly set
+	ProfileName            string        `ini:"-"` // does not participate in Marshal/Unmarshal, explicitly set
 	sourceProfile          *AwsConfig
 }
 
 // SourceProfile returns a resolved AwsConfig object for the SrcProfile field in the AwsConfig object.
 func (c *AwsConfig) SourceProfile() *AwsConfig {
 	return c.sourceProfile
+}
+
+// SetSourceProfile set the source profile fields for the configuration
+func (c *AwsConfig) SetSourceProfile(p *AwsConfig) {
+	c.sourceProfile = p
+	c.SrcProfile = p.ProfileName
 }
 
 // RoleCredentialDuration normalizes the selection of the Assume Role credential duration.  If the CredentialsDuration

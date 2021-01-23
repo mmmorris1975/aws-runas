@@ -164,7 +164,7 @@ func (l *iniLoader) SaveProfile(cfg *AwsConfig) error {
 		return err
 	}
 
-	if err = f.Section(cfg.ProfileName).ReflectFrom(cfg); err != nil {
+	if err = f.Section(fmt.Sprintf("profile %s", cfg.ProfileName)).ReflectFrom(cfg); err != nil {
 		return err
 	}
 
