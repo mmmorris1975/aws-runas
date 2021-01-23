@@ -206,7 +206,7 @@ adv_form.addEventListener("submit", function(evt) {
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
 			if (this.status === 200) {
-				
+				// todo - anything?
 			} else {
 				console.log("advanced form POST returned " + this.status + ": " + this.responseText);
 			}
@@ -222,11 +222,18 @@ adv_form.addEventListener("submit", function(evt) {
 });
 
 document.getElementById("save-as").addEventListener("click", function() {
+	document.getElementById("profile-modal").style.display = 'block';
+	document.getElementById("profile-name").focus();
+});
+
+document.getElementById("profile-form").addEventListener("submit", function(evt) {
+	evt.preventDefault();
+
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
 			if (this.status === 200) {
-				
+				document.getElementById("profile-modal").style.display = 'none';
 			} else {
 				console.log("advanced form PUT returned " + this.status + ": " + this.responseText);
 			}
@@ -237,8 +244,14 @@ document.getElementById("save-as").addEventListener("click", function() {
 	xhr.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
 
 	let data = new URLSearchParams(new FormData(adv_form));
+	data.append("profile-name", document.getElementById("profile-name").value);
+
 	xhr.send(data.toString());
 	return false;
+});
+
+document.getElementById("profile-close").addEventListener("click", function () {
+	document.getElementById("profile-modal").style.display = "none";
 });
 
 function updateAdvancedForm(obj, val) {

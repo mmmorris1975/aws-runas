@@ -520,7 +520,19 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 			return
 		}
 	case http.MethodPut:
+		name := r.Form.Get("profile-name")
+
+		if len(name) < 1 {
+			http.Error(w, "Invalid profile name", http.StatusBadRequest)
+			return
+		}
+
 		// todo - save as new profile in config file (switch to profile after save?)
+		logger.Warningf("%s => %+v", name, newCfg)
+
+		if newCred != nil {
+			logger.Warningf("%s => %+v", name, newCred)
+		}
 	default:
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return

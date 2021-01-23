@@ -87,4 +87,9 @@ label {
     min-width: 14em;
     max-width: 16em;
 }
+
+#profile-prompt {
+	min-width: 18em;
+	max-width: 20em;
+}
 `

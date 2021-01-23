@@ -91,13 +91,6 @@ const IndexHtml = `
                        title="OIDC redirect URI required for Web Identity roles">
             </div>
             <span class="w3-left w3-margin-top w3-margin-bottom">
-<!--
-            <button type="button" id="info"
-                    class="w3-button w3-round-large w3-blue w3-border w3-border-blue w3-hover-white w3-margin-right"
-                    title="Show details about current configuration">
-                Info
-            </button>
--->
             <button type="button" id="save-as"
                     class="w3-button w3-round-large w3-blue w3-border w3-border-blue w3-hover-white w3-margin-right"
                     title="Save configuration to new profile">
@@ -164,6 +157,22 @@ const IndexHtml = `
             <input id="cred-type" name="cred-type" type="hidden" value="saml">
             <button type="submit" class="w3-btn w3-round w3-block w3-margin-top cred-submit">
                 Login
+            </button>
+        </form>
+    </div>
+</div>
+<div id="profile-modal" class="w3-modal">
+    <div id="profile-prompt" class="w3-card-4 w3-padding w3-white w3-modal-content">
+        <span id="profile-close" class="w3-button w3-hover-red w3-display-topright" title="Close">&times;</span>
+        <br>
+        <form id="profile-form" method="post">
+            <fieldset>
+                <legend>Enter Profile Name</legend>
+                <label for="profile-name" style="width: auto; margin-right: 1em;"><b>Name</b></label>
+                <input id="profile-name" name="profile-name" type="text" required class="w3-border w3-round">
+            </fieldset>
+            <button type="submit" class="w3-btn w3-round w3-block w3-margin-top cred-submit">
+                Submit
             </button>
         </form>
     </div>
