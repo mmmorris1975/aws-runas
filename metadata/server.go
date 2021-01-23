@@ -27,14 +27,15 @@ const (
 	DefaultEcsCredPath = "/credentials"
 	DefaultEc2ImdsAddr = "169.254.169.254"
 
-	imdsTokenPath  = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
-	ec2CredPath    = "/latest/meta-data/iam/security-credentials/"
-	authPath       = "/auth"
-	mfaPath        = "/mfa"
-	profilePath    = "/profile"
-	newProfilePath = "/profile/custom"
-	listRolesPath  = "/list-roles"
-	refreshPath    = "/refresh"
+	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
+	ec2CredPath      = "/latest/meta-data/iam/security-credentials/"
+	authPath         = "/auth"
+	mfaPath          = "/mfa"
+	profilePath      = "/profile"
+	newProfilePath   = "/profile/custom"
+	listRolesPath    = "/list-roles"
+	listProfilesPath = "/list-profiles"
+	refreshPath      = "/refresh"
 )
 
 var (
@@ -100,6 +101,7 @@ func (s *metadataCredentialService) Run() error {
 	mux.HandleFunc(imdsTokenPath, logHandler(s.imdsV2TokenHandler))
 	mux.HandleFunc(ec2CredPath, logHandler(s.ec2CredHandler))
 	mux.HandleFunc(newProfilePath, logHandler(s.customProfileHandler))
+	mux.HandleFunc(listProfilesPath, logHandler(s.listProfilesHandler))
 
 	if len(s.options.Path) > 0 {
 		// configure ECS http handlers with logging
@@ -188,11 +190,12 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 		_, _ = w.Write([]byte(templates.IndexHtml))
 	case "/site.js":
 		params := map[string]string{
-			"profile_ep": profilePath,
-			"roles_ep":   listRolesPath,
-			"auth_ep":    authPath,
-			"mfa_ep":     mfaPath,
-			"custom_ep":  newProfilePath,
+			"profile_ep":  profilePath,
+			"roles_ep":    listRolesPath,
+			"auth_ep":     authPath,
+			"mfa_ep":      mfaPath,
+			"custom_ep":   newProfilePath,
+			"profiles_ep": listProfilesPath,
 		}
 
 		tmpl := template.Must(template.New("").Parse(templates.SiteJs))
@@ -249,7 +252,7 @@ func marshalProfile(cfg *config.AwsConfig) []byte {
 	authUrl := cfg.SamlUrl
 	username := cfg.SamlUsername
 	if len(cfg.WebIdentityClientId) > 0 {
-		authUrl = cfg.WebIdentityUsername
+		authUrl = cfg.WebIdentityUrl
 		username = cfg.WebIdentityUsername
 	}
 
@@ -380,14 +383,25 @@ func (s *metadataCredentialService) listRolesHandler(w http.ResponseWriter, _ *h
 		return
 	}
 
-	body, err := json.Marshal(roles)
+	writeJson(w, roles)
+}
+
+func (s *metadataCredentialService) listProfilesHandler(w http.ResponseWriter, _ *http.Request) {
+	profiles, err := config.DefaultIniLoader.Profiles()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(body)
+	p := make([]string, 0)
+	for k, v := range profiles {
+		// v will be false if profile does not have role_arn attribute (indicating it could be used as a source profile)
+		if !v {
+			p = append(p, k)
+		}
+	}
+
+	writeJson(w, p)
 }
 
 func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.Request) {
@@ -619,4 +633,15 @@ func logHandler(nextHandler http.HandlerFunc) http.HandlerFunc {
 		w.WriteHeader(rec.Code)
 		_, _ = rec.Body.WriteTo(w)
 	}
+}
+
+func writeJson(w http.ResponseWriter, data interface{}) {
+	body, err := json.Marshal(data)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_, _ = w.Write(body)
 }

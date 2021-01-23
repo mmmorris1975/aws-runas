@@ -6,7 +6,7 @@ const advancedSamlFields = ['auth-url', 'username', 'password', 'jump-role'];
 const advancedOidcFields = ['client-id', 'redirect-uri'];
 
 document.body.onload = function () {
-	updateAdvancedForm(document.getElementById("adv-type").selectedOptions);
+	updateAdvancedForm(document.getElementById("adv-type").selectedOptions, document.getElementById("source-profile").value);
 }
 
 let roleList = document.getElementById("roles")
@@ -53,14 +53,6 @@ roleList.addEventListener("change", function () {
 				//document.getElementById("message").innerHTML = "Credentials will expire on <i>" + data + "</i>"
 
 				let o = JSON.parse(this.responseText);
-				document.getElementById("role-arn").value = o.role_arn;
-				document.getElementById("source-profile").value = o.source_profile;
-				document.getElementById("external-id").value = o.external_id;
-				document.getElementById("auth-url").value = o.auth_url;
-				document.getElementById("username").value = o.username;
-				document.getElementById("jump-role").value = o.jump_role;
-				document.getElementById("client-id").value = o.client_id;
-				document.getElementById("redirect-uri").value = o.redirect_uri;
 
 				if (o.client_id !== "") {
 					document.getElementById("adv-type").value = "oidc";
@@ -70,7 +62,16 @@ roleList.addEventListener("change", function () {
 					document.getElementById("adv-type").value = "iam";
 				}
 
-				updateAdvancedForm(document.getElementById("adv-type").selectedOptions);
+				updateAdvancedForm(document.getElementById("adv-type").selectedOptions, o.source_profile);
+
+				document.getElementById("role-arn").value = o.role_arn;
+				document.getElementById("source-profile").value = o.source_profile;
+				document.getElementById("external-id").value = o.external_id;
+				document.getElementById("auth-url").value = o.auth_url;
+				document.getElementById("username").value = o.username;
+				document.getElementById("jump-role").value = o.jump_role;
+				document.getElementById("client-id").value = o.client_id;
+				document.getElementById("redirect-uri").value = o.redirect_uri;
 			} else if (this.status === 401) {
 				let o = JSON.parse(this.responseText);
 				if (o.username || o.username === "") {
@@ -108,7 +109,7 @@ document.getElementById("refresh").addEventListener("click", function () {
 
 let advType = document.getElementById("adv-type")
 advType.addEventListener("change", function () {
-	updateAdvancedForm(this.selectedOptions);
+	updateAdvancedForm(this.selectedOptions, document.getElementById("source-profile").value);
 });
 
 document.getElementById("mfa-close").addEventListener("click", function () {
@@ -220,23 +221,6 @@ adv_form.addEventListener("submit", function(evt) {
 	return false;
 });
 
-/*
-document.getElementById("info").addEventListener("click", function() {
-	const xhr = new XMLHttpRequest();
-	xhr.onreadystatechange = function () {
-		if (this.readyState === 4) {
-			if (this.status === 200) {
-				
-			} else {
-				console.log("advanced form GET returned " + this.status + ": " + this.responseText);
-			}
-		}
-	};
-
-	xhr.open("GET", "{{.auth_ep}}");
-});
-*/
-
 document.getElementById("save-as").addEventListener("click", function() {
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
@@ -257,7 +241,29 @@ document.getElementById("save-as").addEventListener("click", function() {
 	return false;
 });
 
-function updateAdvancedForm(obj) {
+function updateAdvancedForm(obj, val) {
+	const xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (this.readyState === 4) {
+			let sel = document.getElementById("source-profile");
+			sel.length = 1;
+	
+			if (this.status === 200) {
+				JSON.parse(this.responseText).sort().forEach(function (val, idx, _) {
+					if (val != "default") {
+						sel.add(new Option(val));
+					}
+				});
+				sel.value = val;
+			} else {
+				console.log("list-profiles returned " + this.status + ": " + this.responseText);
+			}
+		}
+	};
+
+	xhr.open("GET", "{{.profiles_ep}}");
+	xhr.send();
+
     switch (obj[0].value) {
         case "saml":
             hide(advancedIamFields.concat(advancedOidcFields));

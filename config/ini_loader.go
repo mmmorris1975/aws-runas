@@ -100,20 +100,45 @@ func (l *iniLoader) Credentials(profile string, sources ...interface{}) (*AwsCre
 }
 
 // Roles enumerates the profile sections in the default configuration file and returns a list of section (profile)
-// names with contain the role_arn parameter.
+// names which contain the role_arn parameter.
 func (l *iniLoader) Roles(sources ...interface{}) ([]string, error) {
+	roles := make([]string, 0)
+	if p, err := l.Profiles(sources...); err == nil {
+		for k, v := range p {
+			if v {
+				roles = append(roles, k)
+			}
+		}
+	} else {
+		return nil, err
+	}
+
+	return roles, nil
+}
+
+// Profiles returns a map with profile names as keys and a boolean indicating if the profile is a role (determined by
+// the presence of the role_arn configuration attribute in the profile.
+func (l *iniLoader) Profiles(sources ...interface{}) (map[string]bool, error) {
 	file, err := resolveConfigSources(sources...)
 	if err != nil {
 		return nil, err
 	}
 
-	roles := make([]string, 0)
+	profiles := make(map[string]bool)
 	for _, s := range file.Sections() {
-		if s.HasKey("role_arn") {
-			roles = append(roles, strings.TrimPrefix(s.Name(), "profile "))
+		if s.Name() == ini.DefaultSection {
+			continue
 		}
+
+		var isRole bool
+		name := strings.TrimPrefix(s.Name(), "profile ")
+		if s.HasKey("role_arn") {
+			isRole = true
+		}
+		profiles[name] = isRole
 	}
-	return roles, nil
+
+	return profiles, nil
 }
 
 func resolveConfigSources(sources ...interface{}) (*ini.File, error) {

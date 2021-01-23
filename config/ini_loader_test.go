@@ -254,6 +254,29 @@ func TestIniLoader_Roles(t *testing.T) {
 	}
 }
 
+func TestIniLoader_Profiles(t *testing.T) {
+	p, err := DefaultIniLoader.Profiles(testConfig)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	if len(p) != 9 {
+		t.Error("did not receive expected number of profiles")
+	}
+
+	roles := make([]string, 0)
+	for k, v := range p {
+		if v {
+			roles = append(roles, k)
+		}
+	}
+
+	if len(roles) != 4 {
+		t.Error("did not receive expected number of roles")
+	}
+}
+
 var testCredentials = []byte(`
 [default]
 aws_access_key_id = mockAk
