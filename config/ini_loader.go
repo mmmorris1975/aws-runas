@@ -5,7 +5,9 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gopkg.in/ini.v1"
+	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
@@ -139,6 +141,64 @@ func (l *iniLoader) Profiles(sources ...interface{}) (map[string]bool, error) {
 	}
 
 	return profiles, nil
+}
+
+// SaveCredentials writes the data in cred to the AWS credentials file, using the profile name specified by the profile
+// parameter. The value of the field containing the password value is stored as-is from the object, any encryption/
+// obfuscation is expected to be completed before entering this method.
+func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error {
+	src := defaults.SharedCredentialsFilename()
+	if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
+		src = e
+	}
+
+	f, err := ini.Load(src)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+
+		var newFile *os.File
+		newFile, err = os.Create(src)
+		if err != nil {
+			return err
+		}
+
+		f, _ = ini.Load(newFile)
+	}
+
+	if err = f.Section(profile).ReflectFrom(cred); err != nil {
+		return err
+	}
+
+	return writeFile(f, src, 0600)
+}
+
+func writeFile(f *ini.File, dst string, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(dst), 0770); err != nil {
+		return err
+	}
+
+	tmp, err := ioutil.TempFile(filepath.Dir(dst), fmt.Sprintf("%s.*", filepath.Base(dst)))
+	if err != nil {
+		return err
+	}
+	defer func() {
+		_ = tmp.Close()
+		_ = os.Remove(tmp.Name())
+	}()
+
+	logger.Debugf("saving credentials")
+	if err = f.SaveTo(tmp.Name()); err != nil {
+		return err
+	}
+	_ = tmp.Close()
+
+	if err = os.Rename(tmp.Name(), dst); err == nil {
+		_ = os.Chmod(dst, mode)
+	}
+
+	return err
 }
 
 func resolveConfigSources(sources ...interface{}) (*ini.File, error) {

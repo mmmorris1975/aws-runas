@@ -2,12 +2,9 @@ package cli
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/urfave/cli/v2"
-	"gopkg.in/ini.v1"
-	"io/ioutil"
 	"os"
 )
 
@@ -65,10 +62,8 @@ func validateInput(cfg *config.AwsConfig) (string, error) {
 
 func updateCreds(cfg *config.AwsConfig, password string) error {
 	url := cfg.SamlUrl
-	key := "saml_password"
 	if len(cfg.WebIdentityUrl) > 0 {
 		url = cfg.WebIdentityUrl
-		key = "web_identity_password"
 	}
 
 	crypt, err := helpers.NewPasswordEncoder([]byte(url)).Encode(password, 18)
@@ -76,47 +71,12 @@ func updateCreds(cfg *config.AwsConfig, password string) error {
 		return err
 	}
 
-	src := defaults.SharedCredentialsFilename()
-	if v, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
-		src = v
+	creds := new(config.AwsCredentials)
+	if len(cfg.WebIdentityUrl) > 0 {
+		creds.WebIdentityPassword = crypt
+	} else {
+		creds.SamlPassword = crypt
 	}
 
-	f, err := ini.Load(src)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-		newFile, err := os.Create(src)
-		if err != nil {
-			return err
-		}
-
-		f, _ = ini.Load(newFile)
-	}
-	f.Section(url).Key(key).SetValue(crypt)
-
-	return writeOutput(f, src)
-}
-
-func writeOutput(f *ini.File, dst string) error {
-	tmp, err := ioutil.TempFile("", "aws-runas-credentials-*.tmp")
-	if err != nil {
-		return err
-	}
-	defer func() {
-		_ = tmp.Close()
-		_ = os.Remove(tmp.Name())
-	}()
-
-	log.Debug("saving credentials")
-	if err = f.SaveTo(tmp.Name()); err != nil {
-		return err
-	}
-	_ = tmp.Close()
-
-	if err = os.Rename(tmp.Name(), dst); err != nil {
-		return err
-	}
-	_ = os.Chmod(dst, 0600)
-	return nil
+	return config.DefaultIniLoader.SaveCredentials(url, creds)
 }

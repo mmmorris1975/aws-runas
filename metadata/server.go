@@ -479,30 +479,40 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		return
 	}
 
+	var crypt, url string
 	var newCred *config.AwsCredentials
 	newCfg := new(config.AwsConfig)
 	newCfg.RoleArn = r.Form.Get("role-arn")
+
+	if p := r.Form.Get("password"); len(p) > 0 {
+		url = r.Form.Get("auth-url")
+		crypt, err = helpers.NewPasswordEncoder([]byte(url)).Encode(p, 18)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
 
 	switch r.Form.Get("adv-type") {
 	case "iam":
 		newCfg.ExternalId = r.Form.Get("external-id")
 		newCfg.SrcProfile = r.Form.Get("source-profile")
 	case "saml":
-		newCfg.SamlUrl = r.Form.Get("auth-url")
+		newCfg.SamlUrl = url
 		newCfg.SamlUsername = r.Form.Get("username")
 		newCfg.JumpRoleArn = r.Form.Get("jump-role")
 
 		newCred = new(config.AwsCredentials)
-		newCred.SamlPassword = r.Form.Get("password")
+		newCred.SamlPassword = crypt
 	case "oidc":
-		newCfg.WebIdentityUrl = r.Form.Get("auth-url")
+		newCfg.WebIdentityUrl = url
 		newCfg.WebIdentityUsername = r.Form.Get("username")
 		newCfg.WebIdentityClientId = r.Form.Get("client-id")
 		newCfg.WebIdentityRedirectUri = r.Form.Get("redirect-uri")
 		newCfg.JumpRoleArn = r.Form.Get("jump-role")
 
 		newCred = new(config.AwsCredentials)
-		newCred.WebIdentityPassword = r.Form.Get("password")
+		newCred.WebIdentityPassword = crypt
 	default:
 		http.Error(w, "Invalid Configuration Type", http.StatusBadRequest)
 		return
@@ -527,11 +537,15 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 			return
 		}
 
-		// todo - save as new profile in config file (switch to profile after save?)
+		// todo - save as new profile in config file (switch to profile after save? ... eh, nah)
+		//   config.DefaultIniLoader.Save...
 		logger.Warningf("%s => %+v", name, newCfg)
 
 		if newCred != nil {
-			logger.Warningf("%s => %+v", name, newCred)
+			if err := config.DefaultIniLoader.SaveCredentials(url, newCred); err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
 		}
 	default:
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)

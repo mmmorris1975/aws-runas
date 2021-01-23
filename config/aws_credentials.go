@@ -4,8 +4,8 @@ package config
 // which use this feature.  The data in these fields will be the raw value. Logic to decrypt/unobfuscate the values
 // must be done externally. AWS IAM credentials will be resolved and managed using the build-in SDK logic.
 type AwsCredentials struct {
-	SamlPassword        string `ini:"saml_password" env:"SAML_PASSWORD"`
-	WebIdentityPassword string `ini:"web_identity_password" env:"WEB_PASSWORD"`
+	SamlPassword        string `ini:"saml_password,omitempty" env:"SAML_PASSWORD"`
+	WebIdentityPassword string `ini:"web_identity_password,omitempty" env:"WEB_PASSWORD"`
 }
 
 // MergeIn takes the credential settings in the provided "creds" argument and applies them to the existing
