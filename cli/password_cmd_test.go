@@ -15,7 +15,11 @@ func TestPasswordCmd_Action(t *testing.T) {
 
 	t.Run("good", func(t *testing.T) {
 		_ = os.Setenv("AWS_PROFILE", "saml")
-		defer os.Unsetenv("AWS_PROFILE")
+		_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", filepath.Join(t.TempDir(), "credentials"))
+		defer func() {
+			os.Unsetenv("AWS_PROFILE")
+			os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
+		}()
 
 		ctx := cli.NewContext(App, new(flag.FlagSet), nil)
 		if err := passwordCmd.Run(ctx); err != nil {
