@@ -12,26 +12,26 @@ import (
 // key in the "ini" tag.  Fields which support configuration by environment variables specify the environment variable
 // name in the "env" tag.
 type AwsConfig struct {
-	CredentialsDuration    time.Duration `ini:"credentials_duration" env:"CREDENTIALS_DURATION"`
-	SessionTokenDuration   time.Duration `ini:"session_token_duration" env:"SESSION_TOKEN_DURATION"` // only relevant to IAM identities
-	DurationSeconds        int64         `ini:"duration_seconds" env:"DURATION_SECONDS"`
-	ExternalId             string        `ini:"external_id" env:"EXTERNAL_ID"` // only relevant to IAM identities
-	MfaSerial              string        `ini:"mfa_serial" env:"MFA_SERIAL"`   // only relevant to IAM identities
-	MfaCode                string        `env:"MFA_CODE"`                      // only env var supported, since this value frequently changes over time
-	Region                 string        `ini:"region" env:"AWS_REGION,AWS_DEFAULT_REGION"`
-	RoleArn                string        `ini:"role_arn"`                                      // env var not supported, comes in as command argument
-	RoleSessionName        string        `ini:"role_session_name" env:"AWS_ROLE_SESSION_NAME"` // don't use? (only use IAM identity info or *_username for value?)
-	SrcProfile             string        `ini:"source_profile"`                                // env var not supported, only found in config file, and should not be explicitly set
-	JumpRoleArn            string        `ini:"jump_role_arn" env:"JUMP_ROLE_ARN"`
-	SamlUrl                string        `ini:"saml_auth_url" env:"SAML_AUTH_URL"`
-	SamlUsername           string        `ini:"saml_username" env:"SAML_USERNAME"`
-	SamlProvider           string        `ini:"saml_provider" env:"SAML_PROVIDER"`
-	WebIdentityUrl         string        `ini:"web_identity_auth_url" env:"WEB_IDENTITY_AUTH_URL"`
-	WebIdentityUsername    string        `ini:"web_identity_username" env:"WEB_IDENTITY_USERNAME"`
-	WebIdentityProvider    string        `ini:"web_identity_provider" env:"WEB_IDENTITY_PROVIDER"`
-	WebIdentityTokenFile   string        `ini:"web_identity_token_file" env:"AWS_WEB_IDENTITY_TOKEN_FILE"`
-	WebIdentityClientId    string        `ini:"web_identity_client_id" env:"WEB_IDENTITY_CLIENT_ID"`
-	WebIdentityRedirectUri string        `ini:"web_identity_redirect_uri" env:"WEB_IDENTITY_REDIRECT_URI"`
+	CredentialsDuration    time.Duration `ini:"credentials_duration,omitempty" env:"CREDENTIALS_DURATION"`
+	SessionTokenDuration   time.Duration `ini:"session_token_duration,omitempty" env:"SESSION_TOKEN_DURATION"` // only relevant to IAM identities
+	DurationSeconds        int64         `ini:"duration_seconds,omitempty" env:"DURATION_SECONDS"`
+	ExternalId             string        `ini:"external_id,omitempty" env:"EXTERNAL_ID"` // only relevant to IAM identities
+	MfaSerial              string        `ini:"mfa_serial,omitempty" env:"MFA_SERIAL"`   // only relevant to IAM identities
+	MfaCode                string        `ini:"-" env:"MFA_CODE"`                        // only env var supported, since this value frequently changes over time
+	Region                 string        `ini:"region,omitempty" env:"AWS_REGION,AWS_DEFAULT_REGION"`
+	RoleArn                string        `ini:"role_arn"`                                                // env var not supported, comes in as command argument
+	RoleSessionName        string        `ini:"role_session_name,omitempty" env:"AWS_ROLE_SESSION_NAME"` // don't use? (only use IAM identity info or *_username for value?)
+	SrcProfile             string        `ini:"source_profile,omitempty"`                                // env var not supported, only found in config file, and should not be explicitly set
+	JumpRoleArn            string        `ini:"jump_role_arn,omitempty" env:"JUMP_ROLE_ARN"`
+	SamlUrl                string        `ini:"saml_auth_url,omitempty" env:"SAML_AUTH_URL"`
+	SamlUsername           string        `ini:"saml_username,omitempty" env:"SAML_USERNAME"`
+	SamlProvider           string        `ini:"saml_provider,omitempty" env:"SAML_PROVIDER"`
+	WebIdentityUrl         string        `ini:"web_identity_auth_url,omitempty" env:"WEB_IDENTITY_AUTH_URL"`
+	WebIdentityUsername    string        `ini:"web_identity_username,omitempty" env:"WEB_IDENTITY_USERNAME"`
+	WebIdentityProvider    string        `ini:"web_identity_provider,omitempty" env:"WEB_IDENTITY_PROVIDER"`
+	WebIdentityTokenFile   string        `ini:"web_identity_token_file,omitempty" env:"AWS_WEB_IDENTITY_TOKEN_FILE"`
+	WebIdentityClientId    string        `ini:"web_identity_client_id,omitempty" env:"WEB_IDENTITY_CLIENT_ID"`
+	WebIdentityRedirectUri string        `ini:"web_identity_redirect_uri,omitempty" env:"WEB_IDENTITY_REDIRECT_URI"`
 	ProfileName            string        // does not participate in value Marshal/Unmarshal, explicitly set
 	sourceProfile          *AwsConfig
 }

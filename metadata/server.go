@@ -530,16 +530,17 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 			return
 		}
 	case http.MethodPut:
-		name := r.Form.Get("profile-name")
+		newCfg.ProfileName = r.Form.Get("profile-name")
 
-		if len(name) < 1 {
+		if len(newCfg.ProfileName) < 1 {
 			http.Error(w, "Invalid profile name", http.StatusBadRequest)
 			return
 		}
 
-		// todo - save as new profile in config file (switch to profile after save? ... eh, nah)
-		//   config.DefaultIniLoader.Save...
-		logger.Warningf("%s => %+v", name, newCfg)
+		if err := config.DefaultIniLoader.SaveProfile(newCfg); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
 
 		if newCred != nil {
 			if err := config.DefaultIniLoader.SaveCredentials(url, newCred); err != nil {

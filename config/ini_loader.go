@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -143,28 +144,55 @@ func (l *iniLoader) Profiles(sources ...interface{}) (map[string]bool, error) {
 	return profiles, nil
 }
 
+// SaveProfile writes the data in cfg to the AWS configuration file.  An error will be returned if there is an error
+// writing to the file, if cfg is nil, or if the ProfileName or RoleArn fields are empty in cfg.  This method will not
+// validate that the profile information in cfg is well formed for a given role type (IAM, SAML, OIDC).  This method
+// assumes you know what you are doing and does not check that the profile exists before writing data, it will happily
+// overwrite existing profile configuration if the profile already exists in the file.
+func (l *iniLoader) SaveProfile(cfg *AwsConfig) error {
+	if cfg == nil || len(cfg.ProfileName) < 1 || len(cfg.RoleArn) < 1 {
+		return errors.New("invalid configuration, can not be nil or have empty profile name or role arn")
+	}
+
+	src := defaults.SharedConfigFilename()
+	if e, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
+		src = e
+	}
+
+	f, err := loadFile(src)
+	if err != nil {
+		return err
+	}
+
+	if err = f.Section(cfg.ProfileName).ReflectFrom(cfg); err != nil {
+		return err
+	}
+
+	return writeFile(f, src, 0600)
+}
+
 // SaveCredentials writes the data in cred to the AWS credentials file, using the profile name specified by the profile
 // parameter. The value of the field containing the password value is stored as-is from the object, any encryption/
-// obfuscation is expected to be completed before entering this method.
+// obfuscation is expected to be completed before entering this method.  This method assumes you know what you are doing
+// and does not check that the profile exists before writing data, it will happily overwrite existing credentials if
+// the profile already exists in the file.
 func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error {
+	if cred == nil || (len(cred.SamlPassword) < 1 && len(cred.WebIdentityPassword) < 1) {
+		return errors.New("invalid credentials, can not be nil or empty")
+	}
+
+	if len(profile) < 1 {
+		return errors.New("profile name can not be empty")
+	}
+
 	src := defaults.SharedCredentialsFilename()
 	if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 		src = e
 	}
 
-	f, err := ini.Load(src)
+	f, err := loadFile(src)
 	if err != nil {
-		if !os.IsNotExist(err) {
-			return err
-		}
-
-		var newFile *os.File
-		newFile, err = os.Create(src)
-		if err != nil {
-			return err
-		}
-
-		f, _ = ini.Load(newFile)
+		return err
 	}
 
 	if err = f.Section(profile).ReflectFrom(cred); err != nil {
@@ -172,6 +200,25 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 	}
 
 	return writeFile(f, src, 0600)
+}
+
+func loadFile(path string) (*ini.File, error) {
+	f, err := ini.Load(path)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+
+		var newFile *os.File
+		newFile, err = os.Create(path)
+		if err != nil {
+			return nil, err
+		}
+
+		return ini.Load(newFile)
+	}
+
+	return f, err
 }
 
 func writeFile(f *ini.File, dst string, mode os.FileMode) error {

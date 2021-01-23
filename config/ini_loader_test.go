@@ -1,6 +1,7 @@
 package config
 
 import (
+	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -275,6 +276,269 @@ func TestIniLoader_Profiles(t *testing.T) {
 	if len(roles) != 4 {
 		t.Error("did not receive expected number of roles")
 	}
+}
+
+func TestIniLoader_SaveProfile(t *testing.T) {
+	// todo
+	tf, err := ioutil.TempFile(t.TempDir(), t.Name())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	os.Setenv("AWS_CONFIG_FILE", tf.Name())
+	defer os.Unsetenv("AWS_CONFIG_FILE")
+
+	t.Run("iam", func(t *testing.T) {
+		cfg := &AwsConfig{
+			ExternalId:  "testiam",
+			RoleArn:     "testrole",
+			SrcProfile:  "default",
+			ProfileName: "iam",
+		}
+
+		if err := DefaultIniLoader.SaveProfile(cfg); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section(cfg.ProfileName); s != nil {
+			if s.HasKey("saml_auth_url") || s.HasKey("web_identity_auth_url") {
+				t.Error("invalid profile returned")
+			}
+
+			cfg := new(AwsConfig)
+			if err = s.MapTo(cfg); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if cfg.ProfileName != "iam" || cfg.RoleArn != "testrole" || cfg.ExternalId != "testiam" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("saml", func(t *testing.T) {
+		cfg := &AwsConfig{
+			SamlUrl:     "testsaml",
+			RoleArn:     "testrole",
+			ProfileName: "saml",
+		}
+
+		if err := DefaultIniLoader.SaveProfile(cfg); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section(cfg.ProfileName); s != nil {
+			if s.HasKey("external_id") || s.HasKey("web_identity_auth_url") {
+				t.Error("invalid profile returned")
+			}
+
+			cfg := new(AwsConfig)
+			if err = s.MapTo(cfg); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if cfg.ProfileName != "saml" || cfg.RoleArn != "testrole" || cfg.SamlUrl != "testsaml" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("oidc", func(t *testing.T) {
+		cfg := &AwsConfig{
+			WebIdentityUrl:         "testoidc",
+			WebIdentityClientId:    "testclient",
+			WebIdentityRedirectUri: "app:/callback",
+			RoleArn:                "testrole",
+			ProfileName:            "oidc",
+		}
+
+		if err := DefaultIniLoader.SaveProfile(cfg); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section(cfg.ProfileName); s != nil {
+			if s.HasKey("external_id") || s.HasKey("saml_auth_url") {
+				t.Error("invalid profile returned")
+			}
+
+			cfg := new(AwsConfig)
+			if err = s.MapTo(cfg); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if cfg.ProfileName != "oidc" || cfg.RoleArn != "testrole" || cfg.WebIdentityUrl != "testoidc" ||
+				cfg.WebIdentityClientId != "testclient" || cfg.WebIdentityRedirectUri != "app:/callback" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("nil config", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveProfile(nil); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("missing profile name", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveProfile(&AwsConfig{RoleArn: "test"}); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("missing role arn", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveProfile(&AwsConfig{ProfileName: "test"}); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+}
+
+func TestIniLoader_SaveCredentials(t *testing.T) {
+	tf, err := ioutil.TempFile(t.TempDir(), t.Name())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf.Name())
+	defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
+
+	t.Run("saml", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveCredentials("saml", &AwsCredentials{SamlPassword: "testsaml"}); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section("saml"); s != nil {
+			c := new(AwsCredentials)
+			if err = s.MapTo(c); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if c.SamlPassword != "testsaml" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("oidc", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveCredentials("oidc", &AwsCredentials{WebIdentityPassword: "testweb"}); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section("oidc"); s != nil {
+			c := new(AwsCredentials)
+			if err = s.MapTo(c); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if c.WebIdentityPassword != "testweb" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("both", func(t *testing.T) {
+		// there could be some case (very unlikely) where the SAML and OIDC endpoint are the same, using the same password,
+		// so it would be more efficient if you store the credentials in a single place.  If there's one thing you should
+		// be, you should be efficient.
+		c := &AwsCredentials{
+			SamlPassword:        "testboth",
+			WebIdentityPassword: "testboth",
+		}
+
+		if err := DefaultIniLoader.SaveCredentials("both", c); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if s := f.Section("both"); s != nil {
+			c = new(AwsCredentials)
+			if err = s.MapTo(c); err != nil {
+				t.Error(err)
+				return
+			}
+
+			if c.SamlPassword != "testboth" || c.WebIdentityPassword != "testboth" {
+				t.Error("data mismatch")
+			}
+		} else {
+			t.Error("missing profile")
+		}
+	})
+
+	t.Run("empty creds", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveCredentials("test", new(AwsCredentials)); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("nil creds", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveCredentials("test", nil); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("empty profile", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveCredentials("", &AwsCredentials{SamlPassword: "test"}); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
 }
 
 var testCredentials = []byte(`
