@@ -26,6 +26,7 @@ roleList.addEventListener("mousedown", function () {
 				});
 			} else {
 				console.log("list-roles returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -90,6 +91,7 @@ roleList.addEventListener("change", function () {
 				}
 			} else {
 				console.log("profile POST returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -133,6 +135,7 @@ mfa_form.addEventListener('submit', function (evt) {
                 console.log(this.responseText);
 			} else {
 				console.log("mfa POST returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -167,6 +170,7 @@ cred_form.addEventListener('submit', function (evt) {
                 console.log(this.responseText);
 			} else {
 				console.log("auth POST returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -207,8 +211,10 @@ adv_form.addEventListener("submit", function(evt) {
 		if (this.readyState === 4) {
 			if (this.status === 200) {
 				// todo - anything?
+				show_alert("Success", "running configuration updated");
 			} else {
 				console.log("advanced form POST returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -232,10 +238,13 @@ document.getElementById("profile-form").addEventListener("submit", function(evt)
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
 		if (this.readyState === 4) {
+			document.getElementById("profile-modal").style.display = 'none';
+
 			if (this.status === 200) {
-				document.getElementById("profile-modal").style.display = 'none';
+				show_alert("Success");
 			} else {
 				console.log("advanced form PUT returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -254,6 +263,10 @@ document.getElementById("profile-close").addEventListener("click", function () {
 	document.getElementById("profile-modal").style.display = "none";
 });
 
+document.getElementById("alert-close").addEventListener("click", function () {
+	this.parentElement.style.display='none';
+});
+
 function updateAdvancedForm(obj, val) {
 	const xhr = new XMLHttpRequest();
 	xhr.onreadystatechange = function () {
@@ -270,6 +283,7 @@ function updateAdvancedForm(obj, val) {
 				sel.value = val;
 			} else {
 				console.log("list-profiles returned " + this.status + ": " + this.responseText);
+				show_alert("Error", this.responseText);
 			}
 		}
 	};
@@ -303,5 +317,26 @@ function show(elems) {
     for (let e of elems) {
         document.getElementById(e + "-block").style.display = "block";
     }
+}
+
+function show_alert(type, msg) {
+	tmout = 4000;
+
+	alertBox = document.getElementById('alerts')
+	alertType = document.getElementById('alert-type');
+	alertBox.classList.remove("w3-red", "w3-green");
+	if (type.toLowerCase() === "success") {
+		alertBox.classList.add("w3-green");
+		alertType.textContent = "Success";
+		tmout = 1500;
+	} else {
+		alertBox.classList.add("w3-red");
+		alertType.textContent = "Error";
+	}
+
+	document.getElementById('alert-text').textContent = msg;
+	alertBox.style.display = "inline";
+
+	setTimeout(function () {alertBox.style.display = "none"}, tmout);
 }
 `

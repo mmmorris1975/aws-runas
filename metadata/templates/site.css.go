@@ -92,4 +92,11 @@ label {
 	min-width: 18em;
 	max-width: 20em;
 }
+
+#alerts {
+	position: absolute;
+	width: 40%;
+	z-index: 9000;
+	display: none;
+}
 `

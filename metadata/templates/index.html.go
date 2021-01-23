@@ -12,6 +12,11 @@ const IndexHtml = `
 </head>
 <body>
 <main class="w3-container w3-margin-top w3-margin-bottom w3-white w3-round-xlarge">
+	<div id="alerts" class="w3-panel w3-display-container">
+	  <span id="alert-close" class="w3-button w3-display-topright" title="Close">&times;</span>
+	  <h3 id="alert-type"></h3>
+	  <p id="alert-text"></p>
+	</div>
     <h3 class="w3-center">AWS Metadata Credential Service</h3>
     <form id="role-form" name="role-form">
         <div class="w3-center" style="padding-bottom: 0.5em">
