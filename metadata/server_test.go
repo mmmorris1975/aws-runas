@@ -16,8 +16,10 @@ import (
 	"github.com/mmmorris1975/aws-runas/shared"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -479,6 +481,120 @@ func TestMetadataCredentialService_logHandler(t *testing.T) {
 
 	if !bytes.Equal(rec.Body.Bytes(), []byte("success\n")) {
 		t.Error("invalid body")
+	}
+}
+
+func TestMetadataCredentialService_rootHandler(t *testing.T) {
+	t.Run("index", func(t *testing.T) {
+		for _, v := range []string{"/", "/index.html", "/index.htm"} {
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, v, http.NoBody)
+
+			mockMetadataCredentialService().rootHandler(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("unexpected http status code: %d", rec.Code)
+				return
+			}
+
+			if ct := rec.Header().Get("Content-Type"); ct != "text/html" {
+				t.Errorf("invalid content-type '%s", ct)
+			}
+
+			if rec.Body.Len() < 1000 {
+				t.Error("too short")
+			}
+		}
+	})
+
+	t.Run("css", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/site.css", http.NoBody)
+
+		mockMetadataCredentialService().rootHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		if ct := rec.Header().Get("Content-Type"); ct != "text/css" {
+			t.Errorf("invalid content-type '%s", ct)
+		}
+
+		if rec.Body.Len() < 1000 {
+			t.Error("too short")
+		}
+	})
+
+	t.Run("js", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/site.js", http.NoBody)
+
+		mockMetadataCredentialService().rootHandler(rec, req)
+
+		if rec.Code != http.StatusOK {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+
+		if ct := rec.Header().Get("Content-Type"); ct != "application/javascript" {
+			t.Errorf("invalid content-type '%s", ct)
+		}
+
+		if rec.Body.Len() < 1000 {
+			t.Error("too short")
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		rec := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodGet, "/bogus", http.NoBody)
+
+		mockMetadataCredentialService().rootHandler(rec, req)
+
+		if rec.Code != http.StatusNotFound {
+			t.Errorf("unexpected http status code: %d", rec.Code)
+			return
+		}
+	})
+}
+
+func TestMetadataCredentialService_authHandler(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	body := url.Values{}
+	body.Set("username", "test")
+	body.Set("password", "test")
+	req := httptest.NewRequest(http.MethodPost, "/auth", strings.NewReader(body.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	mcs := mockMetadataCredentialService()
+	mcs.awsConfig = new(config.AwsConfig)
+	mcs.clientOptions = new(client.Options)
+	mcs.authHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("unexpected http status code: %d", rec.Code)
+		return
+	}
+}
+
+func TestMetadataCredentialService_mfaHandler(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	body := url.Values{}
+	body.Set("mfa", "1234567")
+	req := httptest.NewRequest(http.MethodPost, "/mfa", strings.NewReader(body.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	mcs := mockMetadataCredentialService()
+	mcs.awsConfig = new(config.AwsConfig)
+	mcs.mfaHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("unexpected http status code: %d", rec.Code)
+		return
 	}
 }
 

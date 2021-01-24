@@ -185,7 +185,7 @@ func (s *metadataCredentialService) RunNoApi() error {
 
 func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.Request) {
 	switch r.URL.Path {
-	case "/", "/index.html", "index.htm":
+	case "/", "/index.html", "/index.htm":
 		w.Header().Set("Content-Type", "text/html")
 		_, _ = w.Write([]byte(templates.IndexHtml))
 	case "/site.js":
@@ -498,14 +498,16 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		newCfg.ExternalId = r.Form.Get("external-id")
 		newCfg.SrcProfile = r.Form.Get("source-profile")
 
-		var sp *config.AwsConfig
-		sp, err = s.configResolver.Config(r.Form.Get("source-profile"))
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
-			return
-		}
+		if p := r.Form.Get("source-profile"); len(p) > 0 {
+			var sp *config.AwsConfig
+			sp, err = s.configResolver.Config(p)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
 
-		newCfg.SetSourceProfile(sp)
+			newCfg.SetSourceProfile(sp)
+		}
 	case "saml":
 		newCfg.SamlUrl = url
 		newCfg.SamlUsername = r.Form.Get("username")
