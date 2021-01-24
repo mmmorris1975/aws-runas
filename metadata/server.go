@@ -470,6 +470,7 @@ func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Re
 	_, _ = w.Write(nil)
 }
 
+//nolint:gocognit
 func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	var err error
