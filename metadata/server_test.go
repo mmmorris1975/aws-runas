@@ -14,6 +14,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
+	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -598,6 +599,114 @@ func TestMetadataCredentialService_mfaHandler(t *testing.T) {
 	}
 }
 
+func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
+	t.Run("post", func(t *testing.T) {
+		t.Run("iam", func(t *testing.T) {
+			rec := httptest.NewRecorder()
+
+			body := url.Values{}
+			body.Set("adv-type", "iam")
+			body.Set("role-arn", "arn:aws:iam:0123456789:role/test")
+			body.Set("external-id", "test123")
+			req := httptest.NewRequest(http.MethodPost, "/profile/custom", strings.NewReader(body.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			mcs := mockMetadataCredentialService()
+			mcs.awsConfig = new(config.AwsConfig)
+			mcs.customProfileHandler(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("unexpected http status code: %d", rec.Code)
+				return
+			}
+		})
+
+		t.Run("saml", func(t *testing.T) {
+			rec := httptest.NewRecorder()
+
+			body := url.Values{}
+			body.Set("adv-type", "saml")
+			body.Set("role-arn", "arn:aws:iam:0123456789:role/test")
+			body.Set("username", "testsaml")
+			body.Set("password", "saml!password")
+			body.Set("auth-url", "https://saml.local")
+			req := httptest.NewRequest(http.MethodPost, "/profile/custom", strings.NewReader(body.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			mcs := mockMetadataCredentialService()
+			mcs.awsConfig = new(config.AwsConfig)
+			mcs.customProfileHandler(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("unexpected http status code: %d", rec.Code)
+				return
+			}
+		})
+
+		t.Run("oidc", func(t *testing.T) {
+			rec := httptest.NewRecorder()
+
+			body := url.Values{}
+			body.Set("adv-type", "oidc")
+			body.Set("role-arn", "arn:aws:iam:0123456789:role/test")
+			body.Set("username", "testoidc")
+			body.Set("password", "oidc!password")
+			body.Set("auth-url", "https://oidc.local")
+			body.Set("client-id", "xx")
+			body.Set("redirect-uri", "app:/callback")
+			req := httptest.NewRequest(http.MethodPost, "/profile/custom", strings.NewReader(body.Encode()))
+			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+			mcs := mockMetadataCredentialService()
+			mcs.awsConfig = new(config.AwsConfig)
+			mcs.customProfileHandler(rec, req)
+
+			if rec.Code != http.StatusOK {
+				t.Errorf("unexpected http status code: %d", rec.Code)
+				return
+			}
+		})
+	})
+
+	t.Run("put", func(t *testing.T) {
+		var err error
+		var tmpCfg, tmpCred *os.File
+
+		tmpCfg, err = ioutil.TempFile(t.TempDir(), "config")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer os.Remove(tmpCfg.Name())
+
+		tmpCred, err = ioutil.TempFile(t.TempDir(), "credentials")
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		defer os.Remove(tmpCred.Name())
+
+		os.Setenv("AWS_CONFIG_FILE", tmpCfg.Name())
+		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tmpCred.Name())
+		defer func() {
+			os.Unsetenv("AWS_CONFIG_FILE")
+			os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
+		}()
+
+		t.Run("iam", func(t *testing.T) {
+
+		})
+
+		t.Run("saml", func(t *testing.T) {
+
+		})
+
+		t.Run("oidc", func(t *testing.T) {
+
+		})
+	})
+}
+
 func mockMetadataCredentialService() *metadataCredentialService {
 	mcs := new(metadataCredentialService)
 	mcs.configResolver = new(mockConfigResolver)
@@ -609,6 +718,10 @@ func mockMetadataCredentialService() *metadataCredentialService {
 	factoryOptions.CommandCredentials = new(config.AwsCredentials)
 
 	mcs.clientFactory = client.NewClientFactory(mcs.configResolver, factoryOptions)
+
+	mcs.options = new(Options)
+	mcs.options.Logger = factoryOptions.Logger
+	mcs.options.AwsLogLevel = factoryOptions.AwsLogLevel
 
 	return mcs
 }

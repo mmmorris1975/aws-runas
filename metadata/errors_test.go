@@ -3,9 +3,7 @@ package metadata
 import "testing"
 
 func TestWebAuthenticationError_Error(t *testing.T) {
-	var e WebAuthenticationError
-	e = "test"
-
+	var e WebAuthenticationError = "test"
 	if e.Error() != string(e) {
 		t.Error("data mismatch")
 	}

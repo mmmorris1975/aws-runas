@@ -41,7 +41,7 @@ func (c *AwsConfig) SourceProfile() *AwsConfig {
 	return c.sourceProfile
 }
 
-// SetSourceProfile set the source profile fields for the configuration
+// SetSourceProfile set the source profile fields for the configuration.
 func (c *AwsConfig) SetSourceProfile(p *AwsConfig) {
 	c.sourceProfile = p
 	c.SrcProfile = p.ProfileName

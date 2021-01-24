@@ -16,6 +16,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"os/signal"
 	"strings"
@@ -479,53 +480,11 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		return
 	}
 
-	var crypt, url string
+	var newCfg *config.AwsConfig
 	var newCred *config.AwsCredentials
-	newCfg := new(config.AwsConfig)
-	newCfg.RoleArn = r.Form.Get("role-arn")
-
-	if p := r.Form.Get("password"); len(p) > 0 {
-		url = r.Form.Get("auth-url")
-		crypt, err = helpers.NewPasswordEncoder([]byte(url)).Encode(p, 18)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-	}
-
-	switch r.Form.Get("adv-type") {
-	case "iam":
-		newCfg.ExternalId = r.Form.Get("external-id")
-		newCfg.SrcProfile = r.Form.Get("source-profile")
-
-		if p := r.Form.Get("source-profile"); len(p) > 0 {
-			var sp *config.AwsConfig
-			sp, err = s.configResolver.Config(p)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusBadRequest)
-				return
-			}
-
-			newCfg.SetSourceProfile(sp)
-		}
-	case "saml":
-		newCfg.SamlUrl = url
-		newCfg.SamlUsername = r.Form.Get("username")
-		newCfg.JumpRoleArn = r.Form.Get("jump-role")
-
-		newCred = new(config.AwsCredentials)
-		newCred.SamlPassword = crypt
-	case "oidc":
-		newCfg.WebIdentityUrl = url
-		newCfg.WebIdentityUsername = r.Form.Get("username")
-		newCfg.WebIdentityClientId = r.Form.Get("client-id")
-		newCfg.WebIdentityRedirectUri = r.Form.Get("redirect-uri")
-		newCfg.JumpRoleArn = r.Form.Get("jump-role")
-
-		newCred = new(config.AwsCredentials)
-		newCred.WebIdentityPassword = crypt
-	default:
-		http.Error(w, "Invalid Configuration Type", http.StatusBadRequest)
+	newCfg, newCred, err = s.buildConfig(r.Form)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
@@ -562,7 +521,8 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		}
 
 		if newCred != nil {
-			if err := config.DefaultIniLoader.SaveCredentials(url, newCred); err != nil {
+			authUrl := r.Form.Get("auth-url")
+			if err := config.DefaultIniLoader.SaveCredentials(authUrl, newCred); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
@@ -571,6 +531,60 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		http.Error(w, "Invalid Method", http.StatusMethodNotAllowed)
 		return
 	}
+}
+
+func (s *metadataCredentialService) buildConfig(v url.Values) (*config.AwsConfig, *config.AwsCredentials, error) {
+	var err error
+	var crypt, authUrl string
+	var newCred *config.AwsCredentials
+	newCfg := new(config.AwsConfig)
+	newCfg.RoleArn = v.Get("role-arn")
+
+	if p := v.Get("password"); len(p) > 0 {
+		authUrl = v.Get("auth-url")
+		crypt, err = helpers.NewPasswordEncoder([]byte(authUrl)).Encode(p, 18)
+		if err != nil {
+			return nil, nil, err
+		}
+	}
+
+	switch v.Get("adv-type") {
+	case "iam":
+		newCfg.ExternalId = v.Get("external-id")
+
+		if p := v.Get("source-profile"); len(p) > 0 {
+			var sp *config.AwsConfig
+			sp, err = s.configResolver.Config(p)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			newCfg.SrcProfile = p
+			newCfg.SetSourceProfile(sp)
+		}
+	case "saml":
+		newCfg.SamlProvider = "mock"
+		newCfg.SamlUrl = authUrl
+		newCfg.SamlUsername = v.Get("username")
+		newCfg.JumpRoleArn = v.Get("jump-role")
+
+		newCred = new(config.AwsCredentials)
+		newCred.SamlPassword = crypt
+	case "oidc":
+		newCfg.WebIdentityProvider = "mock"
+		newCfg.WebIdentityUrl = authUrl
+		newCfg.WebIdentityUsername = v.Get("username")
+		newCfg.WebIdentityClientId = v.Get("client-id")
+		newCfg.WebIdentityRedirectUri = v.Get("redirect-uri")
+		newCfg.JumpRoleArn = v.Get("jump-role")
+
+		newCred = new(config.AwsCredentials)
+		newCred.WebIdentityPassword = crypt
+	default:
+		return nil, nil, err
+	}
+
+	return newCfg, newCred, nil
 }
 
 func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
