@@ -561,44 +561,47 @@ func TestMetadataCredentialService_rootHandler(t *testing.T) {
 	})
 }
 
-// may only be testable if we have valid AWS credentials to use :(
-//func TestMetadataCredentialService_authHandler(t *testing.T) {
-//	rec := httptest.NewRecorder()
-//
-//	body := url.Values{}
-//	body.Set("username", "test")
-//	body.Set("password", "test")
-//	req := httptest.NewRequest(http.MethodPost, "/auth", strings.NewReader(body.Encode()))
-//	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-//
-//	mcs := mockMetadataCredentialService()
-//	mcs.awsConfig = new(config.AwsConfig)
-//	mcs.clientOptions = new(client.Options)
-//	mcs.authHandler(rec, req)
-//
-//	if rec.Code != http.StatusOK {
-//		t.Errorf("unexpected http status code: %d", rec.Code)
-//		return
-//	}
-//}
-//
-//func TestMetadataCredentialService_mfaHandler(t *testing.T) {
-//	rec := httptest.NewRecorder()
-//
-//	body := url.Values{}
-//	body.Set("mfa", "1234567")
-//	req := httptest.NewRequest(http.MethodPost, "/mfa", strings.NewReader(body.Encode()))
-//	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-//
-//	mcs := mockMetadataCredentialService()
-//	mcs.awsConfig = new(config.AwsConfig)
-//	mcs.mfaHandler(rec, req)
-//
-//	if rec.Code != http.StatusOK {
-//		t.Errorf("unexpected http status code: %d", rec.Code)
-//		return
-//	}
-//}
+// each of these methods fetch AWS credentials as their final step. Since we can't mock the STS endpoints from here,
+// these aren't testable.
+/*
+func TestMetadataCredentialService_authHandler(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	body := url.Values{}
+	body.Set("username", "test")
+	body.Set("password", "test")
+	req := httptest.NewRequest(http.MethodPost, "/auth", strings.NewReader(body.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	mcs := mockMetadataCredentialService()
+	mcs.awsConfig = new(config.AwsConfig)
+	mcs.clientOptions = new(client.Options)
+	mcs.authHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("unexpected http status code: %d", rec.Code)
+		return
+	}
+}
+
+func TestMetadataCredentialService_mfaHandler(t *testing.T) {
+	rec := httptest.NewRecorder()
+
+	body := url.Values{}
+	body.Set("mfa", "1234567")
+	req := httptest.NewRequest(http.MethodPost, "/mfa", strings.NewReader(body.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	mcs := mockMetadataCredentialService()
+	mcs.awsConfig = new(config.AwsConfig)
+	mcs.mfaHandler(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Errorf("unexpected http status code: %d", rec.Code)
+		return
+	}
+}
+*/
 
 func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
 	t.Run("post", func(t *testing.T) {
