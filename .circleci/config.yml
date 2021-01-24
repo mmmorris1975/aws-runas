@@ -32,8 +32,7 @@ jobs:
 
       # specify any bash command here prefixed with `run: `
       - run: go vet -tests=false ./...
-      - run: go test ./...
-      #- go/test
+      - go/test
 
   build:
     executor:
