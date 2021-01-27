@@ -3,7 +3,7 @@ package helpers
 import (
 	"errors"
 	"fmt"
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 	"io"
 	"os"
 )
@@ -60,8 +60,8 @@ func readInput(input io.Reader, dst *string) error {
 func trySecureRead(f *os.File) (string, error) {
 	var val string
 	fd := int(f.Fd())
-	if terminal.IsTerminal(fd) {
-		b, err := terminal.ReadPassword(int(f.Fd()))
+	if term.IsTerminal(fd) {
+		b, err := term.ReadPassword(int(f.Fd()))
 		if err != nil && !errors.Is(err, io.EOF) {
 			return "", err
 		}
