@@ -12,7 +12,7 @@ orbs:
 jobs:
   lint:
     docker:
-      - image: "golangci/golangci-lint:v1.35.2"
+      - image: "golangci/golangci-lint:v1.36"
 
     steps:
       - checkout
@@ -30,7 +30,6 @@ jobs:
       - go/mod-download
       - go/save-cache
 
-      # specify any bash command here prefixed with `run: `
       - run: go vet -tests=false ./...
       - go/test
 
@@ -44,15 +43,16 @@ jobs:
 
     steps:
       - checkout
+      - go/load-cache
 
       - run: mkdir -p build
       - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
       - run: GOOS=windows go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas.exe
 
-        # This is only really useful for configuring base IAM credentials, as the advanced config file setup
-        # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
-        # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
-        # a similar configuration can be used locally and with CI
+      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
+      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
+      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
+      # a similar configuration can be used locally and with CI
       - aws-cli/setup:
           skip-install-check: false
           configure-default-region: false
@@ -97,8 +97,8 @@ jobs:
       - attach_workspace:
           at: build
 
-        # was hoping to run the serverspec tests, but things were weird on Windows, just
-        # run a few commands instead just to verify things happen without blowing up
+      # was hoping to run the serverspec tests, but things were weird on Windows, just
+      # run a few commands instead just to verify things happen without blowing up
       - run: build/aws-runas --help
       - run: build/aws-runas -lv iam-role
       - run: build/aws-runas -mv iam-role

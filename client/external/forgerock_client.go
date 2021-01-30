@@ -44,11 +44,11 @@ func NewForgerockClient(url string) (*forgerockClient, error) {
 	}
 
 	c := &forgerockClient{baseClient: bc}
-	if err := c.parseRealm(); err != nil {
+	if err = c.parseRealm(); err != nil {
 		return nil, err
 	}
 
-	if err := c.parseBaseUrl(); err != nil {
+	if err = c.parseBaseUrl(); err != nil {
 		return nil, err
 	}
 
