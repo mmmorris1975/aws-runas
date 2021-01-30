@@ -71,7 +71,7 @@ func (c *cookieJar) SetCookies(u *url.URL, cookies []*http.Cookie) {
 	defer c.mu.Unlock()
 
 	c.jar.SetCookies(u, cookies)
-	_ = c.flush(u) // todo handle (log?) error
+	_ = c.flush(u, cookies) // todo handle (log?) error
 }
 
 // Cookies is the implementation of the http.CookieJar interface to retrieve cookies from the cache.
@@ -96,8 +96,9 @@ func (c *cookieJar) loadCache() error {
 		return err
 	}
 
+	var u *url.URL
 	for k, v := range cache {
-		u, err := url.Parse(k)
+		u, err = url.Parse(k)
 		if err != nil {
 			// key isn't a valid url ... just skip it (maybe log?)
 			continue
@@ -108,18 +109,16 @@ func (c *cookieJar) loadCache() error {
 }
 
 // WARNING - be sure to Lock() before calling this method.
-func (c *cookieJar) flush(u *url.URL) error {
-	// we'll need this read-before-update step to ensure we have a complete view of the cookies in the
-	// in-momory jar implementation (since those details are hidden)
+func (c *cookieJar) flush(u *url.URL, cookies []*http.Cookie) error {
+	// we'll need this read-before-update step to ensure we have a complete view of the cookies, since we can't
+	// dump the entire in-memory jar (details hidden)
 	cache, err := readCache(c.path)
 	if err != nil {
 		return err
 	}
 
-	// we literally just set cookies before calling flush(), so we
-	// know calling Cookies() on the in-memory cache will have data
 	key := fmt.Sprintf("%s://%s", u.Scheme, u.Hostname())
-	cache[key] = c.jar.Cookies(u)
+	cache[key] = cookies
 
 	return writeCache(c.path, cache)
 }
@@ -139,7 +138,7 @@ func readCache(path string) (map[string][]*http.Cookie, error) {
 
 	if len(data) > 2 {
 		// this is non-fatal, just rewrite a fresh cache without the old data
-		_ = json.Unmarshal(data, &cookies) // todo handle (log?) error
+		_ = json.Unmarshal(data, &cookies)
 	}
 
 	return cookies, nil
@@ -147,7 +146,7 @@ func readCache(path string) (map[string][]*http.Cookie, error) {
 
 // WARNING - if called outside of flush(), be sure Lock() before entering!
 func writeCache(path string, data map[string][]*http.Cookie) error {
-	tmp, err := ioutil.TempFile("", ".aws_runas_cookies_*.tmp")
+	tmp, err := ioutil.TempFile(filepath.Dir(path), ".aws_runas_cookies_*.tmp")
 	if err != nil {
 		return err
 	}
