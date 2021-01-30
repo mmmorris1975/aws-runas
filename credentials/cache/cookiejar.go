@@ -41,7 +41,9 @@ type cookieJar struct {
 	jar  *cookiejar.Jar
 }
 
-// force public access through CookieJar() so we have better safety for concurrent access to individual files.
+// force public access through CookieJar() so we have better safety for concurrent access to individual files
+// for cases where multiple calls to CookieJar() with the same path are made within the same process.  Doesn't
+// solve cases where distinct processes use the same CookieJar(), we need to rely on our file handling logic for that
 func newCookieJar(path string) (*cookieJar, error) {
 	// ensure all intermediate directories exist
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
