@@ -118,9 +118,30 @@ func (c *cookieJar) flush(u *url.URL, cookies []*http.Cookie) error {
 	}
 
 	key := fmt.Sprintf("%s://%s", u.Scheme, u.Hostname())
-	cache[key] = cookies
+	cache[key] = merge(cache[key], cookies)
 
 	return writeCache(c.path, cache)
+}
+
+func merge(src []*http.Cookie, new []*http.Cookie) []*http.Cookie {
+	key := func(c *http.Cookie) string {
+		return strings.Join([]string{c.Name, c.Domain, c.Path}, `|`)
+	}
+
+	mergeMap := make(map[string]*http.Cookie, len(src))
+
+	for _, v := range append(src, new...) {
+		mergeMap[key(v)] = v
+	}
+
+	i := 0
+	cookies := make([]*http.Cookie, len(mergeMap))
+	for _, v := range mergeMap {
+		cookies[i] = v
+		i++
+	}
+
+	return cookies
 }
 
 // WARNING - if called outside of loadCache() or flush(), be sure to RLock() or Lock() before entering!
