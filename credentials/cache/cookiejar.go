@@ -124,14 +124,10 @@ func (c *cookieJar) flush(u *url.URL, cookies []*http.Cookie) error {
 }
 
 func merge(src []*http.Cookie, new []*http.Cookie) []*http.Cookie {
-	key := func(c *http.Cookie) string {
-		return strings.Join([]string{c.Name, c.Domain, c.Path}, `|`)
-	}
-
 	mergeMap := make(map[string]*http.Cookie, len(src))
 
 	for _, v := range append(src, new...) {
-		mergeMap[key(v)] = v
+		mergeMap[strings.Join([]string{v.Name, v.Domain, v.Path}, `|`)] = v
 	}
 
 	i := 0
