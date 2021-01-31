@@ -35,6 +35,27 @@ var App = &cli.App{
 	UseShortOptionHandling: true,
 	EnableBashCompletion:   true,
 
+	BashComplete: func(ctx *cli.Context) {
+		if ctx.Bool(mfaFlag.Name) {
+			mfaCmd.BashComplete(ctx)
+			return
+		}
+
+		if ctx.Bool(rolesFlag.Name) {
+			rolesCmd.BashComplete(ctx)
+			return
+		}
+
+		if ctx.Bool(diagFlag.Name) {
+			diagCmd.BashComplete(ctx)
+			return
+		}
+
+		// execute default cli package behavior & profile name completion
+		cli.DefaultAppComplete(ctx)
+		bashCompleteProfile(ctx)
+	},
+
 	Before: func(ctx *cli.Context) error {
 		opts.Logger = log
 

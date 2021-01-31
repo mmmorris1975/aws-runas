@@ -14,6 +14,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
+	"sort"
 	"syscall"
 	"time"
 )
@@ -160,7 +161,6 @@ func printCredIdentity(cfg awsclient.ConfigProvider, creds *credentials.Credenti
 	return nil
 }
 
-// this may(?) not get called if coming in via the top-level flags (only subcommand paths).
 func bashCompleteProfile(ctx *cli.Context) {
 	if ctx.NArg() > 0 {
 		return
@@ -172,7 +172,15 @@ func bashCompleteProfile(ctx *cli.Context) {
 		return
 	}
 
+	var i int
+	vals := make([]string, len(p))
 	for k := range p {
-		fmt.Println(k)
+		vals[i] = k
+		i++
+	}
+	sort.Strings(vals)
+
+	for _, v := range vals {
+		fmt.Println(v)
 	}
 }
