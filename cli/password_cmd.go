@@ -14,11 +14,12 @@ const passwordDesc = `Manage the password for the external identity provider (SA
    storing the plaintext value in the file.`
 
 var passwordCmd = &cli.Command{
-	Name:        "password",
-	Aliases:     []string{"passwd", "pw"},
-	Usage:       "Set or update the stored password for an external identity provider",
-	ArgsUsage:   "profile_name",
-	Description: passwordDesc,
+	Name:         "password",
+	Aliases:      []string{"passwd", "pw"},
+	Usage:        "Set or update the stored password for an external identity provider",
+	ArgsUsage:    "profile_name",
+	Description:  passwordDesc,
+	BashComplete: bashCompleteProfile,
 
 	Action: func(ctx *cli.Context) error {
 		_, cfg, err := resolveConfig(ctx, 1)

@@ -19,10 +19,11 @@ var ecsCmdDesc = `Start a local web server which mimics the credential retrieval
    service's address and port so calling programs know the location of the endpoint.`
 
 var ecsCmd = &cli.Command{
-	Name:        "ecs",
-	Usage:       "Run a mock ECS credential endpoint to provide role credentials",
-	ArgsUsage:   "[profile_name]",
-	Description: ecsCmdDesc,
+	Name:         "ecs",
+	Usage:        "Run a mock ECS credential endpoint to provide role credentials",
+	ArgsUsage:    "[profile_name]",
+	Description:  ecsCmdDesc,
+	BashComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ecsPortFlag, headlessFlag},
 

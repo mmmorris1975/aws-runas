@@ -20,10 +20,11 @@ var ec2CmdDesc = `Start a local web server which mimics the credential retrieval
    calling programs know the location of the endpoint.`
 
 var ec2Cmd = &cli.Command{
-	Name:        "ec2",
-	Usage:       "Run a mock EC2 metadata (IMDS) service to provide role credentials",
-	ArgsUsage:   "[profile_name]",
-	Description: ec2CmdDesc,
+	Name:         "ec2",
+	Usage:        "Run a mock EC2 metadata (IMDS) service to provide role credentials",
+	ArgsUsage:    "[profile_name]",
+	Description:  ec2CmdDesc,
+	BashComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ec2PortFlag, headlessFlag},
 

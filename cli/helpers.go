@@ -162,10 +162,17 @@ func printCredIdentity(cfg awsclient.ConfigProvider, creds *credentials.Credenti
 
 // this may(?) not get called if coming in via the top-level flags (only subcommand paths).
 func bashCompleteProfile(ctx *cli.Context) {
-	// todo - profile name lookup (just iam profiles? ... could be tricky)
-	//  ... do same for roles command (or any command which accepts a profile arg?)
 	if ctx.NArg() > 0 {
-		fmt.Print("no ")
+		return
 	}
-	fmt.Println("suggest")
+
+	p, err := config.DefaultIniLoader.Profiles()
+	if err != nil {
+		log.Debugf("completion error: %v", err)
+		return
+	}
+
+	for k := range p {
+		fmt.Println(k)
+	}
 }

@@ -27,6 +27,8 @@ var diagCmd = &cli.Command{
 	ArgsUsage:   "[profile_name]",
 	Description: diagDesc,
 
+	BashComplete: bashCompleteProfile,
+
 	Action: func(ctx *cli.Context) error {
 		log.Debug("Diagnostics")
 		_, cfg, err := resolveConfig(ctx, 1)

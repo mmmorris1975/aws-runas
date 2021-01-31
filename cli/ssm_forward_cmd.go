@@ -18,11 +18,12 @@ const ssmFwdDesc = `Create an SSM port forwarding session with the specified 'ta
    otherwise a random port is used.`
 
 var ssmForwardCmd = &cli.Command{
-	Name:        "forward",
-	Aliases:     []string{"fwd"},
-	Usage:       "Start an SSM port forwarding session",
-	ArgsUsage:   "profile_name target_spec",
-	Description: ssmFwdDesc,
+	Name:         "forward",
+	Aliases:      []string{"fwd"},
+	Usage:        "Start an SSM port forwarding session",
+	ArgsUsage:    "profile_name target_spec",
+	Description:  ssmFwdDesc,
+	BashComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ssmFwdPortFlag, ssmUsePluginFlag},
 

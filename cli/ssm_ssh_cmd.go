@@ -26,10 +26,11 @@ const ssmSshDesc = `Create an SSH over SSM session with the specified 'target_sp
    can be left as-is`
 
 var ssmSshCmd = &cli.Command{
-	Name:        "ssh",
-	Usage:       "Start an SSH over SSM session",
-	ArgsUsage:   "profile_name target_spec",
-	Description: ssmSshDesc,
+	Name:         "ssh",
+	Usage:        "Start an SSH over SSM session",
+	ArgsUsage:    "profile_name target_spec",
+	Description:  ssmSshDesc,
+	BashComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ssmUsePluginFlag},
 

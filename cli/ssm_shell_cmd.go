@@ -14,11 +14,12 @@ const ssmShellDesc = `Create an SSM shell session with the specified 'target_spe
    TXT record whose value is EC2 instance ID.`
 
 var ssmShellCmd = &cli.Command{
-	Name:        "shell",
-	Aliases:     []string{"sh"},
-	Usage:       "Start an SSM shell session",
-	ArgsUsage:   "profile_name target_spec",
-	Description: ssmShellDesc,
+	Name:         "shell",
+	Aliases:      []string{"sh"},
+	Usage:        "Start an SSM shell session",
+	ArgsUsage:    "profile_name target_spec",
+	Description:  ssmShellDesc,
+	BashComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ssmUsePluginFlag},
 
