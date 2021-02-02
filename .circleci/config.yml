@@ -259,7 +259,7 @@ jobs:
       - run: apk add --no-cache bash git
       - attach_workspace:
           at: /var/tmp/release
-      # TODO - create/run release script
+      - run: scripts/release.sh /var/tmp/release/pkg
 
 workflows:
   version: 2
