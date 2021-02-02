@@ -181,6 +181,7 @@ jobs:
       - attach_workspace:
           at: build
 
+      - run: mv build/linux/amd64/aws-runas build/
       - ruby/install-deps
       - ruby/rspec-test
 
@@ -216,6 +217,10 @@ workflows:
   build_and_test:
     jobs:
       - lint
+#      - preflight
+#      - build:
+#          requires:
+#            - preflight
       - build-darwin
       - build-linux
       - build-windows
@@ -224,13 +229,9 @@ workflows:
             - build-darwin
             - build-linux
             - build-windows
-#      - preflight
-#      - build:
-#          requires:
-#            - preflight
-#      - test-linux:
-#          requires:
-#            - build
+      - test-linux:
+          requires:
+            - configure-aws
 #      - test-windows:
 #          requires:
 #            - build

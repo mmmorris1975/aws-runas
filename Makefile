@@ -1,3 +1,4 @@
+SHELL := /bin/bash
 EXE := aws-runas
 VER := $(shell git describe --tags)
 LDFLAGS := -ldflags '-s -w -X main.Version=$(VER)'
