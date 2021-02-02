@@ -34,7 +34,7 @@ linux_pkg: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).zip
 	@if [ -z ${CIRCLECI} ]; then \
 		docker run --rm -e VER=$(VER) -e ARCH=$(GOARCH) -v ${PWD}:/build --entrypoint /build/scripts/package.sh cimg/ruby:2.7; \
   	else \
-  		ARCH=$(GOARCH) scripts/package.sh; \
+  		ARCH=$(GOARCH) VER=$(VER) scripts/package.sh; \
   	fi;
 
 zip: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).zip
