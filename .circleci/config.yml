@@ -244,10 +244,22 @@ jobs:
             GOOS: linux
             GOARCH: arm
             GOARM: 7
+      # TODO - create deb and rpm packages for each arch
       - persist_to_workspace:
           root: pkg
           paths:
             - aws-runas-*-linux-*.zip
+
+  release:
+    docker:
+      - image: alpine:3
+
+    steps:
+      - checkout
+      - run: apk add --no-cache bash git
+      - attach_workspace:
+          at: /var/tmp/release
+      # TODO - create/run release script
 
 workflows:
   version: 2
@@ -255,33 +267,81 @@ workflows:
   # So far we don't have a 'requires' in build for lint, maybe something to change? I mean, who doesn't like clean code?
   build_and_test:
     jobs:
-      - lint
-      - preflight
+      - lint:
+          filters: &ci-filter
+            tags:
+              ignore: /.*/
+      - preflight:
+          filters:
+            <<: *ci-filter
       - build-darwin:
+          filters:
+            <<: *ci-filter
           requires:
             - preflight
       - build-linux:
+          filters:
+            <<: *ci-filter
           requires:
             - preflight
       - build-windows:
+          filters:
+            <<: *ci-filter
           requires:
             - preflight
       - configure-aws:
+          filters:
+            <<: *ci-filter
           requires:
             - build-linux
             - build-windows
       - test-linux:
+          filters:
+            <<: *ci-filter
           requires:
             - configure-aws
       - test-windows:
+          filters:
+            <<: *ci-filter
           requires:
             - configure-aws
+
+  release:
+    jobs:
+      - preflight:
+          filters: &release-filter
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v\d+\.\d+\.\d+/
+      - build-darwin:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
+      - build-linux:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
+      - build-windows:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
       - package-darwin:
           requires:
             - build-darwin
       - package-linux:
           requires:
-            - test-linux
+            - build-linux
       - package-windows:
           requires:
-            - test-windows
+            - build-windows
+      - release:
+          filters:
+            <<: *release-filter
+          requires:
+            - package-darwin
+            - package-linux
+            - package-windows
