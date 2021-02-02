@@ -33,21 +33,87 @@ jobs:
       - run: go vet -tests=false ./...
       - go/test
 
-  build:
+  build-darwin:
     executor:
       name: go/default
       tag: '1.15'
+
+    steps:
+      - checkout
+      - go/load-cache
+      - run:
+          name: build darwin/amd64
+          command: make darwin
+          environment:
+            GOOS: darwin
+            GOARCH: amd64
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - darwin
+
+  build-linux:
+    executor:
+      name: go/default
+      tag: '1.15'
+
+    steps:
+      - checkout
+      - go/load-cache
+      - run:
+          name: build linux/amd64
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: amd64
+      - run:
+          name: build linux/arm64
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: arm64
+      - run:
+          name: build linux/armv7
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: arm
+            GOARM: 7
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - linux
+
+  build-windows:
+    executor:
+      name: go/default
+      tag: '1.15'
+
+    steps:
+      - checkout
+      - go/load-cache
+      - run:
+          name: build windows/amd64
+          command: make windows
+          environment:
+            GOOS: windows
+            GOARCH: amd64
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - windows
+
+  configure-aws:
+    executor: aws-cli/default
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
 
     steps:
-      - checkout
-      - go/load-cache
-
       - run: mkdir -p build
-      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
-      - run: GOOS=windows go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas.exe
 
       # This is only really useful for configuring base IAM credentials, as the advanced config file setup
       # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
@@ -63,8 +129,40 @@ jobs:
       - persist_to_workspace:
           root: build
           paths:
-            - aws-runas*
             - aws_credentials
+
+#  build:
+#    executor:
+#      name: go/default
+#      tag: '1.15'
+#
+#    environment:
+#      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+#
+#    steps:
+#      - checkout
+#      - go/load-cache
+#
+#      - run: mkdir -p build
+#      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
+#      - run: GOOS=windows go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas.exe
+#
+#      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
+#      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
+#      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
+#      # a similar configuration can be used locally and with CI
+#      - aws-cli/setup:
+#          skip-install-check: false
+#          configure-default-region: false
+#          profile-name: circleci
+#          aws-access-key-id: AWS_ACCESSKEY
+#          aws-secret-access-key: AWS_SECRETKEY
+#
+#      - persist_to_workspace:
+#          root: build
+#          paths:
+#            - aws-runas*
+#            - aws_credentials
 
   test-linux:
     executor:
@@ -115,13 +213,21 @@ workflows:
   build_and_test:
     jobs:
       - lint
-      - preflight
-      - build:
+      - build-darwin
+      - build-linux
+      - build-windows
+      - configure-aws:
           requires:
-            - preflight
-      - test-linux:
-          requires:
-            - build
-      - test-windows:
-          requires:
-            - build
+            - build-darwin
+            - build-linux
+            - build-windows
+#      - preflight
+#      - build:
+#          requires:
+#            - preflight
+#      - test-linux:
+#          requires:
+#            - build
+#      - test-windows:
+#          requires:
+#            - build

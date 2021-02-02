@@ -33,3 +33,4 @@ vendor/
 .bundle/
 .ca/
 build/
+pkg/
