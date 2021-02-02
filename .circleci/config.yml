@@ -223,7 +223,7 @@ workflows:
 #            - preflight
       - build-darwin
       - build-linux
-      - build-windows
+#      - build-windows
       - configure-aws:
           requires:
             - build-darwin
