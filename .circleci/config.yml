@@ -185,7 +185,9 @@ jobs:
       - run: build/aws-runas -ve iam-role
 
   package-darwin:
-    executor: go/default
+    executor:
+      name: go/default
+      tag: 1.15
     steps:
       - checkout
       - attach_workspace:
@@ -201,7 +203,9 @@ jobs:
             - aws-runas-*-darwin-*.zip
 
   package-windows:
-    executor: go/default
+    executor:
+      name: go/default
+      tag: 1.15
     steps:
       - checkout
       - attach_workspace:
@@ -217,7 +221,9 @@ jobs:
             - aws-runas-*-windows-*.zip
 
   package-linux:
-    executor: go/default
+    executor:
+      name: go/default
+      tag: 1.15
     steps:
       - checkout
       - attach_workspace:
