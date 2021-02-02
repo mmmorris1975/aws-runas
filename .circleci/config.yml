@@ -270,12 +270,12 @@ workflows:
       - test-windows:
           requires:
             - configure-aws
-      - pakcage-darwin:
+      - package-darwin:
           requires:
             - build-darwin
-      - pakcage-linux:
+      - package-linux:
           requires:
             - test-linux
-      - pakcage-windows:
+      - package-windows:
           requires:
             - test-windows
