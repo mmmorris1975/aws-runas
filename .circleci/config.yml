@@ -228,7 +228,7 @@ workflows:
           requires:
             - build-darwin
             - build-linux
-            - build-windows
+#            - build-windows
       - test-linux:
           requires:
             - configure-aws
