@@ -106,7 +106,8 @@ Other common make targets which may be useful for local development:
   - linux, darwin, windows - compile program specifically targeting these platforms. Compiled program will be placed
     in the `build` subdirectory of the source tree. Specific architecture can be compiled by setting the GOOS environment variable.
   - zip - create a zip file of the compiled program (compiling it, if necessary). By default, it will compile for the
-    platform the command is run on.  Use the GOOS and GOARCH environment variables to compile for other systems.
+    platform the command is run on.  Zip file will be placed in the `pkg` subdirectory of the source tree.  Use the
+    GOOS and GOARCH environment variables to compile and package for other systems.
 
 ## Contributing
 
