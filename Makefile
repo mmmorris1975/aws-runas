@@ -27,11 +27,17 @@ windows: GOOS = windows
 darwin linux: $$(BUILDDIR)/$$@/$$(GOARCH)/$$(EXE)
 windows: $$(BUILDDIR)/$$@/$$(GOARCH)/$$(EXE).exe
 
-# Don't use file-specific target, .deb and .rpm file names can get goofy, just do the packaging here
-linux_pkg: linux zip
-	# TODO
+# Don't use file-specific make target, .deb and .rpm file names can get goofy, just do the packaging here
+# Local execution will use the same docker image used by the circleci job
+linux_pkg: GOOS = linux
+linux_pkg: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).zip
+	@if [ -z ${CIRCLECI} ]; then \
+		docker run --rm -e VER=$(VER) -e ARCH=$(GOARCH) -v ${PWD}:/build --entrypoint /build/scripts/package.sh cimg/ruby:2.7; \
+  	else \
+  		ARCH=$(GOARCH) scripts/pakcage.sh; \
+  	fi;
 
-zip: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).$$@
+zip: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).zip
 
 $(PKGDIR):
 	mkdir -p $@

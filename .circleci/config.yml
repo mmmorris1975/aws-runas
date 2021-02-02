@@ -41,7 +41,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && sudo apt-get install upx
+      - run: sudo apt-get update && sudo apt-get -y install upx
       - run:
           name: build darwin/amd64
           command: make darwin
@@ -62,7 +62,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && sudo apt-get install upx
+      - run: sudo apt-get update && sudo apt-get -y install upx
       - run:
           name: build linux/amd64
           command: make linux
@@ -96,7 +96,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && sudo apt-get install upx osslsigncode
+      - run: sudo apt-get update && sudo apt-get -y install upx osslsigncode
       - run:
           name: install code signing files
           command: |
@@ -229,26 +229,27 @@ jobs:
       - attach_workspace:
           at: build
       - run:
-          command: make zip
+          command: make linux_pkg
           environment:
             GOOS: linux
             GOARCH: amd64
       - run:
-          command: make zip
+          command: make linux_pkg
           environment:
             GOOS: linux
             GOARCH: arm64
       - run:
-          command: make zip
+          command: make linux_pkg
           environment:
             GOOS: linux
             GOARCH: arm
             GOARM: 7
-      # TODO - create deb and rpm packages for each arch
       - persist_to_workspace:
           root: pkg
           paths:
             - aws-runas-*-linux-*.zip
+            - aws-runas*.rpm
+            - aws-runas*.deb
 
   release:
     docker:
