@@ -98,6 +98,12 @@ jobs:
       - go/load-cache
       - run: sudo apt-get update && sudo apt-get install upx osslsigncode
       - run:
+          name: install code signing files
+          command: |
+            mkdir .ca
+            echo $CODESIGN_KEY | base64 --decode > .ca/codesign.key
+            echo $CODESIGN_CRT | base64 --decode > .ca/codesign.crt
+      - run:
           name: build windows/amd64
           command: make windows
           environment:
@@ -133,39 +139,6 @@ jobs:
           root: build
           paths:
             - aws_credentials
-
-#  build:
-#    executor:
-#      name: go/default
-#      tag: '1.15'
-#
-#    environment:
-#      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
-#
-#    steps:
-#      - checkout
-#      - go/load-cache
-#
-#      - run: mkdir -p build
-#      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
-#      - run: GOOS=windows go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas.exe
-#
-#      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
-#      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
-#      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
-#      # a similar configuration can be used locally and with CI
-#      - aws-cli/setup:
-#          skip-install-check: false
-#          configure-default-region: false
-#          profile-name: circleci
-#          aws-access-key-id: AWS_ACCESSKEY
-#          aws-secret-access-key: AWS_SECRETKEY
-#
-#      - persist_to_workspace:
-#          root: build
-#          paths:
-#            - aws-runas*
-#            - aws_credentials
 
   test-linux:
     executor:
@@ -225,17 +198,16 @@ workflows:
       - build-linux:
           requires:
             - preflight
-#      - build-windows:
-#          requires:
-#            - preflight
+      - build-windows:
+          requires:
+            - preflight
       - configure-aws:
           requires:
-            - build-darwin
             - build-linux
-#            - build-windows
+            - build-windows
       - test-linux:
           requires:
             - configure-aws
-#      - test-windows:
-#          requires:
-#            - configure-aws
+      - test-windows:
+          requires:
+            - configure-aws

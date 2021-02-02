@@ -47,8 +47,9 @@ $(BUILDDIR)/%:
 	upx -v $@
 
 	@if [ $(GOOS) == "windows" ]; then \
-  		set -x; \
+  		mkdir -p .ca; \
 		out=$(@D)/$(EXE)-signed.exe; \
+		set -x; \
 		osslsigncode sign -certs .ca/codesign.crt -key .ca/codesign.key -n $(EXE) -i https://github.com/mmmorris1975/aws-runas -in $@ -out $$out; \
 		mv $$out $@; \
 	fi;
