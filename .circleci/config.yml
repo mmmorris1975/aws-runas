@@ -184,6 +184,65 @@ jobs:
       - run: build/aws-runas -v --whoami iam-role
       - run: build/aws-runas -ve iam-role
 
+  package-darwin:
+    executor: go/default
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          command: make zip
+          environment:
+            GOOS: darwin
+            GOARCH: amd64
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-darwin-*.zip
+
+  package-windows:
+    executor: go/default
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          command: make zip
+          environment:
+            GOOS: windows
+            GOARCH: amd64
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-windows-*.zip
+
+  package-linux:
+    executor: go/default
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          command: make zip
+          environment:
+            GOOS: linux
+            GOARCH: amd64
+      - run:
+          command: make zip
+          environment:
+            GOOS: linux
+            GOARCH: arm64
+      - run:
+          command: make zip
+          environment:
+            GOOS: linux
+            GOARCH: arm
+            GOARM: 7
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-linux-*.zip
+
 workflows:
   version: 2
 
@@ -211,3 +270,12 @@ workflows:
       - test-windows:
           requires:
             - configure-aws
+      - pakcage-darwin:
+          requires:
+            - build-darwin
+      - pakcage-linux:
+          requires:
+            - test-linux
+      - pakcage-windows:
+          requires:
+            - test-windows
