@@ -33,6 +33,8 @@ Version 3.0 TODO list (in no particular order)
   * Enhancements and fixes from collected feedback
   * Possibly add support for other SAML and OIDC identity provider
   * Consider adding an ECR credential retrieval shortcut
+  * Support for Apple M1 systems (go 1.16)
+  * Use new `embed` directive with MCS web resources (go 1.16)
 
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just download the
 compiled executable and "go".
