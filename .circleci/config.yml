@@ -193,6 +193,7 @@ jobs:
       - attach_workspace:
           at: build
       - run:
+          name: package darwin/amd64
           command: make zip
           environment:
             GOOS: darwin
@@ -211,6 +212,7 @@ jobs:
       - attach_workspace:
           at: build
       - run:
+          run: package windows/amd64
           command: make zip
           environment:
             GOOS: windows
@@ -229,16 +231,19 @@ jobs:
       - attach_workspace:
           at: build
       - run:
+          name: package linux/amd64
           command: make linux_pkg
           environment:
             GOOS: linux
             GOARCH: amd64
       - run:
+          name: package linux/arm64
           command: make linux_pkg
           environment:
             GOOS: linux
             GOARCH: arm64
       - run:
+          name: package linux/armv7
           command: make linux_pkg
           environment:
             GOOS: linux
@@ -260,7 +265,7 @@ jobs:
       - run: apk add --no-cache bash git
       - attach_workspace:
           at: /var/tmp/release
-      - run: scripts/release.sh /var/tmp/release/pkg
+      - run: scripts/release.sh /var/tmp/release
 
 workflows:
   version: 2
