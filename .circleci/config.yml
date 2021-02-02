@@ -313,7 +313,7 @@ workflows:
             branches:
               ignore: /.*/
             tags:
-              only: /^v\d+\.\d+\.\d+/
+              only: /^\d+\.\d+\.\d+/
       - build-darwin:
           filters:
             <<: *release-filter
@@ -330,12 +330,18 @@ workflows:
           requires:
             - preflight
       - package-darwin:
+          filters:
+            <<: *release-filter
           requires:
             - build-darwin
       - package-linux:
+          filters:
+            <<: *release-filter
           requires:
             - build-linux
       - package-windows:
+          filters:
+            <<: *release-filter
           requires:
             - build-windows
       - release:
