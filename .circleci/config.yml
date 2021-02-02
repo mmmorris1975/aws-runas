@@ -41,7 +41,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && apt-get install upx
+      - run: sudo apt-get update && sudo apt-get install upx
       - run:
           name: build darwin/amd64
           command: make darwin
@@ -62,7 +62,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && apt-get install upx
+      - run: sudo apt-get update && sudo apt-get install upx
       - run:
           name: build linux/amd64
           command: make linux
@@ -96,7 +96,7 @@ jobs:
     steps:
       - checkout
       - go/load-cache
-      - run: sudo apt-get update && apt-get install upx osslsigncode
+      - run: sudo apt-get update && sudo apt-get install upx osslsigncode
       - run:
           name: build windows/amd64
           command: make windows
