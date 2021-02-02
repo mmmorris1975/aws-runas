@@ -201,6 +201,7 @@ jobs:
 
       # was hoping to run the serverspec tests, but things were weird on Windows, just
       # run a few commands instead just to verify things happen without blowing up
+      - run: mv build/windows/amd64/aws-runas.exe build/
       - run: build/aws-runas --help
       - run: build/aws-runas -lv iam-role
       - run: build/aws-runas -mv iam-role
@@ -217,13 +218,16 @@ workflows:
   build_and_test:
     jobs:
       - lint
-#      - preflight
-#      - build:
+      - preflight
+      - build-darwin:
+          requires:
+            - preflight
+      - build-linux:
+          requires:
+            - prefilight
+#      - build-windows:
 #          requires:
 #            - preflight
-      - build-darwin
-      - build-linux
-#      - build-windows
       - configure-aws:
           requires:
             - build-darwin
@@ -234,4 +238,4 @@ workflows:
             - configure-aws
 #      - test-windows:
 #          requires:
-#            - build
+#            - configure-aws
