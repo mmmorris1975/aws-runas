@@ -224,7 +224,7 @@ workflows:
             - preflight
       - build-linux:
           requires:
-            - prefilight
+            - preflight
 #      - build-windows:
 #          requires:
 #            - preflight
