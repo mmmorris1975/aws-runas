@@ -139,7 +139,10 @@ func (c *forgerockClient) parseRealm() error {
 
 	p := strings.Split(c.authUrl.Path, "/realms/")
 	if len(p) < 2 {
-		return err
+		p = strings.Split(c.authUrl.Path, "/metaAlias/")
+		if len(p) < 2 {
+			return err
+		}
 	}
 
 	r := strings.Split(p[1], "/")
@@ -158,6 +161,8 @@ func (c *forgerockClient) parseBaseUrl() error {
 		sep = "/json/"
 	} else if strings.Contains(p, "/oauth2/") {
 		sep = "/oauth2/"
+	} else if strings.Contains(p, "/WSFederationServlet/") {
+		sep = "/WSFederationServlet/"
 	}
 
 	if len(sep) > 0 {
