@@ -16,6 +16,7 @@ const (
 	oktaProvider      = "okta"
 	mockProvider      = "mock"
 	unknownProvider   = "unknown"
+	azureadProvider   = "azuread"
 )
 
 var errUnknownProvider = errors.New("unable to determine client provider type")
@@ -58,6 +59,7 @@ func MustGetWebIdentityClient(provider, authUrl string, cfg OidcClientConfig) We
 	return c
 }
 
+//nolint:gocyclo // the switch statement will continue to grow as new providers are added
 func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, error) {
 	if len(provider) < 1 {
 		provider = divineClient(authUrl, http.MethodHead)
@@ -108,6 +110,14 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
 		return c, nil
+	case azureadProvider:
+		c, err := NewAadClient(authUrl)
+		if err != nil {
+			return nil, err
+		}
+		c.OidcClientConfig = cfg
+		c.Logger = cfg.Logger
+		return c, nil
 	default:
 		return nil, errUnknownProvider
 	}
@@ -129,6 +139,8 @@ func divineClient(u, method string) string {
 		return oktaProvider
 	case strings.HasSuffix(h, ".onelogin.com"):
 		return oneloginProvider
+	case strings.HasSuffix(h, ".microsoft.com"):
+		return azureadProvider
 	}
 
 	errCh := make(chan error, 1)
@@ -172,6 +184,10 @@ func checkResult(res *http.Response) string {
 
 	if len(res.Header.Get("x-okta-request-id")) > 0 {
 		return oktaProvider
+	}
+
+	if len(res.Header.Get("x-ms-request-id")) > 0 {
+		return azureadProvider
 	}
 
 	// Test for provider-specific cookies

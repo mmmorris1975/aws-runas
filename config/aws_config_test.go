@@ -29,6 +29,7 @@ func TestAwsConfig_MergeIn(t *testing.T) {
 		WebIdentityTokenFile:   os.DevNull,
 		WebIdentityClientId:    "oauth_client",
 		WebIdentityRedirectUri: "app:/callback",
+		FederatedUsername:      "fed",
 		sourceProfile:          nil,
 	})
 }

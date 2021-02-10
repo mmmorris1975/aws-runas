@@ -101,6 +101,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 	return f.sessionClient(cfg, opts), nil
 }
 
+//nolint:funlen
 func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring SAML client")
@@ -114,6 +115,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 			MfaType:                 external.MfaTypeAuto, // not supplied by config resolver, should it be?
 			CredentialInputProvider: f.options.CredentialInputProvider,
 			IdentityProviderName:    cfg.SamlProvider,
+			FederatedUsername:       cfg.FederatedUsername,
 		},
 		Duration: cfg.RoleCredentialDuration(),
 		RoleArn:  cfg.RoleArn,
@@ -179,6 +181,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 	return cl, nil
 }
 
+//nolint:funlen
 func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Web Identity client")
@@ -194,6 +197,7 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 	webCfg.CredentialInputProvider = f.options.CredentialInputProvider
 	webCfg.Username = cfg.WebIdentityUsername
 	webCfg.Password = f.decodePassword(cfg.WebIdentityUrl, creds.WebIdentityPassword)
+	webCfg.FederatedUsername = cfg.FederatedUsername
 	webCfg.ClientId = cfg.WebIdentityClientId
 	webCfg.RedirectUri = cfg.WebIdentityRedirectUri
 	webCfg.IdentityProviderName = cfg.WebIdentityProvider

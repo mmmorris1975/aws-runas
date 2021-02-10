@@ -110,6 +110,27 @@ func TestMustGetSamlClient_Keycloak(t *testing.T) {
 	})
 }
 
+func TestMustGetSamlClient_AzureAD(t *testing.T) {
+	t.Run("public url", func(t *testing.T) {
+		MustGetSamlClient("", "http://test.microsoft.com/signin/myAppId?tenantId=myTenantId", AuthenticationClientConfig{})
+	})
+
+	t.Run("custom url", func(t *testing.T) {
+		u := fmt.Sprintf("%s/%s/signin/myAppId?tenantId=myTenantId", mockExternalProvider.URL, azureadProvider)
+		MustGetSamlClient("", u, AuthenticationClientConfig{})
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Errorf("Did not receive expected panic calling %s MustGetSamlClient", oktaProvider)
+			}
+		}()
+
+		MustGetSamlClient("", "telnet://test.microsoft.com", AuthenticationClientConfig{})
+	})
+}
+
 func TestMustGetWebIdentityClient(t *testing.T) {
 	t.Run("unknown", func(t *testing.T) {
 		defer func() {
@@ -228,6 +249,27 @@ func Test_lookupClient_Mock(t *testing.T) {
 	})
 }
 
+func TestMustGetWebIdentityClient_AzureAD(t *testing.T) {
+	t.Run("public url", func(t *testing.T) {
+		MustGetWebIdentityClient("", "http://test.microsoft.com/signin/myAppId?tenantId=myTenantId", OidcClientConfig{})
+	})
+
+	t.Run("custom url", func(t *testing.T) {
+		u := fmt.Sprintf("%s/%s/signin/myAppId?tenantId=myTenantId", mockExternalProvider.URL, azureadProvider)
+		MustGetWebIdentityClient("", u, OidcClientConfig{})
+	})
+
+	t.Run("bad", func(t *testing.T) {
+		defer func() {
+			if x := recover(); x == nil {
+				t.Errorf("Did not receive expected panic calling %s MustGetSamlClient", oktaProvider)
+			}
+		}()
+
+		MustGetWebIdentityClient("", "telnet://test.microsoft.com", OidcClientConfig{})
+	})
+}
+
 func mockExternalHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
@@ -249,6 +291,9 @@ func mockExternalHandler(w http.ResponseWriter, r *http.Request) {
 			Name:  "KC_RESTART",
 			Value: "abc123",
 		})
+		_, _ = w.Write(nil)
+	case azureadProvider:
+		w.Header().Set("x-ms-request-id", "abc123")
 		_, _ = w.Write(nil)
 	default:
 		http.NotFound(w, r)

@@ -32,6 +32,7 @@ type AwsConfig struct {
 	WebIdentityTokenFile   string        `ini:"web_identity_token_file,omitempty" env:"AWS_WEB_IDENTITY_TOKEN_FILE"`
 	WebIdentityClientId    string        `ini:"web_identity_client_id,omitempty" env:"WEB_IDENTITY_CLIENT_ID"`
 	WebIdentityRedirectUri string        `ini:"web_identity_redirect_uri,omitempty" env:"WEB_IDENTITY_REDIRECT_URI"`
+	FederatedUsername      string        `ini:"federated_username,omitempty" env:"FEDERATED_USERNAME"`
 	ProfileName            string        `ini:"-"` // does not participate in Marshal/Unmarshal, explicitly set
 	sourceProfile          *AwsConfig
 }
@@ -161,6 +162,10 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 
 		if len(cfg.WebIdentityRedirectUri) > 0 {
 			c.WebIdentityRedirectUri = cfg.WebIdentityRedirectUri
+		}
+
+		if len(cfg.FederatedUsername) > 0 {
+			c.FederatedUsername = cfg.FederatedUsername
 		}
 	}
 }
