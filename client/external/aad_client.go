@@ -70,7 +70,8 @@ func (c *aadClient) Authenticate() error {
 // processing at multiple parts of the flow, I don't think this will get much faster.
 //nolint:bodyclose // response bodies closed in parseResponse
 func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
-	res, err := checkResponseError(c.httpClient.Get(c.authUrl.String()))
+	req, _ := newHttpRequest(ctx, http.MethodGet, c.authUrl.String())
+	res, err := checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return err
 	}
@@ -90,7 +91,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	authForm.Set("ctx", authRes.Ctx)
 	authForm.Set("login", c.Username)
 
-	res, err = checkResponseError(c.httpClient.PostForm(urlPost.String(), authForm))
+	req, _ = newHttpRequest(ctx, http.MethodPost, urlPost.String())
+	res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
 	if err != nil {
 		return err
 	}
@@ -115,7 +117,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		}
 		authForm.Set("passwd", c.Password)
 
-		res, err = checkResponseError(c.httpClient.PostForm(urlPost.String(), authForm))
+		// update existing req with new form values (password)
+		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
 		if err != nil {
 			return err
 		}
@@ -132,7 +135,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// it is possible to require MFA for federated/guest users
 	if len(authRes.UrlSkipMfaRegistration) > 0 {
 		// We can't register an MFA device here, so skip past it
-		res, err = checkResponseError(c.httpClient.Get(authRes.UrlSkipMfaRegistration))
+		req, _ = newHttpRequest(ctx, http.MethodGet, authRes.UrlSkipMfaRegistration)
+		res, err = checkResponseError(c.httpClient.Do(req.Request))
 		if err != nil {
 			return err
 		}
@@ -164,7 +168,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		kmsiForm.Set("ctx", authRes.Ctx)
 		kmsiForm.Set("LoginOptions", "1")
 
-		res, err = checkResponseError(c.httpClient.PostForm(kmsiUrl.String(), kmsiForm))
+		req, _ = newHttpRequest(ctx, http.MethodPost, kmsiUrl.String())
+		res, err = checkResponseError(c.httpClient.Do(req.withValues(kmsiForm).Request))
 		if err != nil {
 			return err
 		}
@@ -224,7 +229,8 @@ func (c *aadClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
 	// using c.authUrl directly won't work, you need to fetch that URL, then process the response which
 	// contains the actual URL we need to submit (which is embedded in JS, because why wouldn't it be?).
-	res, err := checkResponseError(c.httpClient.Get(c.authUrl.String()))
+	req, _ := newHttpRequest(ctx, http.MethodGet, c.authUrl.String())
+	res, err := checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		// We will see HTTP 200 even if the caller is unauthenticated, so any error here is probably something
 		// attempting authentication won't help, just bail out.
@@ -308,7 +314,8 @@ func (c *aadClient) submitResponse(r *http.Response) (*http.Response, error) {
 		vals.Set(name, val)
 	})
 
-	return checkResponseError(c.httpClient.PostForm(submitUrl.String(), vals))
+	req, _ := newHttpRequest(context.Background(), http.MethodPost, submitUrl.String())
+	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
 func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err error) {
@@ -332,7 +339,8 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 		return nil, err
 	}
 
-	res, err = checkResponseError(c.httpClient.Get(fedUrl))
+	req, _ := newHttpRequest(context.Background(), http.MethodGet, fedUrl)
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return nil, err
 	}
@@ -396,62 +404,63 @@ func (c *aadClient) handleMfa(authRes *authResponse) (*http.Response, error) {
 	vals.Set("request", mfaRes.Ctx)
 	vals.Set("login", c.Username)
 
-	return checkResponseError(c.httpClient.PostForm(authRes.LoginUrl().String(), vals))
+	req, _ := newHttpRequest(context.Background(), http.MethodPost, authRes.LoginUrl().String())
+	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
+//nolint:gocognit,gocyclo // won't simplify
 func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	factors := make([]aadUserProof, 0)
-	var mfaFactor aadUserProof
 
 	switch c.MfaType {
 	case MfaTypeAuto:
 		for _, v := range mfaCfg {
+			switch v.AuthMethodID {
+			case mfaMethodNotify:
+				c.MfaType = MfaTypePush
+			case mfaMethodSMS, mfaMethodOTP:
+				c.MfaType = MfaTypeCode
+			}
+
+			factors = append(factors, v)
 			if v.IsDefault {
-				mfaFactor = v
+				break
 			}
 		}
 	case MfaTypePush:
 		// MS Authenticator app push notification
 		for _, v := range mfaCfg {
 			if v.AuthMethodID == mfaMethodNotify {
+				factors = append(factors, v)
 				if v.IsDefault {
-					mfaFactor = v
 					break
 				}
-				factors = append(factors, v)
 			}
 		}
 	case MfaTypeCode:
 		// TOTP, SMS
 		for _, v := range mfaCfg {
 			if v.AuthMethodID == mfaMethodOTP || v.AuthMethodID == mfaMethodSMS {
+				factors = append(factors, v)
 				if v.IsDefault {
-					mfaFactor = v
 					break
 				}
-				factors = append(factors, v)
+
 			}
 		}
 	case MfaTypeNone:
 		return aadUserProof{}, nil
 	}
 
-	if len(mfaFactor.AuthMethodID) < 1 {
-		if len(factors) < 1 {
-			return aadUserProof{}, errMfaNotConfigured
-		}
-		mfaFactor = factors[0]
+	if len(factors) < 1 {
+		return aadUserProof{}, errMfaNotConfigured
 	}
 
-	switch mfaFactor.AuthMethodID {
-	case mfaMethodNotify:
-		c.MfaType = MfaTypePush
-	case mfaMethodOTP, mfaMethodSMS:
-		c.MfaType = MfaTypeCode
-	default:
-		return aadUserProof{}, fmt.Errorf("unsupported mfa type: %s", mfaFactor.AuthMethodID)
+	// default factor should be last on the list, otherwise return the 1st element of the list
+	if f := factors[len(factors)-1]; f.IsDefault {
+		return f, nil
 	}
-	return mfaFactor, nil
+	return factors[0], nil
 }
 
 func (c *aadClient) handleCodeMfa(mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
@@ -517,8 +526,11 @@ func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData int
 		return err
 	}
 
+	req, _ := newHttpRequest(context.Background(), http.MethodPost, submitUrl)
+	req.withContentType(contentTypeJson).withBody(bytes.NewReader(mfaJson))
+
 	var res *http.Response
-	res, err = checkResponseError(c.httpClient.Post(submitUrl, "application/json", bytes.NewReader(mfaJson)))
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return err
 	}

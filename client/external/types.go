@@ -20,6 +20,9 @@ const (
 	MfaTypeCode = "code"
 	// MfaTypePush indicates the use of MFA push notifications.
 	MfaTypePush = "push"
+
+	contentTypeForm = "application/x-www-form-urlencoded"
+	contentTypeJson = "application/json"
 )
 
 var (
