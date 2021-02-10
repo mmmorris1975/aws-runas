@@ -79,6 +79,9 @@ type AuthenticationClientConfig struct {
 	IdentityProviderName string
 	// Logger is the logging interface to use with the client
 	Logger shared.Logger
+	// FederatedUsername is the username used to authenticate to a federated authentication service, if
+	// different from Username
+	FederatedUsername string
 }
 
 // OidcClientConfig is an extension of AuthenticationClientConfig which defines the extra properties needed to

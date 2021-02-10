@@ -8,7 +8,7 @@ PATH := $(BUILDDIR):$(PATH)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test docs
+.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test docs lint
 
 $(EXE): go.mod *.go **/*.go
 	go build -v $(LDFLAGS)
@@ -60,8 +60,11 @@ $(BUILDDIR)/%:
 		mv $$out $@; \
 	fi;
 
-release: $(EXE) darwin windows linux
-	docker run --rm -e VER=$(VER) -v ${PWD}:/build --entrypoint /build/scripts/package.sh debian:stretch
+#release: $(EXE) darwin windows linux
+#	docker run --rm -e VER=$(VER) -v ${PWD}:/build --entrypoint /build/scripts/package.sh debian:stretch
+
+lint:
+	docker run --rm -v ${PWD}:/app -w /app -t golangci/golangci-lint:v1.36 golangci-lint run -v
 
 clean:
 	rm -f $(EXE) $(EXE)-*-*-* $(EXE)*.rpm $(EXE)*.deb $(EXE)*.exe
@@ -77,6 +80,4 @@ test: $(EXE)
 	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
 
 docs:
-	cd docs && bundle install
-	cd docs && bundle exec jekyll build
-	cd docs && bundle exec jekyll serve
+	docker run --rm -v ${PWD}/:/app -w /app -p 4000:4000 -it --entrypoint scripts/run_jekyll.sh cimg/ruby:2.7
