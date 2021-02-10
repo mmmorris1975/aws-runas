@@ -157,11 +157,12 @@ func (c *forgerockClient) parseRealm() error {
 func (c *forgerockClient) parseBaseUrl() error {
 	p := c.authUrl.Path
 	sep := ""
-	if strings.Contains(p, "/json/") {
+	switch {
+	case strings.Contains(p, "/json/"):
 		sep = "/json/"
-	} else if strings.Contains(p, "/oauth2/") {
+	case strings.Contains(p, "/oauth2/"):
 		sep = "/oauth2/"
-	} else if strings.Contains(p, "/WSFederationServlet/") {
+	case strings.Contains(p, "/WSFederationServlet/"):
 		sep = "/WSFederationServlet/"
 	}
 
