@@ -14,13 +14,15 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
 
 const (
 	aadIdentityProvider   = "AzureADIdentityProvider"
-	aadBadUserPassErrCode = "50126"
+	aadBadUserPassErrCode = 50126
+	aadInvalidMfaCode     = 500121
 
 	mfaMethodNotify = "PhoneAppNotification"
 	mfaMethodOTP    = "PhoneAppOTP"
@@ -81,87 +83,14 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		return err
 	}
 
-	urlPost := authRes.LoginUrl()
-	if len(urlPost.Scheme) < 1 {
-		urlPost = res.Request.URL.ResolveReference(urlPost)
-	}
-
-	authForm := url.Values{}
-	authForm.Set(authRes.FTName, authRes.FT)
-	authForm.Set("ctx", authRes.Ctx)
-	authForm.Set("login", c.Username)
-
-	req, _ = newHttpRequest(ctx, http.MethodPost, urlPost.String())
-	res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
-	if err != nil {
+	if err = c.auth(ctx, authRes.LoginUrl(res.Request.URL), authRes); err != nil {
 		return err
-	}
-
-	if err = parseResponse(res.Body, authRes); err != nil {
-		return err
-	}
-
-	// a bold assumption that everything down this path is not nil
-	if u := authRes.CredentialTypeResult.Credentials.FederationRedirectUrl; len(u) > 0 {
-		res, err = c.doFederatedAuth(u)
-		if err != nil {
-			return err
-		}
-	} else {
-		// assume anything else means we're an aad-managed account
-		// reset authRes.ErrCode so we capture the correct state of the authentication attempt
-		authRes.ErrCode = ""
-
-		if err = c.gatherCredentials(); err != nil {
-			return err
-		}
-		authForm.Set("passwd", c.Password)
-
-		// update existing req with new form values (password)
-		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
-		if err != nil {
-			return err
-		}
-	}
-
-	// test for auth failure. Ideally auth failure for a federated user set 'err' and returned before this,
-	// but we'll be safe and test everything. Code 50126 is bad username/password error
-	if err = parseResponse(res.Body, authRes); err != nil {
-		return err
-	} else if authRes.ErrCode == aadBadUserPassErrCode {
-		return errors.New("authentication failed")
-	}
-
-	// it is possible to require MFA for federated/guest users
-	if len(authRes.UrlSkipMfaRegistration) > 0 {
-		// We can't register an MFA device here, so skip past it
-		req, _ = newHttpRequest(ctx, http.MethodGet, authRes.UrlSkipMfaRegistration)
-		res, err = checkResponseError(c.httpClient.Do(req.Request))
-		if err != nil {
-			return err
-		}
-
-		if err = parseResponse(res.Body, authRes); err != nil {
-			return err
-		}
-	} else if len(authRes.UserProofs) > 0 {
-		res, err = c.handleMfa(authRes)
-		if err != nil {
-			return err
-		}
-
-		if err = parseResponse(res.Body, authRes); err != nil {
-			return err
-		}
 	}
 
 	// A "keep me signed in" prompt may show up before getting to the good stuff. authRes.ErrCode should
 	// equal 50058 too ... isn't really an error, other than signalling you've reached this KMSI prompt
 	if strings.HasSuffix(authRes.UrlPost, "/kmsi") {
-		kmsiUrl := authRes.LoginUrl()
-		if len(kmsiUrl.Scheme) < 1 {
-			kmsiUrl = res.Request.URL.ResolveReference(authRes.LoginUrl())
-		}
+		kmsiUrl := authRes.LoginUrl(res.Request.URL)
 
 		kmsiForm := url.Values{}
 		kmsiForm.Set(authRes.FTName, authRes.FT)
@@ -175,8 +104,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		}
 	}
 
-	// fixme - if we don't do kmsi, res.Body is closed by the code preceding the kmsi handling
-	//  and we'll get a 'read on closed response body' with this call
+	// fixme - if we don't do kmsi, res.Body is closed by auth() and a 'read on closed response body' error happens here
 	// KMSI or not, I think we end up here. Another JS auto-submit form containing OIDC stuff.
 	// The OIDC ID token probably isn't sufficient for use with the IdentityToken* methods, since
 	// there aren't any useful claims in the token, afaict just basic profile info.
@@ -318,6 +246,58 @@ func (c *aadClient) submitResponse(r *http.Response) (*http.Response, error) {
 	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
+//nolint:bodyclose // response bodies closed in parseResponse
+func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *authResponse) error {
+	authForm := url.Values{}
+	authForm.Set(authRes.FTName, authRes.FT)
+	authForm.Set("ctx", authRes.Ctx)
+	authForm.Set("login", c.Username)
+
+	req, _ := newHttpRequest(ctx, http.MethodPost, authUrl.String())
+	res, err := checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
+	if err != nil {
+		return err
+	}
+
+	if err = parseResponse(res.Body, authRes); err != nil {
+		return err
+	}
+
+	// a bold assumption that everything down this path is not nil
+	if u := authRes.CredentialTypeResult.Credentials.FederationRedirectUrl; len(u) > 0 {
+		res, err = c.doFederatedAuth(u)
+		if err != nil {
+			return err
+		}
+	} else {
+		// assume anything else means we're an aad-managed account
+		// reset authRes.ErrCode so we capture the correct state of the authentication attempt
+		authRes.ErrCode = ""
+
+		if err = c.gatherCredentials(); err != nil {
+			return err
+		}
+		authForm.Set("passwd", c.Password)
+
+		// update existing req with new form values (password)
+		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
+		if err != nil {
+			return err
+		}
+	}
+
+	// test for auth failure. Ideally auth failure for a federated user set 'err' and returned before this,
+	// but we'll be safe and test everything. Code 50126 is bad username/password error
+	if err = parseResponse(res.Body, authRes); err != nil {
+		return err
+	} else if authRes.ErrCode == strconv.Itoa(aadBadUserPassErrCode) {
+		return errors.New("authentication failed")
+	}
+
+	// it is possible to require MFA for federated/guest users
+	return c.checkMfa(ctx, authRes)
+}
+
 func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err error) {
 	cfg := AuthenticationClientConfig{
 		CredentialInputProvider: c.CredentialInputProvider,
@@ -346,6 +326,32 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 	}
 
 	return c.submitResponse(res)
+}
+
+//nolint:bodyclose // response bodies closed in parseResponse
+func (c *aadClient) checkMfa(ctx context.Context, authRes *authResponse) error {
+	var res *http.Response
+	var err error
+
+	if len(authRes.UrlSkipMfaRegistration) > 0 {
+		// We can't register an MFA device here, so skip past it
+		req, _ := newHttpRequest(ctx, http.MethodGet, authRes.UrlSkipMfaRegistration)
+		res, err = checkResponseError(c.httpClient.Do(req.Request))
+		if err != nil {
+			return err
+		}
+
+		return parseResponse(res.Body, authRes)
+	} else if len(authRes.UserProofs) > 0 {
+		res, err = c.handleMfa(authRes)
+		if err != nil {
+			return err
+		}
+
+		return parseResponse(res.Body, authRes)
+	}
+
+	return nil
 }
 
 func (c *aadClient) handleMfa(authRes *authResponse) (*http.Response, error) {
@@ -404,7 +410,7 @@ func (c *aadClient) handleMfa(authRes *authResponse) (*http.Response, error) {
 	vals.Set("request", mfaRes.Ctx)
 	vals.Set("login", c.Username)
 
-	req, _ := newHttpRequest(context.Background(), http.MethodPost, authRes.LoginUrl().String())
+	req, _ := newHttpRequest(context.Background(), http.MethodPost, authRes.LoginUrl(nil).String())
 	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
@@ -513,7 +519,9 @@ func (c *aadClient) sendMfaReply(mfaUrl string, mfaReq aadMfaRequest) (*aadMfaRe
 		return nil, err
 	}
 
-	if mfaRes.ErrCode != 0 {
+	if mfaRes.ErrCode == aadInvalidMfaCode {
+		mfaRes.Retry = true
+	} else if mfaRes.ErrCode != 0 {
 		return nil, fmt.Errorf("mfa failure: %s [code: %d]", mfaRes.Message, mfaRes.ErrCode)
 	}
 
@@ -580,9 +588,14 @@ type authResponse struct {
 	UrlSkipMfaRegistration string                `json:"urlSkipMfaRegistration"`
 }
 
-func (r authResponse) LoginUrl() *url.URL {
+func (r authResponse) LoginUrl(base *url.URL) *url.URL {
 	if r.urlPost == nil {
 		r.urlPost, _ = url.Parse(r.UrlPost)
+	}
+
+	if len(r.urlPost.Scheme) < 1 && base != nil {
+		// turn relative url to absolute url
+		return base.ResolveReference(r.urlPost)
 	}
 	return r.urlPost
 }
