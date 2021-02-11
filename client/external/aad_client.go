@@ -22,11 +22,11 @@ import (
 const (
 	aadIdentityProvider   = "AzureADIdentityProvider"
 	aadBadUserPassErrCode = 50126
-	aadInvalidMfaCode     = 500121
+	aadInvalidMfaErrCode  = 500121
 
-	mfaMethodNotify = "PhoneAppNotification"
-	mfaMethodOTP    = "PhoneAppOTP"
-	mfaMethodSMS    = "OneWaySMS"
+	aadMfaMethodNotify = "PhoneAppNotification"
+	aadMfaMethodOTP    = "PhoneAppOTP"
+	aadMfaMethodSMS    = "OneWaySMS"
 )
 
 var (
@@ -78,7 +78,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		return err
 	}
 
-	authRes := new(authResponse)
+	authRes := new(aadAuthResponse)
 	if err = parseResponse(res.Body, authRes); err != nil {
 		return err
 	}
@@ -195,7 +195,7 @@ func (c *aadClient) parseTenantId() error {
 func (c *aadClient) parseAppId() error {
 	parts := strings.Split(c.authUrl.Path, `/`)
 	c.appId = parts[len(parts)-1]
-	if len(c.appId) < 1 {
+	if len(parts) < 3 || len(c.appId) < 1 {
 		return errors.New("app ID not found in url")
 	}
 	return nil
@@ -247,7 +247,7 @@ func (c *aadClient) submitResponse(r *http.Response) (*http.Response, error) {
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
-func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *authResponse) error {
+func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuthResponse) error {
 	authForm := url.Values{}
 	authForm.Set(authRes.FTName, authRes.FT)
 	authForm.Set("ctx", authRes.Ctx)
@@ -329,7 +329,7 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
-func (c *aadClient) checkMfa(ctx context.Context, authRes *authResponse) error {
+func (c *aadClient) checkMfa(ctx context.Context, authRes *aadAuthResponse) error {
 	var res *http.Response
 	var err error
 
@@ -354,7 +354,7 @@ func (c *aadClient) checkMfa(ctx context.Context, authRes *authResponse) error {
 	return nil
 }
 
-func (c *aadClient) handleMfa(authRes *authResponse) (*http.Response, error) {
+func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) {
 	factor, err := c.findFactor(authRes.UserProofs)
 	if err != nil {
 		return nil, err
@@ -422,9 +422,9 @@ func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	case MfaTypeAuto:
 		for _, v := range mfaCfg {
 			switch v.AuthMethodID {
-			case mfaMethodNotify:
+			case aadMfaMethodNotify:
 				c.MfaType = MfaTypePush
-			case mfaMethodSMS, mfaMethodOTP:
+			case aadMfaMethodSMS, aadMfaMethodOTP:
 				c.MfaType = MfaTypeCode
 			}
 
@@ -436,7 +436,7 @@ func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	case MfaTypePush:
 		// MS Authenticator app push notification
 		for _, v := range mfaCfg {
-			if v.AuthMethodID == mfaMethodNotify {
+			if v.AuthMethodID == aadMfaMethodNotify {
 				factors = append(factors, v)
 				if v.IsDefault {
 					break
@@ -446,7 +446,7 @@ func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	case MfaTypeCode:
 		// TOTP, SMS
 		for _, v := range mfaCfg {
-			if v.AuthMethodID == mfaMethodOTP || v.AuthMethodID == mfaMethodSMS {
+			if v.AuthMethodID == aadMfaMethodOTP || v.AuthMethodID == aadMfaMethodSMS {
 				factors = append(factors, v)
 				if v.IsDefault {
 					break
@@ -519,7 +519,7 @@ func (c *aadClient) sendMfaReply(mfaUrl string, mfaReq aadMfaRequest) (*aadMfaRe
 		return nil, err
 	}
 
-	if mfaRes.ErrCode == aadInvalidMfaCode {
+	if mfaRes.ErrCode == aadInvalidMfaErrCode {
 		mfaRes.Retry = true
 	} else if mfaRes.ErrCode != 0 {
 		return nil, fmt.Errorf("mfa failure: %s [code: %d]", mfaRes.Message, mfaRes.ErrCode)
@@ -571,7 +571,7 @@ func parseResponse(body io.ReadCloser, out interface{}) error {
 	return json.Unmarshal(match[1], out)
 }
 
-type authResponse struct {
+type aadAuthResponse struct {
 	Ctx          string         `json:"sCtx"`
 	ErrCode      string         `json:"sErrorCode"`
 	ErrTxt       string         `json:"sErrTxt"`
@@ -588,7 +588,7 @@ type authResponse struct {
 	UrlSkipMfaRegistration string                `json:"urlSkipMfaRegistration"`
 }
 
-func (r authResponse) LoginUrl(base *url.URL) *url.URL {
+func (r aadAuthResponse) LoginUrl(base *url.URL) *url.URL {
 	if r.urlPost == nil {
 		r.urlPost, _ = url.Parse(r.UrlPost)
 	}

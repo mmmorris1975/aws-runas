@@ -141,6 +141,10 @@ func divineClient(u, method string) string {
 		return oneloginProvider
 	case strings.HasSuffix(h, ".microsoft.com"):
 		return azureadProvider
+	case strings.HasPrefix(h, "localhost") || strings.HasPrefix(h, "127.0.0.1") || strings.HasPrefix(h, "[::1]"):
+		if strings.HasPrefix(r.URL.Path, "/mock") {
+			return mockProvider
+		}
 	}
 
 	errCh := make(chan error, 1)
