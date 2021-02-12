@@ -153,22 +153,25 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 		return err
 	}
 
+	var req *httpRequest
 	var res *http.Response
-	res, err = c.httpClient.PostForm(submitUrl.String(), creds) //nolint:noctx
+	req, err = newHttpRequest(context.Background(), http.MethodPost, submitUrl.String())
+	if err != nil {
+		return err
+	}
+
+	res, err = checkResponseError(c.httpClient.Do(req.withValues(creds).Request))
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("http status %d", res.StatusCode)
-	}
-
 	if c.isAuthSuccess(res.Cookies()) {
 		return nil
 	}
 
-	body, err := ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
+	var body []byte
+	body, err = ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return err
 	}
@@ -178,21 +181,17 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 }
 
 func (c *keycloakClient) parseForm(authUrl string) (*url.URL, url.Values, error) {
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, authUrl, http.NoBody)
+	req, err := newHttpRequest(context.Background(), http.MethodGet, authUrl)
 	if err != nil {
 		return nil, url.Values{}, err
 	}
 
 	var res *http.Response
-	res, err = c.httpClient.Do(req)
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return nil, nil, err
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return nil, nil, fmt.Errorf("http status %d", res.StatusCode)
-	}
 
 	doc, err := goquery.NewDocumentFromReader(res.Body)
 	if err != nil {

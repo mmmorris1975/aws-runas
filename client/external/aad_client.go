@@ -547,15 +547,6 @@ func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData int
 	return json.NewDecoder(res.Body).Decode(outData)
 }
 
-func checkResponseError(r *http.Response, err error) (*http.Response, error) {
-	if err != nil {
-		return nil, err
-	} else if r.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("http status %s (%d)", r.Status, r.StatusCode)
-	}
-	return r, err
-}
-
 func parseResponse(body io.ReadCloser, out interface{}) error {
 	defer body.Close()
 

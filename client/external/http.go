@@ -3,6 +3,7 @@ package external
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -54,4 +55,13 @@ func (r *httpRequest) withBody(body io.Reader) *httpRequest {
 func (r *httpRequest) withValues(v url.Values) *httpRequest {
 	r.withContentType(contentTypeForm)
 	return r.withBody(strings.NewReader(v.Encode()))
+}
+
+func checkResponseError(r *http.Response, err error) (*http.Response, error) {
+	if err != nil {
+		return nil, err
+	} else if r.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("http status %s (%d)", r.Status, r.StatusCode)
+	}
+	return r, err
 }

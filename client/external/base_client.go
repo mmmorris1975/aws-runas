@@ -110,21 +110,17 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 	//	},
 	// }
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), http.NoBody)
+	req, err := newHttpRequest(ctx, http.MethodGet, u.String())
 	if err != nil {
 		return err
 	}
 
 	var res *http.Response
-	res, err = c.httpClient.Do(req)
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
-		return err
+		return fmt.Errorf("SAML request error %w", err)
 	}
 	defer res.Body.Close()
-
-	if res.StatusCode != http.StatusOK {
-		return fmt.Errorf("SAML request http status code: %d", res.StatusCode)
-	}
 
 	return c.handleSamlResponse(res.Body)
 }
@@ -258,31 +254,26 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	data.Set("redirect_uri", c.RedirectUri)
 	sb := bytes.NewBufferString(data.Encode())
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, ep, sb)
+	req, err := newHttpRequest(context.Background(), http.MethodPost, ep)
 	if err != nil {
 		return nil, err
 	}
-	req.PostForm = data
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	var res *http.Response
-	res, err = c.httpClient.Do(req)
+	res, err = checkResponseError(c.httpClient.Do(req.withBody(sb).withValues(data).Request))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("oAuth token request error: %w", err)
 	}
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(io.LimitReader(res.Body, 64*1024))
+	var body []byte
+	body, err = ioutil.ReadAll(io.LimitReader(res.Body, 64*1024))
 	if err != nil {
 		return nil, err
 	}
 
-	if res.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("http status %s", res.Status)
-	}
-
 	token := new(oauthToken)
-	if err := json.Unmarshal(body, token); err != nil {
+	if err = json.Unmarshal(body, token); err != nil {
 		return nil, err
 	}
 	return token, nil

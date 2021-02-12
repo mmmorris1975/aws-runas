@@ -46,7 +46,7 @@ $(PKGDIR)/$(EXE)-%.zip: $(PKGDIR)
 	zip -j $@ $(BUILDDIR)/$(GOOS)/$(GOARCH)/$(EXE)*
 
 # Having $(GOARM) unset, with non-arm builds, doesn't seem to harm anything
-# osslsigncode is available in cimg/ruby:2.7 and cimg/go:1.15 images
+# osslsigncode package is available in cimg/ruby:2.7 and cimg/go:1.15 images
 $(BUILDDIR)/%:
 	mkdir -p $(@D)
 	GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build $(LDFLAGS) -o $(@D)/
