@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -135,7 +136,15 @@ func TestAadClient_Authenticate_Member(t *testing.T) {
 	})
 
 	t.Run("push mfa", func(t *testing.T) {
-		// todo
+		c := newMockAadClient()
+		c.Username = "pushmfa"
+		c.Password = "whatever"
+		c.MfaType = MfaTypePush
+
+		if err := c.Authenticate(); err != nil {
+			t.Error(err)
+			return
+		}
 	})
 }
 
@@ -241,6 +250,18 @@ func aadLoginHandler(w http.ResponseWriter, r *http.Request) {
 			ar.UrlPost = fmt.Sprintf("%s/login", aadMock.URL)
 		}
 	case "pushmfa":
+		ar.UrlPost = "/kmsi"
+
+		if r.PostFormValue(ar.FTName) != "mfa complete" {
+			ar.UserProofs = []aadUserProof{
+				{AuthMethodID: aadMfaMethodNotify, IsDefault: true},
+				{AuthMethodID: aadMfaMethodSMS, IsDefault: false},
+				{AuthMethodID: aadMfaMethodOTP, IsDefault: false},
+			}
+			ar.UrlBeginAuth = fmt.Sprintf("%s/beginmfa", aadMock.URL)
+			ar.UrlEndAuth = fmt.Sprintf("%s/endmfa", aadMock.URL)
+			ar.UrlPost = fmt.Sprintf("%s/login", aadMock.URL)
+		}
 	case "guest":
 		ar.CredentialTypeResult = aadGetCredTypeResults{Credentials: aadCredDetails{
 			HasPassword:           true,
@@ -326,6 +347,14 @@ func aadEndMfaHandler(w http.ResponseWriter, r *http.Request) {
 
 	switch mfaRes.AuthMethodId {
 	case aadMfaMethodNotify:
+		//nolint:gosec // don't need a crypto random number
+		if rand.Float32() >= 0.66 {
+			mfaRes.Success = true
+			mfaRes.Retry = false
+			break
+		}
+		mfaRes.Retry = true
+		mfaRes.Success = false
 	case aadMfaMethodOTP, aadMfaMethodSMS:
 		// the otp code is contained in the AdditionalAuthData of the request, which is being processed through
 		// processMfaRequest() and returning the value in the mfaRes.Message field, which is non-standard
