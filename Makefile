@@ -4,9 +4,9 @@ VER := $(shell git describe --tags)
 LDFLAGS := -ldflags '-s -w -X main.Version=$(VER)'
 BUILDDIR := build
 PKGDIR := pkg
-PATH := $(BUILDDIR):${GOROOT}/bin:$(PATH)
-GOOS ?= $(shell go env GOOS)
-GOARCH ?= $(shell go env GOARCH)
+PATH := $(BUILDDIR):${GOROOT}/bin:${PATH}
+GOOS ?= $(shell ${GOROOT}/bin/go env GOOS)
+GOARCH ?= $(shell ${GOROOT}/bin/go env GOARCH)
 
 .PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test docs lint
 
@@ -32,7 +32,7 @@ windows: $$(BUILDDIR)/$$@/$$(GOARCH)/$$(EXE).exe
 linux_pkg: GOOS = linux
 linux_pkg: $$(GOOS) $$(PKGDIR)/$$(EXE)-$(VER)-$$(GOOS)-$$(GOARCH).zip
 	@if [ -z ${CIRCLECI} ]; then \
-		docker run --rm -e VER=$(VER) -e ARCH=$(GOARCH) -v ${PWD}:/build --user root --entrypoint /build/scripts/package.sh cimg/ruby:2.7; \
+		docker run --rm -e VER=$(VER) -e ARCH=$(GOARCH) -v $${PWD}:/build --user root --entrypoint /build/scripts/package.sh cimg/ruby:2.7; \
   	else \
   		ARCH=$(GOARCH) VER=$(VER) scripts/package.sh; \
   	fi;
@@ -80,7 +80,7 @@ test: $(EXE)
 	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
 
 docs:
-	@if [ -z ${CIRCLECI} ]; then \
+	@if [ -z $${CIRCLECI} ]; then \
   		DOCKER_ARGS="--user root"; \
 	fi; \
-	docker run --rm -v ${PWD}/:/app -w /app -p 4000:4000 -it $${DOCKER_ARGS} --entrypoint scripts/run_jekyll.sh cimg/ruby:2.7
+	docker run --rm -v $${PWD}:/app -w /app -p 4000:4000 -it $${DOCKER_ARGS} --entrypoint scripts/run_jekyll.sh cimg/ruby:2.7
