@@ -4,7 +4,7 @@ BUILD_DIR=`realpath $(dirname $0)/..`
 
 cd $BUILD_DIR
 
-apt-get update && apt-get -y install build-essential alien ruby-dev rubygems
+apt-get update && apt-get -y install build-essential alien ruby-dev rubygems git
 gem install --no-ri --no-rdoc fpm
 
 cp $BUILD_DIR/aws-runas-*-linux-amd64 /var/tmp/aws-runas
