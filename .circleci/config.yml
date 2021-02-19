@@ -44,6 +44,8 @@ jobs:
       - aws-cli/setup:
           profile-name: circleci
           configure-default-region: false
+          aws-access-key-id: AWS_ACCESSKEY
+          aws-secret-access-key: AWS_SECRETKEY
       - aws-cli/setup:
           profile-name: default
           configure-default-region: false
