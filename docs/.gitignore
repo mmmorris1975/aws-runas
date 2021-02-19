@@ -1,3 +1,5 @@
 _site
+.old
+vendor
 .sass-cache
 .jekyll-metadata
