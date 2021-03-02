@@ -10,7 +10,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -345,7 +344,7 @@ func (c *forgerockClient) sendApiRequest(req *http.Request) ([]byte, error) {
 	}
 	defer res.Body.Close()
 
-	b, err := ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
+	b, err := io.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return nil, err
 	}

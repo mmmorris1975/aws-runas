@@ -2,7 +2,6 @@ package cache
 
 import (
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -100,7 +99,7 @@ func TestFileCredentialCache_Load(t *testing.T) {
 		c := NewFileCredentialCache(f)
 
 		j := `{"AccessKeyId": "akid", "SecretAccessKeyID": "sak"}`
-		if err := ioutil.WriteFile(c.path, []byte(j), 0600); err != nil {
+		if err := os.WriteFile(c.path, []byte(j), 0600); err != nil {
 			t.Error(err)
 			return
 		}
@@ -115,7 +114,7 @@ func TestFileCredentialCache_Load(t *testing.T) {
 		c := NewFileCredentialCache(f)
 
 		j := `{"AccessKeyId": "akid", "SecretAccessKey": "sak", "Expiration": 0}`
-		if err := ioutil.WriteFile(c.path, []byte(j), 0600); err != nil {
+		if err := os.WriteFile(c.path, []byte(j), 0600); err != nil {
 			t.Error(err)
 			return
 		}

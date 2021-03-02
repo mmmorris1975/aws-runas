@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -320,7 +320,7 @@ func oktaSamlHandler(w http.ResponseWriter, r *http.Request) {
 func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	data, err := ioutil.ReadAll(r.Body)
+	data, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -444,7 +444,7 @@ func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
 func oktaVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

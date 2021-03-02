@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/mmmorris1975/aws-runas/shared"
 	"html/template"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/httptest"
@@ -199,6 +199,7 @@ func newMockAadClient() *aadClient {
 	}
 	c.authUrl, _ = url.Parse(aadMock.URL + "/myapp")
 	c.httpClient = aadMock.Client()
+	c.Logger = new(shared.DefaultLogger)
 
 	return c
 }
@@ -372,7 +373,7 @@ func aadEndMfaHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func processMfaRequest(r io.Reader) (*aadMfaResponse, error) {
-	body, err := ioutil.ReadAll(r)
+	body, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}

@@ -9,7 +9,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -171,7 +170,7 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 	}
 
 	var body []byte
-	body, err = ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
+	body, err = io.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return err
 	}
@@ -287,7 +286,7 @@ func (c keycloakClient) doMfa(submitUrl, mfaField string) error {
 	}
 
 	c.MfaTokenCode = ""
-	body, err := ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return err
 	}

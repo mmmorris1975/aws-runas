@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -127,7 +126,7 @@ func Test_withBody(t *testing.T) {
 	})
 
 	t.Run("io.ReadCloser", func(t *testing.T) {
-		b := ioutil.NopCloser(strings.NewReader("data"))
+		b := io.NopCloser(strings.NewReader("data"))
 
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)

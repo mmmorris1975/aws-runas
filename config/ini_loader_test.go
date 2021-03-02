@@ -2,7 +2,6 @@ package config
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -280,7 +279,7 @@ func TestIniLoader_Profiles(t *testing.T) {
 }
 
 func TestIniLoader_SaveProfile(t *testing.T) {
-	tf, err := ioutil.TempFile(t.TempDir(), t.Name())
+	tf, err := os.CreateTemp(t.TempDir(), t.Name())
 	if err != nil {
 		t.Error(err)
 		return
@@ -424,7 +423,7 @@ func TestIniLoader_SaveProfile(t *testing.T) {
 }
 
 func TestIniLoader_SaveCredentials(t *testing.T) {
-	tf, err := ioutil.TempFile(t.TempDir(), t.Name())
+	tf, err := os.CreateTemp(t.TempDir(), t.Name())
 	if err != nil {
 		t.Error(err)
 		return

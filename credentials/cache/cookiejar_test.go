@@ -3,7 +3,6 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
@@ -233,7 +232,7 @@ func TestCookieJar_Cache(t *testing.T) {
 		}
 
 		f := filepath.Join(t.TempDir(), "test.cookies")
-		if err = ioutil.WriteFile(f, data, 0666|os.ModeExclusive); err != nil {
+		if err = os.WriteFile(f, data, 0666|os.ModeExclusive); err != nil {
 			t.Fatal(err)
 		}
 
@@ -250,7 +249,7 @@ func TestCookieJar_Cache(t *testing.T) {
 
 	t.Run("invalid data", func(t *testing.T) {
 		f := filepath.Join(t.TempDir(), "test.cookies")
-		if err := ioutil.WriteFile(f, []byte("something, but not right"), 0666|os.ModeExclusive); err != nil {
+		if err := os.WriteFile(f, []byte("something, but not right"), 0666|os.ModeExclusive); err != nil {
 			t.Fatal(err)
 		}
 

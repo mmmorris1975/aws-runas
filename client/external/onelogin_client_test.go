@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -422,7 +422,7 @@ func olSessionHandler(w http.ResponseWriter, r *http.Request) {
 
 func olAuthHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
@@ -620,7 +620,7 @@ func olMfaDeviceHandler(w http.ResponseWriter, r *http.Request) {
 
 func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
-	body, err := ioutil.ReadAll(r.Body)
+	body, err := io.ReadAll(r.Body)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return

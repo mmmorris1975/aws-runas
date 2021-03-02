@@ -14,7 +14,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/shared"
 	"golang.org/x/net/publicsuffix"
 	"io"
-	"io/ioutil"
 	"math/rand"
 	"net/http"
 	"net/http/cookiejar"
@@ -126,7 +125,7 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 }
 
 func (c *baseClient) handleSamlResponse(r io.Reader) error {
-	b, _ := ioutil.ReadAll(r)
+	b, _ := io.ReadAll(r)
 	r = bytes.NewReader(b)
 	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
@@ -267,7 +266,7 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	defer res.Body.Close()
 
 	var body []byte
-	body, err = ioutil.ReadAll(io.LimitReader(res.Body, 64*1024))
+	body, err = io.ReadAll(io.LimitReader(res.Body, 64*1024))
 	if err != nil {
 		return nil, err
 	}

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -30,7 +29,7 @@ func (f *fileCredentialCache) Load() *credentials.Credentials {
 	creds := new(credentials.Credentials)
 	stsCreds := new(sts.Credentials)
 
-	data, err := ioutil.ReadFile(f.path)
+	data, err := os.ReadFile(f.path)
 	if err != nil {
 		return creds
 	}
@@ -71,7 +70,7 @@ func (f *fileCredentialCache) writeFile(creds *credentials.Credentials) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	tmp, err := ioutil.TempFile("", fmt.Sprintf("%s_*.tmp", filepath.Base(f.path)))
+	tmp, err := os.CreateTemp("", fmt.Sprintf("%s_*.tmp", filepath.Base(f.path)))
 	if err != nil {
 		return err
 	}

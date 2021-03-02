@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -300,7 +300,7 @@ func mockForgerockHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		body, _ := ioutil.ReadAll(r.Body)
+		body, _ := io.ReadAll(r.Body)
 
 		form := new(frMfaPrompt)
 		if err := json.Unmarshal(body, form); err != nil {

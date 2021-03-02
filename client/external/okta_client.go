@@ -8,7 +8,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -302,7 +301,7 @@ func (c *oktaClient) sendApiRequst(ctx context.Context, url string, body io.Read
 func (c *oktaClient) handleAuthResponse(res *http.Response) (*oktaAuthnResponse, error) {
 	defer res.Body.Close()
 
-	body, err := ioutil.ReadAll(io.LimitReader(res.Body, 1024*1024))
+	body, err := io.ReadAll(io.LimitReader(res.Body, 1024*1024))
 	if err != nil {
 		return nil, err
 	}

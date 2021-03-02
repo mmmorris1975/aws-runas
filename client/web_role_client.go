@@ -10,7 +10,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials/cache"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
-	"io/ioutil"
+	"os"
 	"path/filepath"
 	"time"
 )
@@ -123,7 +123,7 @@ func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
 	// The file is treated as an always available, always valid, source of truth for providing an identity token
 	// It will bypass any communication with an IdP and use the data from the file directly
 	if len(c.tokenFile) > 0 {
-		return ioutil.ReadFile(c.tokenFile)
+		return os.ReadFile(c.tokenFile)
 	}
 
 	var err error

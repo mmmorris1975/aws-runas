@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/net/publicsuffix"
-	"io/ioutil"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -146,7 +145,7 @@ func merge(src []*http.Cookie, new []*http.Cookie) []*http.Cookie {
 func readCache(path string) (map[string][]*http.Cookie, error) {
 	cookies := make(map[string][]*http.Cookie)
 
-	data, err := ioutil.ReadFile(path)
+	data, err := os.ReadFile(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err // some kind of I/O error we probably care about
@@ -165,7 +164,7 @@ func readCache(path string) (map[string][]*http.Cookie, error) {
 
 // WARNING - if called outside of flush(), be sure Lock() before entering!
 func writeCache(path string, data map[string][]*http.Cookie) error {
-	tmp, err := ioutil.TempFile(filepath.Dir(path), ".aws_runas_cookies_*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(path), ".aws_runas_cookies_*.tmp")
 	if err != nil {
 		return err
 	}

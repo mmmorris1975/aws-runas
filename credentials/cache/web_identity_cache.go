@@ -6,7 +6,6 @@ import (
 	"errors"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"hash/fnv"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sync"
@@ -91,7 +90,7 @@ func (c *webIdentityCache) loadCache() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	data, err := ioutil.ReadFile(c.path)
+	data, err := os.ReadFile(c.path)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return err // some kind of I/O error we probably care about
@@ -109,7 +108,7 @@ func (c *webIdentityCache) loadCache() error {
 }
 
 func (c *webIdentityCache) flush() error {
-	tmp, err := ioutil.TempFile("", ".aws_runas_id_tokens_*.tmp")
+	tmp, err := os.CreateTemp("", ".aws_runas_id_tokens_*.tmp")
 	if err != nil {
 		return err
 	}

@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -35,17 +34,17 @@ func (r *httpRequest) withBody(body io.Reader) *httpRequest {
 	case *bytes.Buffer:
 		data := t.Bytes()
 		r.ContentLength = int64(len(data))
-		rc = ioutil.NopCloser(bytes.NewReader(data))
+		rc = io.NopCloser(bytes.NewReader(data))
 	case *bytes.Reader:
 		r.ContentLength = int64(t.Len())
-		rc = ioutil.NopCloser(t)
+		rc = io.NopCloser(t)
 	case *strings.Reader:
 		r.ContentLength = int64(t.Len())
-		rc = ioutil.NopCloser(t)
+		rc = io.NopCloser(t)
 	case io.ReadCloser:
 		rc = t.(io.ReadCloser)
 	default:
-		rc = ioutil.NopCloser(t)
+		rc = io.NopCloser(t)
 	}
 
 	r.Body = rc

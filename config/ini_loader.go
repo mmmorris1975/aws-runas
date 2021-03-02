@@ -6,7 +6,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/defaults"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"gopkg.in/ini.v1"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -226,7 +225,7 @@ func writeFile(f *ini.File, dst string, mode os.FileMode) error {
 		return err
 	}
 
-	tmp, err := ioutil.TempFile(filepath.Dir(dst), fmt.Sprintf("%s.*", filepath.Base(dst)))
+	tmp, err := os.CreateTemp(filepath.Dir(dst), fmt.Sprintf("%s.*", filepath.Base(dst)))
 	if err != nil {
 		return err
 	}

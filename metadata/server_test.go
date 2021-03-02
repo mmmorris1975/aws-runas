@@ -14,7 +14,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -676,14 +675,14 @@ func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
 		var err error
 		var tmpCfg, tmpCred *os.File
 
-		tmpCfg, err = ioutil.TempFile(t.TempDir(), "config")
+		tmpCfg, err = os.CreateTemp(t.TempDir(), "config")
 		if err != nil {
 			t.Error(err)
 			return
 		}
 		defer os.Remove(tmpCfg.Name())
 
-		tmpCred, err = ioutil.TempFile(t.TempDir(), "credentials")
+		tmpCred, err = os.CreateTemp(t.TempDir(), "credentials")
 		if err != nil {
 			t.Error(err)
 			return

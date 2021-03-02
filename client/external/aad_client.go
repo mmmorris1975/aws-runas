@@ -10,7 +10,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -167,7 +166,7 @@ func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.
 	}
 	defer res.Body.Close()
 
-	data, _ := ioutil.ReadAll(res.Body)
+	data, _ := io.ReadAll(res.Body)
 	match := samlRe.FindSubmatch(data)
 	if match == nil || len(match) < 2 {
 		// response is probably a login page, so attempt re-auth
@@ -554,7 +553,7 @@ func parseResponse(body io.ReadCloser, out interface{}) error {
 }
 
 func parseResponseNoClose(body io.ReadCloser, out interface{}) error {
-	data, err := ioutil.ReadAll(body)
+	data, err := io.ReadAll(body)
 	if err != nil {
 		return err
 	}
