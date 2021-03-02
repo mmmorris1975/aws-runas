@@ -79,7 +79,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	}
 
 	authRes := new(aadAuthResponse)
-	if err = parseResponse(res.Body, authRes); err != nil {
+	if err = parseResponseNoClose(res.Body, authRes); err != nil {
 		return err
 	}
 
@@ -90,6 +90,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// A "keep me signed in" prompt may show up before getting to the good stuff. authRes.ErrCode should
 	// equal 50058 too ... isn't really an error, other than signalling you've reached this KMSI prompt
 	if strings.HasSuffix(authRes.UrlPost, "/kmsi") {
+		c.Logger.Debugf("handling kmsi")
+		res.Body.Close()
 		kmsiUrl := authRes.LoginUrl(res.Request.URL)
 
 		kmsiForm := url.Values{}
@@ -104,7 +106,6 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		}
 	}
 
-	// fixme - if we don't do kmsi, res.Body is closed by auth() and a 'read on closed response body' error happens here
 	// KMSI or not, I think we end up here. Another JS auto-submit form containing OIDC stuff.
 	// The OIDC ID token probably isn't sufficient for use with the IdentityToken* methods, since
 	// there aren't any useful claims in the token, afaict just basic profile info.
@@ -549,7 +550,10 @@ func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData int
 
 func parseResponse(body io.ReadCloser, out interface{}) error {
 	defer body.Close()
+	return parseResponseNoClose(body, out)
+}
 
+func parseResponseNoClose(body io.ReadCloser, out interface{}) error {
 	data, err := ioutil.ReadAll(body)
 	if err != nil {
 		return err
