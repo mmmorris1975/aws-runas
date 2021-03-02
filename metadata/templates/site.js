@@ -1,6 +1,3 @@
-package templates
-
-const SiteJs = `
 const advancedIamFields = ['source-profile', 'external-id'];
 const advancedSamlFields = ['auth-url', 'username', 'password', 'jump-role'];
 const advancedOidcFields = ['client-id', 'redirect-uri'];
@@ -276,7 +273,7 @@ function updateAdvancedForm(obj, val) {
 	
 			if (this.status === 200) {
 				JSON.parse(this.responseText).sort().forEach(function (val, idx, _) {
-					if (val != "default") {
+					if (val !== "default") {
 						sel.add(new Option(val));
 					}
 				});
@@ -339,4 +336,3 @@ function show_alert(type, msg) {
 
 	setTimeout(function () {alertBox.style.display = "none"}, tmout);
 }
-`

@@ -2,6 +2,7 @@ package metadata
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,7 +11,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"github.com/mmmorris1975/aws-runas/metadata/templates"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
 	"net"
@@ -41,6 +41,11 @@ const (
 
 var (
 	logger shared.Logger = new(shared.DefaultLogger)
+
+	//go:embed templates
+	content embed.FS
+
+	indexHtml, siteCss []byte
 )
 
 type Options struct {
@@ -78,6 +83,16 @@ func NewMetadataCredentialService(addr string, opts *Options) (*metadataCredenti
 
 	var err error
 	mcs.listener, err = configureListener(addr)
+	if err != nil {
+		return nil, err
+	}
+
+	indexHtml, err = content.ReadFile("templates/index.html")
+	if err != nil {
+		return nil, err
+	}
+
+	siteCss, err = content.ReadFile("templates/site.css")
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +203,7 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 	switch r.URL.Path {
 	case "/", "/index.html", "/index.htm":
 		w.Header().Set("Content-Type", "text/html")
-		_, _ = w.Write([]byte(templates.IndexHtml))
+		_, _ = w.Write(indexHtml)
 	case "/site.js":
 		params := map[string]string{
 			"profile_ep":  profilePath,
@@ -199,14 +214,14 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 			"profiles_ep": listProfilesPath,
 		}
 
-		tmpl := template.Must(template.New("").Parse(templates.SiteJs))
+		tmpl := template.Must(template.ParseFS(content, "templates/site.js"))
 		w.Header().Set("Content-Type", "application/javascript")
 		if err := tmpl.Execute(w, params); err != nil {
 			logger.Errorf("error executing template: %v", err)
 		}
 	case "/site.css":
 		w.Header().Set("Content-Type", "text/css")
-		_, _ = w.Write([]byte(templates.SiteCss))
+		_, _ = w.Write(siteCss)
 	default:
 		http.NotFound(w, r)
 	}
