@@ -33,8 +33,6 @@ Version 3.0 TODO list (in no particular order)
   * Enhancements and fixes from collected feedback
   * Possibly add support for other SAML and OIDC identity provider
   * Consider adding an ECR credential retrieval shortcut
-  * Support for Apple M1 systems (go 1.16)
-  * Use new `embed` directive with MCS web resources (go 1.16)
 
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just download the
 compiled executable and "go".
@@ -93,7 +91,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.15 tool chain and aws-sdk-go v1.36.31  
+Developed and tested using the go 1.16 tool chain and aws-sdk-go v1.36.31  
 *NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
 
 ### Build Steps

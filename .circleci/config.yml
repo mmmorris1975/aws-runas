@@ -48,6 +48,12 @@ jobs:
           environment:
             GOOS: darwin
             GOARCH: amd64
+      - run:
+          name: build darwin/arm64
+          command: make darwin
+          environment:
+            GOOS: darwin
+            GOARCH: arm64
 
       - persist_to_workspace:
           root: build
@@ -198,6 +204,12 @@ jobs:
           environment:
             GOOS: darwin
             GOARCH: amd64
+      - run:
+          name: package darwin/arm64
+          command: make zip
+          environment:
+            GOOS: darwin
+            GOARCH: arm64
       - persist_to_workspace:
           root: pkg
           paths:
