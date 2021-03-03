@@ -3,8 +3,7 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/defaults"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
@@ -29,10 +28,10 @@ func (l *iniLoader) Config(profile string, sources ...interface{}) (*AwsConfig, 
 
 	c := new(AwsConfig)
 	if len(profile) < 1 {
-		profile = session.DefaultSharedConfigProfile
+		profile = config.DefaultSharedConfigProfile
 	} else {
 		// unconditionally attempt to load default profile config
-		_ = file.Section(session.DefaultSharedConfigProfile).MapTo(c)
+		_ = file.Section(config.DefaultSharedConfigProfile).MapTo(c)
 	}
 
 	s, err := lookupProfile(file, profile)
@@ -50,7 +49,7 @@ func (l *iniLoader) Config(profile string, sources ...interface{}) (*AwsConfig, 
 		src := new(AwsConfig)
 		src.ProfileName = c.SrcProfile
 
-		_ = file.Section(session.DefaultSharedConfigProfile).MapTo(src) // add defaults to source profile config
+		_ = file.Section(config.DefaultSharedConfigProfile).MapTo(src) // add defaults to source profile config
 
 		sp, err := lookupProfile(file, c.SrcProfile)
 		if err != nil {
@@ -153,7 +152,7 @@ func (l *iniLoader) SaveProfile(cfg *AwsConfig) error {
 		return errors.New("invalid configuration, can not be nil or have empty profile name or role arn")
 	}
 
-	src := defaults.SharedConfigFilename()
+	src := config.DefaultSharedConfigFilename()
 	if e, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
 		src = e
 	}
@@ -184,7 +183,7 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 		return errors.New("profile name can not be empty")
 	}
 
-	src := defaults.SharedCredentialsFilename()
+	src := config.DefaultSharedCredentialsFilename()
 	if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 		src = e
 	}
@@ -251,7 +250,7 @@ func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
 	f := ini.Empty()
 
 	if sources == nil || len(sources) < 1 {
-		src := defaults.SharedConfigFilename()
+		src := config.DefaultSharedConfigFilename()
 		if e, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
 			src = e
 		}
@@ -273,7 +272,7 @@ func resolveCredentialSources(sources ...interface{}) (*ini.File, error) {
 	f := ini.Empty()
 
 	if sources == nil || len(sources) < 1 {
-		src := defaults.SharedCredentialsFilename()
+		src := config.DefaultSharedCredentialsFilename()
 		if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 			src = e
 		}
