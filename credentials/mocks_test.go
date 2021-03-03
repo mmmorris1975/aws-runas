@@ -1,23 +1,22 @@
 package credentials
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/request"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"time"
 )
 
 // stsMock provides a mock STS client used for testing.
 type stsMock struct {
-	stsiface.STSAPI
+	stsApi
 }
 
 // GetSessionTokenWithContext implements the AWS API for getting Session Token credentials for testing.
-func (m *stsMock) GetSessionTokenWithContext(_ aws.Context, in *sts.GetSessionTokenInput,
-	_ ...request.Option) (*sts.GetSessionTokenOutput, error) {
+func (m *stsMock) GetSessionToken(_ context.Context, in *sts.GetSessionTokenInput, _ ...func(*sts.Options)) (*sts.GetSessionTokenOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
 		return nil, err
@@ -27,12 +26,11 @@ func (m *stsMock) GetSessionTokenWithContext(_ aws.Context, in *sts.GetSessionTo
 		return nil, err
 	}
 
-	return new(sts.GetSessionTokenOutput).SetCredentials(buildCredentials(d)), nil
+	return &sts.GetSessionTokenOutput{Credentials: buildCredentials(d)}, nil
 }
 
 // AssumeRoleWithContext implements the AWS API for getting Assume Role credentials for testing.
-func (m *stsMock) AssumeRoleWithContext(_ aws.Context, in *sts.AssumeRoleInput,
-	_ ...request.Option) (*sts.AssumeRoleOutput, error) {
+func (m *stsMock) AssumeRole(_ context.Context, in *sts.AssumeRoleInput, _ ...func(*sts.Options)) (*sts.AssumeRoleOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
 		return nil, err
@@ -50,12 +48,11 @@ func (m *stsMock) AssumeRoleWithContext(_ aws.Context, in *sts.AssumeRoleInput,
 		return nil, err
 	}
 
-	return new(sts.AssumeRoleOutput).SetCredentials(buildCredentials(d)), nil
+	return &sts.AssumeRoleOutput{Credentials: buildCredentials(d)}, nil
 }
 
 // AssumeRoleWithSAMLWithContext implements the AWS API for getting role credentials using SAML for testing.
-func (m *stsMock) AssumeRoleWithSAMLWithContext(_ aws.Context, in *sts.AssumeRoleWithSAMLInput,
-	_ ...request.Option) (*sts.AssumeRoleWithSAMLOutput, error) {
+func (m *stsMock) AssumeRoleWithSAML(_ context.Context, in *sts.AssumeRoleWithSAMLInput, _ ...func(*sts.Options)) (*sts.AssumeRoleWithSAMLOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
 		return nil, err
@@ -73,12 +70,11 @@ func (m *stsMock) AssumeRoleWithSAMLWithContext(_ aws.Context, in *sts.AssumeRol
 		return nil, err
 	}
 
-	return new(sts.AssumeRoleWithSAMLOutput).SetCredentials(buildCredentials(d)), nil
+	return &sts.AssumeRoleWithSAMLOutput{Credentials: buildCredentials(d)}, nil
 }
 
 // AssumeRoleWithWebIdentityWithContext implements the AWS API for getting role credentials using Oauth2/OIDC for testing.
-func (m *stsMock) AssumeRoleWithWebIdentityWithContext(_ aws.Context, in *sts.AssumeRoleWithWebIdentityInput,
-	_ ...request.Option) (*sts.AssumeRoleWithWebIdentityOutput, error) {
+func (m *stsMock) AssumeRoleWithWebIdentity(_ context.Context, in *sts.AssumeRoleWithWebIdentityInput, _ ...func(*sts.Options)) (*sts.AssumeRoleWithWebIdentityOutput, error) {
 	d, err := validateDuration(in.DurationSeconds, 900*time.Second, 36*time.Hour, 12*time.Hour)
 	if err != nil {
 		return nil, err
@@ -96,12 +92,12 @@ func (m *stsMock) AssumeRoleWithWebIdentityWithContext(_ aws.Context, in *sts.As
 		return nil, err
 	}
 
-	return new(sts.AssumeRoleWithWebIdentityOutput).SetCredentials(buildCredentials(d)), nil
+	return &sts.AssumeRoleWithWebIdentityOutput{Credentials: buildCredentials(d)}, nil
 }
 
 // if duration != nil (default), must be in acceptable range.
 //nolint:unparam
-func validateDuration(d *int64, min, max, def time.Duration) (time.Duration, error) {
+func validateDuration(d *int32, min, max, def time.Duration) (time.Duration, error) {
 	if d != nil {
 		t := time.Duration(*d) * time.Second
 		if t < min || t > max {
@@ -159,10 +155,10 @@ func validateWebIdentityToken(t *string) error {
 	return errors.New("invalid web identity token")
 }
 
-func buildCredentials(d time.Duration) *sts.Credentials {
+func buildCredentials(d time.Duration) *types.Credentials {
 	t := time.Now().Unix()
 
-	return &sts.Credentials{
+	return &types.Credentials{
 		AccessKeyId:     aws.String(fmt.Sprintf("AKIAM0CK%d", t)),
 		Expiration:      aws.Time(time.Now().Add(d)),
 		SecretAccessKey: aws.String(fmt.Sprintf("s3cR3TkEy%d", t)),

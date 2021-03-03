@@ -1,10 +1,9 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"time"
 )
 
@@ -28,7 +27,7 @@ type SessionTokenProvider struct {
 // NewSessionTokenProvider configures a default SessionTokenProvider to allow retrieval of Session Token credentials.
 // The default provider uses the specified client.ConfigProvider to create a new sts.STS client. The credential duration
 // is set to SessionTokenDurationDefault, and the ExpiryWindow is set to 10% of the duration value.
-func NewSessionTokenProvider(cfg client.ConfigProvider) *SessionTokenProvider {
+func NewSessionTokenProvider(cfg aws.Config) *SessionTokenProvider {
 	b := newBaseStsProvider(cfg)
 	b.Duration = SessionTokenDurationDefault
 	b.ExpiryWindow = -1
@@ -39,23 +38,23 @@ func NewSessionTokenProvider(cfg client.ConfigProvider) *SessionTokenProvider {
 // Retrieve implements the AWS credentials.Provider interface to return a set of Session Token credentials.
 // If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
 // are expired, the credentials will be refreshed (prompting for MFA, if necessary), and stored back in the cache.
-func (p *SessionTokenProvider) Retrieve() (credentials.Value, error) {
-	return p.RetrieveWithContext(aws.BackgroundContext())
-}
+//func (p *SessionTokenProvider) Retrieve() (aws.Credentials, error) {
+//	return p.RetrieveWithContext(context.Background())
+//}
 
 // RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Session Token
 // credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed (prompting for
 // MFA, if necessary), and stored back in the cache.
-func (p *SessionTokenProvider) RetrieveWithContext(ctx aws.Context) (credentials.Value, error) {
+func (p *SessionTokenProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	var err error
 	creds := p.CheckCache()
 
-	if p.IsExpired() {
+	if creds == nil || creds.Value().Expired() {
 		p.Logger.Debugf("Detected expired or unset session token credentials, refreshing")
 		creds, err = p.retrieve(ctx)
 		if err != nil {
-			return credentials.Value{}, err
+			return aws.Credentials{}, err
 		}
 
 		if p.Cache != nil {
@@ -73,19 +72,19 @@ func (p *SessionTokenProvider) RetrieveWithContext(ctx aws.Context) (credentials
 	// }
 
 	v := creds.Value()
-	v.ProviderName = SessionTokenProviderName
+	v.Source = SessionTokenProviderName
 
 	p.Logger.Debugf("SESSION TOKEN CREDENTIALS: %+v", v)
 	return v, nil
 }
 
-func (p *SessionTokenProvider) retrieve(ctx aws.Context) (*Credentials, error) {
+func (p *SessionTokenProvider) retrieve(ctx context.Context) (*Credentials, error) {
 	in, err := p.getSessionTokenInput()
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := p.Client.GetSessionTokenWithContext(ctx, in)
+	out, err := p.Client.GetSessionToken(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -93,9 +92,10 @@ func (p *SessionTokenProvider) retrieve(ctx aws.Context) (*Credentials, error) {
 	if p.ExpiryWindow < 1 {
 		p.ExpiryWindow = p.Duration / 10
 	}
-	p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
+	//p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
 
 	c := FromStsCredentials(out.Credentials)
+	c.Expiration = *out.Credentials.Expiration
 	return c, nil
 }
 

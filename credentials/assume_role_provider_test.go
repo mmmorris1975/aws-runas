@@ -1,7 +1,8 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"testing"
 	"time"
@@ -27,28 +28,19 @@ func TestNewAssumeRoleProvider(t *testing.T) {
 			t.Error("invalid default token provider")
 		}
 	})
-
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
-			}
-		}()
-		NewAssumeRoleProvider(nil, "")
-	})
 }
 
 func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		p := newAssumeRoleProvider()
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -57,13 +49,13 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.Duration = 0 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -72,13 +64,13 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.Duration = 1 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -87,13 +79,13 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.Duration = 100 * time.Hour
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -102,7 +94,7 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.RoleArn = ""
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -113,7 +105,7 @@ func TestAssumeRoleProvider_Retrieve(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.RoleSessionName = ""
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -127,13 +119,13 @@ func TestAssumeRoleProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenCode = "123456"
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -143,7 +135,7 @@ func TestAssumeRoleProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenCode = "abcdef"
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -157,13 +149,13 @@ func TestAssumeRoleProvider_Retrieve_Mfa(t *testing.T) {
 			return "123456", nil
 		}
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != AssumeRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != AssumeRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -173,7 +165,7 @@ func TestAssumeRoleProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenProvider = nil
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -194,7 +186,7 @@ func TestAssumeRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -218,7 +210,7 @@ func TestAssumeRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newAssumeRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -232,7 +224,7 @@ func TestAssumeRoleProvider_Retrieve_Cache(t *testing.T) {
 }
 
 func newAssumeRoleProvider() *AssumeRoleProvider {
-	p := NewAssumeRoleProvider(mock.Session, "mockRole")
+	p := NewAssumeRoleProvider(aws.Config{}, "mockRole")
 	p.Client = new(stsMock)
 	p.RoleSessionName = "mySession"
 	p.Logger = new(shared.DefaultLogger)

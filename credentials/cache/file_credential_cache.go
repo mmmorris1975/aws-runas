@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"os"
 	"path/filepath"
@@ -27,7 +27,7 @@ func (f *fileCredentialCache) Load() *credentials.Credentials {
 	defer f.mu.RUnlock()
 
 	creds := new(credentials.Credentials)
-	stsCreds := new(sts.Credentials)
+	stsCreds := new(types.Credentials)
 
 	data, err := os.ReadFile(f.path)
 	if err != nil {

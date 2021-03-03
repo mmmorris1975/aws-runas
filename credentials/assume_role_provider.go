@@ -1,10 +1,9 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"time"
 )
 
@@ -31,7 +30,7 @@ type AssumeRoleProvider struct {
 // NewAssumeRoleProvider configures a default AssumeRoleProvider to allow Assume Role.  The default provider uses
 // the specified client.ConfigProvider to create a new sts.STS client and the roleArn argument as the role to assume.
 // The credential duration is set to AssumeRoleDefaultDuration, and the ExpiryWindow is set to 10% of the duration value.
-func NewAssumeRoleProvider(cfg client.ConfigProvider, roleArn string) *AssumeRoleProvider {
+func NewAssumeRoleProvider(cfg aws.Config, roleArn string) *AssumeRoleProvider {
 	p := &AssumeRoleProvider{
 		baseStsProvider: newBaseStsProvider(cfg),
 		RoleArn:         roleArn,
@@ -45,23 +44,23 @@ func NewAssumeRoleProvider(cfg client.ConfigProvider, roleArn string) *AssumeRol
 // Retrieve implements the AWS credentials.Provider interface to return a set of Assume Role credentials.
 // If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
 // are expired, the credentials will be refreshed (prompting for MFA, if necessary), and stored back in the cache.
-func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
-	return p.RetrieveWithContext(aws.BackgroundContext())
-}
+//func (p *AssumeRoleProvider) Retrieve() (aws.Credentials, error) {
+//	return p.RetrieveWithContext(context.Background())
+//}
 
 // RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role
 // credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed (prompting for
 // MFA, if necessary), and stored back in the cache.
-func (p AssumeRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Value, error) {
+func (p *AssumeRoleProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	var err error
 	creds := p.CheckCache()
 
-	if p.IsExpired() {
+	if creds == nil || creds.Value().Expired() {
 		p.Logger.Debugf("Detected expired or unset assume role credentials, refreshing")
 		creds, err = p.retrieve(ctx)
 		if err != nil {
-			return credentials.Value{}, err
+			return aws.Credentials{}, err
 		}
 
 		if p.Cache != nil {
@@ -79,19 +78,19 @@ func (p AssumeRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Va
 	// }
 
 	v := creds.Value()
-	v.ProviderName = AssumeRoleProviderName
+	v.Source = AssumeRoleProviderName
 
 	p.Logger.Debugf("ASSUME ROLE CREDENTIALS: %+v", v)
 	return v, nil
 }
 
-func (p AssumeRoleProvider) retrieve(ctx aws.Context) (*Credentials, error) {
+func (p AssumeRoleProvider) retrieve(ctx context.Context) (*Credentials, error) {
 	in, err := p.getAssumeRoleInput()
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := p.Client.AssumeRoleWithContext(ctx, in)
+	out, err := p.Client.AssumeRole(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +98,7 @@ func (p AssumeRoleProvider) retrieve(ctx aws.Context) (*Credentials, error) {
 	if p.ExpiryWindow < 1 {
 		p.ExpiryWindow = p.Duration / 10
 	}
-	p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
+	//p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
 
 	c := FromStsCredentials(out.Credentials)
 	return c, nil

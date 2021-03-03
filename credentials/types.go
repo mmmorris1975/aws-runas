@@ -1,8 +1,9 @@
 package credentials
 
 import (
+	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 // ErrInvalidCredentials is the error returned when a set of invalid AWS credentials is detected.
@@ -27,15 +28,18 @@ type IdentityTokenCacher interface {
 }
 
 type SamlRoleProvider interface {
-	credentials.Expirer
-	credentials.ProviderWithContext
 	SamlAssertion(saml *SamlAssertion)
 	ClearCache() error
 }
 
 type WebRoleProvider interface {
-	credentials.Expirer
-	credentials.ProviderWithContext
 	WebIdentityToken(token *OidcIdentityToken)
 	ClearCache() error
+}
+
+type stsApi interface {
+	AssumeRole(ctx context.Context, params *sts.AssumeRoleInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleOutput, error)
+	AssumeRoleWithSAML(ctx context.Context, params *sts.AssumeRoleWithSAMLInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleWithSAMLOutput, error)
+	AssumeRoleWithWebIdentity(ctx context.Context, params *sts.AssumeRoleWithWebIdentityInput, optFns ...func(*sts.Options)) (*sts.AssumeRoleWithWebIdentityOutput, error)
+	GetSessionToken(ctx context.Context, params *sts.GetSessionTokenInput, optFns ...func(*sts.Options)) (*sts.GetSessionTokenOutput, error)
 }

@@ -1,11 +1,8 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"os"
@@ -13,8 +10,8 @@ import (
 )
 
 type baseStsProvider struct {
-	credentials.Expiry
-	Client        stsiface.STSAPI
+	//credentials.Expiry
+	Client        stsApi
 	Cache         CredentialCacher
 	Duration      time.Duration
 	ExpiryWindow  time.Duration
@@ -24,9 +21,9 @@ type baseStsProvider struct {
 	TokenProvider func() (string, error)
 }
 
-func newBaseStsProvider(cfg client.ConfigProvider) *baseStsProvider {
+func newBaseStsProvider(cfg aws.Config) *baseStsProvider {
 	return &baseStsProvider{
-		Client:        sts.New(cfg),
+		Client:        sts.NewFromConfig(cfg),
 		Logger:        new(shared.DefaultLogger),
 		TokenProvider: helpers.NewMfaTokenProvider(os.Stdin).ReadInput,
 	}
@@ -35,14 +32,15 @@ func newBaseStsProvider(cfg client.ConfigProvider) *baseStsProvider {
 // CheckCache will load credentials from cache.  If a cache is not configured, this method will
 // return an empty and expired set of credentials.
 func (p *baseStsProvider) CheckCache() *Credentials {
-	var creds *Credentials
+	creds := new(Credentials)
 
 	if p.Cache != nil {
 		if creds = p.Cache.Load(); creds.Value().HasKeys() {
 			p.Logger.Debugf("loaded sts credentials from cache")
-			p.SetExpiration(creds.Expiration, 0)
+			//p.SetExpiration(creds.Expiration, 0)
 		} else {
-			p.SetExpiration(time.Unix(0, 0), 0)
+			//p.SetExpiration(time.Unix(0, 0), 0)
+			creds.Expiration = time.Unix(0, 0)
 		}
 	}
 
@@ -54,7 +52,7 @@ func (p *baseStsProvider) CheckCache() *Credentials {
 // will be checked against the other provided duration values.  If less than 1, the default value will
 // be used, if less than the minimum, the minimum value will be used, and if greater than the maximum,
 // the maximum value will be used.
-func (p *baseStsProvider) ConvertDuration(d, min, max, def time.Duration) *int64 {
+func (p *baseStsProvider) ConvertDuration(d, min, max, def time.Duration) *int32 {
 	switch {
 	case d < 1:
 		p.Logger.Debugf("provided duration less than 1, setting to default value")
@@ -67,7 +65,7 @@ func (p *baseStsProvider) ConvertDuration(d, min, max, def time.Duration) *int64
 		d = max
 	}
 
-	return aws.Int64(int64(d.Seconds()))
+	return aws.Int32(int32(d.Seconds()))
 }
 
 func (p *baseStsProvider) handleMfa() (*string, error) {

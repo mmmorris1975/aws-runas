@@ -1,11 +1,10 @@
 package credentials
 
 import (
+	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
 const (
@@ -25,7 +24,7 @@ type samlRoleProvider struct {
 // saml is the base64 encoded SAML assertion which was returned after performing the necessary operations against the
 // identity provider. The credential duration is set to AssumeRoleDefaultDuration, and the ExpiryWindow is set to 10% of
 // the duration value.
-func NewSamlRoleProvider(cfg client.ConfigProvider, roleArn string, saml *SamlAssertion) *samlRoleProvider {
+func NewSamlRoleProvider(cfg aws.Config, roleArn string, saml *SamlAssertion) *samlRoleProvider {
 	return &samlRoleProvider{
 		AssumeRoleProvider: NewAssumeRoleProvider(cfg, roleArn),
 		samlAssertion:      saml,
@@ -41,23 +40,23 @@ func (p *samlRoleProvider) SamlAssertion(saml *SamlAssertion) {
 // Retrieve implements the AWS credentials.Provider interface to return a set of Assume Role with SAML credentials.
 // If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
 // are expired, the credentials will be refreshed, and stored back in the cache.
-func (p *samlRoleProvider) Retrieve() (credentials.Value, error) {
-	return p.RetrieveWithContext(aws.BackgroundContext())
-}
+//func (p *samlRoleProvider) Retrieve() (aws.Credentials, error) {
+//	return p.RetrieveWithContext(context.Background())
+//}
 
 // RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role with
 // SAML credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed, and stored back
 // in the cache.
-func (p *samlRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Value, error) {
+func (p *samlRoleProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
 	var err error
 	creds := p.CheckCache()
 
-	if p.IsExpired() {
+	if creds == nil || creds.Value().Expired() {
 		p.Logger.Debugf("Detected expired or unset saml role credentials, refreshing")
 		creds, err = p.retrieve(ctx)
 		if err != nil {
-			return credentials.Value{}, err
+			return aws.Credentials{}, err
 		}
 
 		if p.Cache != nil {
@@ -75,19 +74,19 @@ func (p *samlRoleProvider) RetrieveWithContext(ctx aws.Context) (credentials.Val
 	// }
 
 	v := creds.Value()
-	v.ProviderName = SamlRoleProviderName
+	v.Source = SamlRoleProviderName
 
 	p.Logger.Debugf("SAML ROLE CREDENTIALS: %+v", v)
 	return v, nil
 }
 
-func (p *samlRoleProvider) retrieve(ctx aws.Context) (*Credentials, error) {
+func (p *samlRoleProvider) retrieve(ctx context.Context) (*Credentials, error) {
 	in, err := p.getAssumeRoleWithSamlInput()
 	if err != nil {
 		return nil, err
 	}
 
-	out, err := p.Client.AssumeRoleWithSAMLWithContext(ctx, in)
+	out, err := p.Client.AssumeRoleWithSAML(ctx, in)
 	if err != nil {
 		return nil, err
 	}
@@ -95,7 +94,7 @@ func (p *samlRoleProvider) retrieve(ctx aws.Context) (*Credentials, error) {
 	if p.ExpiryWindow < 1 {
 		p.ExpiryWindow = p.Duration / 10
 	}
-	p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
+	//p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
 
 	c := FromStsCredentials(out.Credentials)
 	return c, nil

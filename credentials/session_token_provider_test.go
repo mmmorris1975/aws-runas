@@ -1,7 +1,8 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"testing"
 	"time"
@@ -9,7 +10,7 @@ import (
 
 func TestNewSessionTokenProvider(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		p := NewSessionTokenProvider(mock.Session)
+		p := NewSessionTokenProvider(aws.Config{})
 
 		if p.Client == nil {
 			t.Error("invalid Client")
@@ -27,27 +28,18 @@ func TestNewSessionTokenProvider(t *testing.T) {
 			t.Error("invalid default token provider")
 		}
 	})
-
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewSessionTokenProvider with nil config")
-			}
-		}()
-		NewSessionTokenProvider(nil)
-	})
 }
 
 //nolint:gocyclo
 func TestSessionTokenProvider_Retrieve(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		v, err := newSessionTokenProvider().Retrieve()
+		v, err := newSessionTokenProvider().Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -56,13 +48,13 @@ func TestSessionTokenProvider_Retrieve(t *testing.T) {
 		p := newSessionTokenProvider()
 		p.Duration = 0 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -71,13 +63,13 @@ func TestSessionTokenProvider_Retrieve(t *testing.T) {
 		p := newSessionTokenProvider()
 		p.Duration = 1 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -86,13 +78,13 @@ func TestSessionTokenProvider_Retrieve(t *testing.T) {
 		p := newSessionTokenProvider()
 		p.Duration = 100 * time.Hour
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -104,13 +96,13 @@ func TestSessionTokenProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenCode = "123456"
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -120,7 +112,7 @@ func TestSessionTokenProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenCode = "abcdef"
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -134,13 +126,13 @@ func TestSessionTokenProvider_Retrieve_Mfa(t *testing.T) {
 			return "123456", nil
 		}
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SessionTokenProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SessionTokenProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -150,7 +142,7 @@ func TestSessionTokenProvider_Retrieve_Mfa(t *testing.T) {
 		p.SerialNumber = "mfa"
 		p.TokenProvider = nil
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -171,7 +163,7 @@ func TestSessionTokenProvider_Retrieve_Cache(t *testing.T) {
 		p := newSessionTokenProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -195,7 +187,7 @@ func TestSessionTokenProvider_Retrieve_Cache(t *testing.T) {
 		p := newSessionTokenProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -209,7 +201,7 @@ func TestSessionTokenProvider_Retrieve_Cache(t *testing.T) {
 }
 
 func newSessionTokenProvider() *SessionTokenProvider {
-	p := NewSessionTokenProvider(mock.Session)
+	p := NewSessionTokenProvider(aws.Config{})
 	p.Client = new(stsMock)
 	p.Logger = new(shared.DefaultLogger)
 	return p

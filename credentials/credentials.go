@@ -2,9 +2,8 @@ package credentials
 
 import (
 	"encoding/json"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"time"
 )
 
@@ -84,19 +83,22 @@ func (c *Credentials) CredentialsProcess() ([]byte, error) {
 	return json.Marshal(&pc)
 }
 
-// Value returns an AWS credentials.Value type for programmatic use.
-func (c *Credentials) Value() credentials.Value {
-	return credentials.Value{
+// Value returns an aws.Credentials type for programmatic use.
+// AWS SDK v1 terminology retained due to laziness
+func (c *Credentials) Value() aws.Credentials {
+	return aws.Credentials{
 		AccessKeyID:     c.AccessKeyId,
 		SecretAccessKey: c.SecretAccessKey,
 		SessionToken:    c.Token,
-		ProviderName:    c.ProviderName,
+		Source:          c.ProviderName,
+		Expires:         c.Expiration,
+		CanExpire:       true,
 	}
 }
 
 // StsCredentials returns an AWS sts.Credentials type for programmatic use. Also suitable for long term caching.
-func (c *Credentials) StsCredentials() *sts.Credentials {
-	return &sts.Credentials{
+func (c *Credentials) StsCredentials() *types.Credentials {
+	return &types.Credentials{
 		AccessKeyId:     aws.String(c.AccessKeyId),
 		Expiration:      aws.Time(c.Expiration),
 		SecretAccessKey: aws.String(c.SecretAccessKey),
@@ -104,22 +106,24 @@ func (c *Credentials) StsCredentials() *sts.Credentials {
 	}
 }
 
-// FromValue provides a way to take an AWS credentials.Value and convert it to a Credentials type.
+// FromValue provides a way to take an aws.Credentials type and convert it to a Credentials type.
 // Since expiration information is not a native part of the AWS credentials.Value type, it should
 // be set manually in the Expiration field on the returned object, using data sourced elsewhere.
-func FromValue(v credentials.Value) *Credentials {
+// AWS SDK v1 terminology retained due to laziness.
+func FromValue(v aws.Credentials) *Credentials {
 	return &Credentials{
 		AccessKeyId:     v.AccessKeyID,
 		SecretAccessKey: v.SecretAccessKey,
 		Token:           v.SessionToken,
-		ProviderName:    v.ProviderName,
+		ProviderName:    v.Source,
+		Expiration:      v.Expires,
 	}
 }
 
 // FromStsCredentials provides a way to take an AWS sts.Credentials and convert it to a Credentials type.
 // Since credential provider information is not a native part of the AWS sts.Credentials type, it should
 // be set manually in the ProviderName field on the returned object, using data sourced elsewhere.
-func FromStsCredentials(v *sts.Credentials) *Credentials {
+func FromStsCredentials(v *types.Credentials) *Credentials {
 	c := new(Credentials)
 
 	if v == nil {
