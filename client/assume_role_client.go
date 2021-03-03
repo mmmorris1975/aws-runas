@@ -2,8 +2,7 @@ package client
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/client"
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"os/user"
 	"time"
@@ -24,7 +23,7 @@ type AssumeRoleClientConfig struct {
 }
 
 // NewAssumeRoleClient is an AwsClient which knows how to do Assume Role operations.
-func NewAssumeRoleClient(cfg client.ConfigProvider, clientCfg *AssumeRoleClientConfig) *assumeRoleClient {
+func NewAssumeRoleClient(cfg aws.Config, clientCfg *AssumeRoleClientConfig) *assumeRoleClient {
 	c := &assumeRoleClient{newBaseIamClient(cfg, clientCfg.Logger), nil}
 
 	p := credentials.NewAssumeRoleProvider(cfg, clientCfg.RoleArn)
@@ -49,7 +48,10 @@ func NewAssumeRoleClient(cfg client.ConfigProvider, clientCfg *AssumeRoleClientC
 	}
 
 	c.provider = p
-	c.creds = awscreds.NewCredentials(p)
+	//c.creds = awscreds.NewCredentials(p)
+	c.creds = aws.NewCredentialsCache(p, func(o *aws.CredentialsCacheOptions) {
+		o.ExpiryWindow = p.ExpiryWindow
+	})
 	return c
 }
 

@@ -1,13 +1,11 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	awscred "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/aws/defaults"
-	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -56,18 +54,10 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		cfg.ProfileName = ""
 	}
 
-	sesCfg := new(aws.Config).WithCredentialsChainVerboseErrors(true).WithRegion(cfg.Region).
-		WithLogLevel(f.options.AwsLogLevel).
-		WithLogger(aws.LoggerFunc(func(v ...interface{}) {
-			// AWS SDK either does no logging at all, or debug-level logging
-			f.options.Logger.Debugf(fmt.Sprint(v...))
-		}))
-
-	// Profile is used to set cache file names for all clients
-	opts := session.Options{
-		Config:            *sesCfg,
-		Profile:           cfg.ProfileName,
-		SharedConfigState: session.SharedConfigEnable,
+	opts := []func(*awsconfig.LoadOptions) error{
+		//awsconfig.WithLogger(),
+		awsconfig.WithRegion(cfg.Region),
+		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
 	}
 
 	f.options.Logger.Debugf("CLIENT CONFIG: %+v", cfg)
@@ -80,7 +70,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.samlClient(cfg, creds, opts)
+		return f.samlClient(cfg, creds, opts...)
 	}
 
 	if len(cfg.WebIdentityUrl) > 0 {
@@ -91,18 +81,18 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.webClient(cfg, creds, opts)
+		return f.webClient(cfg, creds, opts...)
 	}
 
 	if len(cfg.RoleArn) > 0 {
-		return f.roleClient(cfg, opts), nil
+		return f.roleClient(cfg, opts...)
 	}
 
-	return f.sessionClient(cfg, opts), nil
+	return f.sessionClient(cfg, opts...)
 }
 
 //nolint:funlen
-func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
+func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring SAML client")
 
@@ -123,13 +113,16 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 	}
 
 	if f.options.EnableCache {
-		cacheFile := cacheFileName(".aws_saml_role", opts.Profile, cfg.RoleArn)
+		cacheFile := cacheFileName(".aws_saml_role", cfg.ProfileName, cfg.RoleArn)
 		samlCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
 	// unset opts.Profile, since there's nothing we need it for in the config/credentials files past here
-	opts.Profile = ""
-	ses := session.Must(session.NewSessionWithOptions(opts))
+	opts = append(opts, awsconfig.WithSharedConfigProfile(""))
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(cfg.JumpRoleArn) > 0 {
 		var roleCache credentials.CredentialCacher
@@ -141,7 +134,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		}
 
 		logger.Debugf("jump role found, configuring SAML client as base client")
-		baseCl := NewSamlRoleClient(ses, cfg.SamlUrl, samlCfg)
+		baseCl := NewSamlRoleClient(awsCfg, cfg.SamlUrl, samlCfg)
 		baseCl.samlClient.SetCookieJar(cookieJar)
 
 		logger.Debugf("fetching initial SAML assertion")
@@ -151,7 +144,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		}
 		baseCl.roleProvider.SamlAssertion(saml)
 
-		ses.Config.Credentials = awscred.NewCredentials(baseCl.roleProvider)
+		awsCfg.Credentials = baseCl.roleProvider
 
 		// use assume role client configured with web identity (oidc) creds for role chaining
 		roleCfg := &AssumeRoleClientConfig{
@@ -166,13 +159,13 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		}
 
 		logger.Debugf("configuring assume role client as role client")
-		roleCl := NewAssumeRoleClient(ses, roleCfg)
+		roleCl := NewAssumeRoleClient(awsCfg, roleCfg)
 		roleCl.ident = baseCl.samlClient
 		return roleCl, nil
 	}
 
 	logger.Debugf("no jump role found, only configuring SAML client")
-	cl := NewSamlRoleClient(ses, cfg.SamlUrl, samlCfg)
+	cl := NewSamlRoleClient(awsCfg, cfg.SamlUrl, samlCfg)
 	cl.samlClient.SetCookieJar(cookieJar)
 
 	logger.Debugf("fetching initial SAML assertion")
@@ -182,7 +175,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 }
 
 //nolint:funlen
-func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts session.Options) (AwsClient, error) {
+func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Web Identity client")
 
@@ -205,14 +198,17 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 	webCfg.Scopes = nil // not supported yet
 	webCfg.Logger = logger
 
-	cacheFile := cacheFileName(".aws_web_role", opts.Profile, cfg.RoleArn)
+	cacheFile := cacheFileName(".aws_web_role", cfg.ProfileName, cfg.RoleArn)
 	if f.options.EnableCache {
 		webCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
 	// unset opts.Profile, since there's nothing we need it for in the config/credentials files past here
-	opts.Profile = ""
-	ses := session.Must(session.NewSessionWithOptions(opts))
+	opts = append(opts, awsconfig.WithSharedConfigProfile(""))
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	if len(cfg.JumpRoleArn) > 0 {
 		var roleCache credentials.CredentialCacher
@@ -224,18 +220,18 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		}
 
 		logger.Debugf("jump role found, configuring Web Identity client as base client")
-		baseCl := NewWebRoleClient(ses, cfg.WebIdentityUrl, webCfg)
+		baseCl := NewWebRoleClient(awsCfg, cfg.WebIdentityUrl, webCfg)
 		baseCl.webClient.SetCookieJar(cookieJar)
 
 		logger.Debugf("fetching initial Web Identity token")
-		tokBytes, err := baseCl.FetchToken(aws.BackgroundContext())
+		tokBytes, err := baseCl.FetchToken(context.Background())
 		if err != nil {
 			return nil, err
 		}
 		idToken := credentials.OidcIdentityToken(tokBytes)
 		baseCl.roleProvider.WebIdentityToken(&idToken)
 
-		ses.Config.Credentials = awscred.NewCredentials(baseCl.roleProvider)
+		awsCfg.Credentials = baseCl.roleProvider
 
 		// use assume role client configured with web identity (oidc) creds for role chaining
 		roleCfg := &AssumeRoleClientConfig{
@@ -250,18 +246,18 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		}
 
 		logger.Debugf("configuring assume role client as role client")
-		roleCl := NewAssumeRoleClient(ses, roleCfg)
+		roleCl := NewAssumeRoleClient(awsCfg, roleCfg)
 		roleCl.ident = baseCl.webClient
 		return roleCl, nil
 	}
 
 	logger.Debugf("no jump role found, only configuring Web Identity client")
-	cl := NewWebRoleClient(ses, cfg.WebIdentityUrl, webCfg)
+	cl := NewWebRoleClient(awsCfg, cfg.WebIdentityUrl, webCfg)
 	cl.webClient.SetCookieJar(cookieJar)
 	return cl, nil
 }
 
-func (f *Factory) roleClient(cfg *config.AwsConfig, opts session.Options) *assumeRoleClient {
+func (f *Factory) roleClient(cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*assumeRoleClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Assume Role client")
 
@@ -279,16 +275,19 @@ func (f *Factory) roleClient(cfg *config.AwsConfig, opts session.Options) *assum
 	}
 
 	if f.options.EnableCache {
-		cacheFile := cacheFileName(".aws_assume_role", opts.Profile, cfg.RoleArn)
+		cacheFile := cacheFileName(".aws_assume_role", cfg.ProfileName, cfg.RoleArn)
 		roleCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
 	if len(cfg.SrcProfile) > 0 {
 		logger.Debugf("found source profile, setting as session profile")
-		opts.Profile = cfg.SrcProfile
+		opts = append(opts, awsconfig.WithSharedConfigProfile(cfg.SrcProfile))
 	}
 
-	ses := session.Must(session.NewSessionWithOptions(opts))
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	if err != nil {
+		return nil, err
+	}
 
 	if cfg.RoleCredentialDuration() <= credentials.AssumeRoleDurationDefault {
 		logger.Debugf("detected default or lower role credential duration, using session token credentials")
@@ -296,18 +295,22 @@ func (f *Factory) roleClient(cfg *config.AwsConfig, opts session.Options) *assum
 		roleCfg.SerialNumber = ""
 
 		// configure role client to use session credentials to fetch role credentials and identity
-		sc := f.sessionClient(cfg, opts)
-		ses.Config.Credentials = sc.creds
+		var sc *sessionTokenClient
+		sc, err = f.sessionClient(cfg, opts...)
+		if err != nil {
+			return nil, err
+		}
+		awsCfg.Credentials = sc.creds
 
-		cl := NewAssumeRoleClient(ses, roleCfg)
+		cl := NewAssumeRoleClient(awsCfg, roleCfg)
 		cl.ident = sc.ident
-		return cl
+		return cl, nil
 	}
 
-	return NewAssumeRoleClient(ses, roleCfg)
+	return NewAssumeRoleClient(awsCfg, roleCfg), nil
 }
 
-func (f *Factory) sessionClient(cfg *config.AwsConfig, opts session.Options) *sessionTokenClient {
+func (f *Factory) sessionClient(cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*sessionTokenClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Session Token client")
 
@@ -320,11 +323,16 @@ func (f *Factory) sessionClient(cfg *config.AwsConfig, opts session.Options) *se
 	}
 
 	if f.options.EnableCache {
-		cacheFile := cacheFileName(".aws_session_token", opts.Profile, "")
+		cacheFile := cacheFileName(".aws_session_token", cfg.ProfileName, "")
 		sesCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
-	return NewSessionTokenClient(session.Must(session.NewSessionWithOptions(opts)), sesCfg)
+	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewSessionTokenClient(awsCfg, sesCfg), nil
 }
 
 func (f *Factory) decodePassword(url, password string) string {
@@ -337,7 +345,7 @@ func (f *Factory) decodePassword(url, password string) string {
 }
 
 func cachePath() string {
-	f := defaults.SharedConfigFilename()
+	f := awsconfig.DefaultSharedConfigFilename()
 	if v, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
 		f = v
 	}

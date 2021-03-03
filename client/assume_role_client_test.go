@@ -1,8 +1,7 @@
 package client
 
 import (
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"os"
 	"testing"
@@ -10,20 +9,11 @@ import (
 
 func TestNewAssumeRoleClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		c := NewAssumeRoleClient(mock.Session, &AssumeRoleClientConfig{RoleSessionName: "mockSessionName"})
+		c := NewAssumeRoleClient(aws.Config{}, &AssumeRoleClientConfig{RoleSessionName: "mockSessionName"})
 		if c == nil || c.creds == nil || c.ident == nil {
 			t.Error("invalid client")
 			return
 		}
-	})
-
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
-			}
-		}()
-		NewAssumeRoleClient(nil, new(AssumeRoleClientConfig))
 	})
 
 	t.Run("nil client config", func(t *testing.T) {
@@ -32,7 +22,7 @@ func TestNewAssumeRoleClient(t *testing.T) {
 				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
 			}
 		}()
-		NewAssumeRoleClient(mock.Session, nil)
+		NewAssumeRoleClient(aws.Config{}, nil)
 	})
 
 	t.Run("empty client config", func(t *testing.T) {
@@ -42,7 +32,7 @@ func TestNewAssumeRoleClient(t *testing.T) {
 			os.Unsetenv(e)
 		}
 
-		c := NewAssumeRoleClient(mock.Session, new(AssumeRoleClientConfig))
+		c := NewAssumeRoleClient(aws.Config{}, new(AssumeRoleClientConfig))
 		if c == nil {
 			t.Error("nil client")
 			return
@@ -116,7 +106,7 @@ func TestAssumeRoleClient_Credentials(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		c := newAssumeRoleClient()
-		c.creds = awscreds.NewCredentials(&mockCredProvider{sendError: true})
+		c.creds = aws.NewCredentialsCache(&mockCredProvider{sendError: true})
 
 		if _, err := c.Credentials(); err == nil {
 			t.Error("did not receive expected error")
@@ -127,15 +117,15 @@ func TestAssumeRoleClient_Credentials(t *testing.T) {
 
 func TestAssumeRoleClient_ConfigProvider(t *testing.T) {
 	c := newAssumeRoleClient()
-	c.session = mock.Session
-	if cp := c.ConfigProvider(); cp == nil {
+	c.session = aws.Config{}
+	if cp := c.ConfigProvider(); cp.Region != c.session.Region {
 		t.Error("invalid config provider")
 	}
 }
 
 func TestAssumeRoleClient_ClearCache(t *testing.T) {
 	c := newAssumeRoleClient()
-	c.provider = credentials.NewAssumeRoleProvider(mock.Session, "mockRole")
+	c.provider = credentials.NewAssumeRoleProvider(aws.Config{}, "mockRole")
 
 	t.Run("no cache", func(t *testing.T) {
 		c.provider.Cache = nil
@@ -166,7 +156,7 @@ func TestAssumeRoleClient_ClearCache(t *testing.T) {
 
 func newAssumeRoleClient() *assumeRoleClient {
 	c := &assumeRoleClient{baseIamClient: new(baseIamClient)}
-	c.creds = awscreds.NewCredentials(new(mockCredProvider))
+	c.creds = aws.NewCredentialsCache(new(mockCredProvider))
 	c.ident = new(mockIdent)
 	return c
 }

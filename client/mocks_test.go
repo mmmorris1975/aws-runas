@@ -3,8 +3,7 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws"
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
@@ -18,20 +17,16 @@ type mockCredProvider struct {
 	sendError bool
 }
 
-func (m *mockCredProvider) Retrieve() (awscreds.Value, error) {
-	return m.RetrieveWithContext(aws.BackgroundContext())
-}
-
-func (m *mockCredProvider) RetrieveWithContext(awscreds.Context) (awscreds.Value, error) {
+func (m *mockCredProvider) Retrieve(context.Context) (aws.Credentials, error) {
 	if m.sendError {
-		return awscreds.Value{}, errors.New("error: Retrieve()")
+		return aws.Credentials{}, errors.New("error: Retrieve()")
 	}
 
-	return awscreds.Value{
+	return aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",
 		SessionToken:    "mockST",
-		ProviderName:    "mockProvider",
+		Source:          "mockProvider",
 	}, nil
 }
 
@@ -132,7 +127,7 @@ func (m *mockResolver) Credentials(string) (*config.AwsCredentials, error) {
 type mockWebRoleProvider bool
 
 func (p *mockWebRoleProvider) ExpiresAt() time.Time {
-	if bool(*p) {
+	if *p {
 		return time.Now().Add(-1 * time.Minute)
 	}
 	return time.Now().Add(1 * time.Hour)
@@ -142,16 +137,12 @@ func (p *mockWebRoleProvider) IsExpired() bool {
 	return p.ExpiresAt().Before(time.Now())
 }
 
-func (p *mockWebRoleProvider) Retrieve() (awscreds.Value, error) {
-	return p.RetrieveWithContext(context.Background())
-}
-
-func (p *mockWebRoleProvider) RetrieveWithContext(awscreds.Context) (awscreds.Value, error) {
-	return awscreds.Value{
+func (p *mockWebRoleProvider) Retrieve(context.Context) (aws.Credentials, error) {
+	return aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",
 		SessionToken:    "mockToken",
-		ProviderName:    "mockWebRoleProvider",
+		Source:          "mockWebRoleProvider",
 	}, nil
 }
 
@@ -168,7 +159,7 @@ func (p *mockWebRoleProvider) ClearCache() error {
 type mockSamlRoleProvider bool
 
 func (p *mockSamlRoleProvider) ExpiresAt() time.Time {
-	if bool(*p) {
+	if *p {
 		return time.Now().Add(-1 * time.Minute)
 	}
 	return time.Now().Add(1 * time.Hour)
@@ -178,16 +169,12 @@ func (p *mockSamlRoleProvider) IsExpired() bool {
 	return p.ExpiresAt().Before(time.Now())
 }
 
-func (p *mockSamlRoleProvider) Retrieve() (awscreds.Value, error) {
-	return p.RetrieveWithContext(context.Background())
-}
-
-func (p *mockSamlRoleProvider) RetrieveWithContext(awscreds.Context) (awscreds.Value, error) {
-	return awscreds.Value{
+func (p *mockSamlRoleProvider) Retrieve(context.Context) (aws.Credentials, error) {
+	return aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",
 		SessionToken:    "mockToken",
-		ProviderName:    "mockSamlRoleProvider",
+		Source:          "mockSamlRoleProvider",
 	}, nil
 }
 

@@ -1,8 +1,7 @@
 package client
 
 import (
-	"github.com/aws/aws-sdk-go/aws/client"
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"time"
@@ -24,7 +23,7 @@ type SessionTokenClientConfig struct {
 }
 
 // NewSessionTokenClient is an AwsClient which knows how to do Get Session Token operations.
-func NewSessionTokenClient(cfg client.ConfigProvider, clientCfg *SessionTokenClientConfig) *sessionTokenClient {
+func NewSessionTokenClient(cfg aws.Config, clientCfg *SessionTokenClientConfig) *sessionTokenClient {
 	c := &sessionTokenClient{newBaseIamClient(cfg, clientCfg.Logger), nil}
 
 	p := credentials.NewSessionTokenProvider(cfg)
@@ -36,7 +35,7 @@ func NewSessionTokenClient(cfg client.ConfigProvider, clientCfg *SessionTokenCli
 	p.Logger = clientCfg.Logger
 
 	c.provider = p
-	c.creds = awscreds.NewCredentials(p)
+	c.creds = aws.NewCredentialsCache(p)
 	return c
 }
 

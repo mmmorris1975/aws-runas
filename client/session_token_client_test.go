@@ -1,28 +1,18 @@
 package client
 
 import (
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"testing"
 )
 
 func TestNewSessionTokenClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		c := NewSessionTokenClient(mock.Session, new(SessionTokenClientConfig))
+		c := NewSessionTokenClient(aws.Config{}, new(SessionTokenClientConfig))
 		if c == nil || c.creds == nil || c.ident == nil {
 			t.Error("invalid client")
 			return
 		}
-	})
-
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
-			}
-		}()
-		NewSessionTokenClient(nil, new(SessionTokenClientConfig))
 	})
 
 	t.Run("nil client config", func(t *testing.T) {
@@ -31,7 +21,7 @@ func TestNewSessionTokenClient(t *testing.T) {
 				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
 			}
 		}()
-		NewSessionTokenClient(mock.Session, nil)
+		NewSessionTokenClient(aws.Config{}, nil)
 	})
 }
 
@@ -101,7 +91,7 @@ func TestSessionTokenClient_Credentials(t *testing.T) {
 
 	t.Run("error", func(t *testing.T) {
 		c := newSessionTokenClient()
-		c.creds = awscreds.NewCredentials(&mockCredProvider{sendError: true})
+		c.creds = aws.NewCredentialsCache(&mockCredProvider{sendError: true})
 
 		if _, err := c.Credentials(); err == nil {
 			t.Error("did not receive expected error")
@@ -122,15 +112,15 @@ func TestSessionTokenClient_Credentials(t *testing.T) {
 
 func TestSessionTokenClient_ConfigProvider(t *testing.T) {
 	c := newSessionTokenClient()
-	c.session = mock.Session
-	if cp := c.ConfigProvider(); cp == nil {
+	c.session = aws.Config{}
+	if cp := c.ConfigProvider(); cp.Region != c.session.Region {
 		t.Error("invalid config provider")
 	}
 }
 
 func TestSessionTokenClient_ClearCache(t *testing.T) {
 	c := newSessionTokenClient()
-	c.provider = credentials.NewSessionTokenProvider(mock.Session)
+	c.provider = credentials.NewSessionTokenProvider(aws.Config{})
 
 	t.Run("no cache", func(t *testing.T) {
 		c.provider.Cache = nil
@@ -161,7 +151,7 @@ func TestSessionTokenClient_ClearCache(t *testing.T) {
 
 func newSessionTokenClient() *sessionTokenClient {
 	c := &sessionTokenClient{baseIamClient: new(baseIamClient)}
-	c.creds = awscreds.NewCredentials(new(mockCredProvider))
+	c.creds = aws.NewCredentialsCache(new(mockCredProvider))
 	c.ident = new(mockIdent)
 	return c
 }
