@@ -1,13 +1,12 @@
 package identity
 
 import (
+	"context"
 	"encoding/json"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"net/url"
 	"sort"
@@ -19,17 +18,17 @@ import (
 const ProviderAws = "AwsIdentityProvider"
 
 type awsIdentityProvider struct {
-	stsClient stsiface.STSAPI
-	iamClient iamiface.IAMAPI
+	stsClient stsApi
+	iamClient iamApi
 	logger    shared.Logger
 	wg        *sync.WaitGroup
 }
 
 // NewAwsIdentityProvider creates a valid, default AwsIdentityProvider using the specified client.ConfigProvider.
-func NewAwsIdentityProvider(cfg client.ConfigProvider) *awsIdentityProvider {
+func NewAwsIdentityProvider(cfg aws.Config) *awsIdentityProvider {
 	return &awsIdentityProvider{
-		stsClient: sts.New(cfg),
-		iamClient: iam.New(cfg),
+		stsClient: sts.NewFromConfig(cfg),
+		iamClient: iam.NewFromConfig(cfg),
 		logger:    new(shared.DefaultLogger),
 		wg:        new(sync.WaitGroup),
 	}
@@ -45,7 +44,7 @@ func (p *awsIdentityProvider) WithLogger(l shared.Logger) *awsIdentityProvider {
 
 // Identity retrieves the Identity information for the AWS IAM user.
 func (p *awsIdentityProvider) Identity() (*Identity, error) {
-	out, err := p.stsClient.GetCallerIdentity(new(sts.GetCallerIdentityInput))
+	out, err := p.stsClient.GetCallerIdentity(context.Background(), new(sts.GetCallerIdentityInput))
 	if err != nil {
 		p.logger.Errorf("error calling GetCallerIdentity: %v", err)
 		return nil, err
@@ -111,17 +110,23 @@ func (p *awsIdentityProvider) roles(user string, ch chan<- string) {
 	go p.getInlineUserRoles(user, ch)
 	go p.getAttachedUserRoles(user, ch)
 
-	in := new(iam.ListGroupsForUserInput).SetUserName(user)
-	err := p.iamClient.ListGroupsForUserPages(in, func(out *iam.ListGroupsForUserOutput, last bool) bool {
+	var err error
+	in := &iam.ListGroupsForUserInput{UserName: aws.String(user)}
+	pg := iam.NewListGroupsForUserPaginator(p.iamClient, in)
+	for pg.HasMorePages() {
+		out, e := pg.NextPage(context.Background())
+		if e != nil {
+			err = e
+			continue
+		}
+
 		for _, g := range out.Groups {
 			p.logger.Debugf("GROUP: %s", *g.GroupName)
 			p.wg.Add(2)
 			go p.getInlineGroupRoles(*g.GroupName, ch)
 			go p.getAttachedGroupRoles(*g.GroupName, ch)
 		}
-
-		return !last
-	})
+	}
 
 	if err != nil {
 		p.logger.Errorf("error getting IAM group list for %s: %v", user, err)
@@ -133,24 +138,29 @@ func (p *awsIdentityProvider) roles(user string, ch chan<- string) {
 func (p *awsIdentityProvider) getInlineUserRoles(user string, ch chan<- string) {
 	defer p.wg.Done()
 
-	lIn := new(iam.ListUserPoliciesInput).SetUserName(user)
-	pIn := new(iam.GetUserPolicyInput).SetUserName(user)
+	var err error
+	lIn := &iam.ListUserPoliciesInput{UserName: aws.String(user)}
+	pIn := &iam.GetUserPolicyInput{UserName: aws.String(user)}
+	pg := iam.NewListUserPoliciesPaginator(p.iamClient, lIn)
+	for pg.HasMorePages() {
+		out, e := pg.NextPage(context.Background())
+		if e != nil {
+			err = e
+			continue
+		}
 
-	err := p.iamClient.ListUserPoliciesPages(lIn, func(out *iam.ListUserPoliciesOutput, last bool) bool {
 		for _, pol := range out.PolicyNames {
-			pIn.PolicyName = pol
+			pIn.PolicyName = &pol
 
-			r, err := p.iamClient.GetUserPolicy(pIn)
-			if err != nil {
-				p.logger.Errorf("error getting policy %s for user %s: %v", *pol, user, err)
+			r, e := p.iamClient.GetUserPolicy(context.Background(), pIn)
+			if e != nil {
+				p.logger.Errorf("error getting policy %s for user %s: %v", pol, user, e)
 				continue
 			}
 
 			p.findPolicyRoles(r.PolicyDocument, ch)
 		}
-
-		return !last
-	})
+	}
 
 	if err != nil {
 		p.logger.Errorf("error getting inline policies for user %s: %v", user, err)
@@ -160,14 +170,20 @@ func (p *awsIdentityProvider) getInlineUserRoles(user string, ch chan<- string) 
 func (p *awsIdentityProvider) getAttachedUserRoles(user string, ch chan<- string) {
 	defer p.wg.Done()
 
-	in := new(iam.ListAttachedUserPoliciesInput).SetUserName(user)
-	err := p.iamClient.ListAttachedUserPoliciesPages(in, func(out *iam.ListAttachedUserPoliciesOutput, last bool) bool {
+	var err error
+	in := &iam.ListAttachedUserPoliciesInput{UserName: aws.String(user)}
+	pg := iam.NewListAttachedUserPoliciesPaginator(p.iamClient, in)
+	for pg.HasMorePages() {
+		out, e := pg.NextPage(context.Background())
+		if e != nil {
+			err = e
+			continue
+		}
+
 		for _, pol := range out.AttachedPolicies {
 			p.getAttachedPolicyRoles(pol.PolicyArn, ch)
 		}
-
-		return !last
-	})
+	}
 
 	if err != nil {
 		p.logger.Errorf("error getting attached policies for user %s: %v", user, err)
@@ -177,24 +193,29 @@ func (p *awsIdentityProvider) getAttachedUserRoles(user string, ch chan<- string
 func (p *awsIdentityProvider) getInlineGroupRoles(group string, ch chan<- string) {
 	defer p.wg.Done()
 
-	lIn := new(iam.ListGroupPoliciesInput).SetGroupName(group)
-	pIn := new(iam.GetGroupPolicyInput).SetGroupName(group)
+	var err error
+	lIn := &iam.ListGroupPoliciesInput{GroupName: aws.String(group)}
+	pIn := &iam.GetGroupPolicyInput{GroupName: aws.String(group)}
+	pg := iam.NewListGroupPoliciesPaginator(p.iamClient, lIn)
+	for pg.HasMorePages() {
+		out, e := pg.NextPage(context.Background())
+		if e != nil {
+			err = e
+			continue
+		}
 
-	err := p.iamClient.ListGroupPoliciesPages(lIn, func(out *iam.ListGroupPoliciesOutput, last bool) bool {
 		for _, pol := range out.PolicyNames {
-			pIn.PolicyName = pol
+			pIn.PolicyName = &pol
 
-			r, err := p.iamClient.GetGroupPolicy(pIn)
-			if err != nil {
-				p.logger.Errorf("error getting policy %s for group %s: %v", *pol, group, err)
+			r, e := p.iamClient.GetGroupPolicy(context.Background(), pIn)
+			if e != nil {
+				p.logger.Errorf("error getting policy %s for group %s: %v", pol, group, e)
 				continue
 			}
 
 			p.findPolicyRoles(r.PolicyDocument, ch)
 		}
-
-		return !last
-	})
+	}
 
 	if err != nil {
 		p.logger.Errorf("error getting inline policies for group %s: %v", group, err)
@@ -204,14 +225,20 @@ func (p *awsIdentityProvider) getInlineGroupRoles(group string, ch chan<- string
 func (p *awsIdentityProvider) getAttachedGroupRoles(group string, ch chan<- string) {
 	defer p.wg.Done()
 
-	in := new(iam.ListAttachedGroupPoliciesInput).SetGroupName(group)
-	err := p.iamClient.ListAttachedGroupPoliciesPages(in, func(out *iam.ListAttachedGroupPoliciesOutput, last bool) bool {
+	var err error
+	in := &iam.ListAttachedGroupPoliciesInput{GroupName: aws.String(group)}
+	pg := iam.NewListAttachedGroupPoliciesPaginator(p.iamClient, in)
+	for pg.HasMorePages() {
+		out, e := pg.NextPage(context.Background())
+		if e != nil {
+			err = e
+			continue
+		}
+
 		for _, pol := range out.AttachedPolicies {
 			p.getAttachedPolicyRoles(pol.PolicyArn, ch)
 		}
-
-		return !last
-	})
+	}
 
 	if err != nil {
 		p.logger.Errorf("error getting attached policies for group %s: %v", group, err)
@@ -219,14 +246,14 @@ func (p *awsIdentityProvider) getAttachedGroupRoles(group string, ch chan<- stri
 }
 
 func (p *awsIdentityProvider) getAttachedPolicyRoles(arn *string, ch chan<- string) {
-	pol, err := p.iamClient.GetPolicy(&iam.GetPolicyInput{PolicyArn: arn})
+	pol, err := p.iamClient.GetPolicy(context.Background(), &iam.GetPolicyInput{PolicyArn: arn})
 	if err != nil {
 		p.logger.Errorf("error getting IAM policy %s: %v", *arn, err)
 		return
 	}
 
 	vIn := &iam.GetPolicyVersionInput{PolicyArn: pol.Policy.Arn, VersionId: pol.Policy.DefaultVersionId}
-	ver, err := p.iamClient.GetPolicyVersion(vIn)
+	ver, err := p.iamClient.GetPolicyVersion(context.Background(), vIn)
 	if err != nil {
 		p.logger.Errorf("error getting IAM policy version for policy %s: %v", *pol.Policy.PolicyName, err)
 		return
