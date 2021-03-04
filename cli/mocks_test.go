@@ -3,9 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/aws/client"
-	awscred "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
@@ -32,15 +30,15 @@ func (c *mockAwsClient) Credentials() (*credentials.Credentials, error) {
 	return c.CredentialsWithContext(context.Background())
 }
 
-func (c *mockAwsClient) CredentialsWithContext(ctx awscred.Context) (*credentials.Credentials, error) {
+func (c *mockAwsClient) CredentialsWithContext(context.Context) (*credentials.Credentials, error) {
 	if *c {
 		return nil, errors.New("err")
 	}
 	return new(credentials.Credentials), nil
 }
 
-func (c *mockAwsClient) ConfigProvider() client.ConfigProvider {
-	return mock.Session
+func (c *mockAwsClient) ConfigProvider() aws.Config {
+	return aws.Config{}
 }
 
 func (c *mockAwsClient) ClearCache() error {

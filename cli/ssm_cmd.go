@@ -1,9 +1,11 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
-	awsclient "github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/urfave/cli/v2"
@@ -58,7 +60,7 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		}
 
 		if ctx.Bool(whoamiFlag.Name) {
-			if err = printCredIdentity(c.ConfigProvider(), creds); err != nil {
+			if err = printCredIdentity(sts.NewFromConfig(c.ConfigProvider())); err != nil {
 				return "", nil, err
 			}
 		}
@@ -72,9 +74,9 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 	return target, c, nil
 }
 
-func execSsmPlugin(cfg awsclient.ConfigProvider, in *ssm.StartSessionInput) error {
-	s := ssm.New(cfg)
-	out, err := s.StartSession(in)
+func execSsmPlugin(cfg aws.Config, in *ssm.StartSessionInput) error {
+	s := ssm.NewFromConfig(cfg)
+	out, err := s.StartSession(context.Background(), in)
 	if err != nil {
 		return err
 	}
@@ -90,10 +92,16 @@ func execSsmPlugin(cfg awsclient.ConfigProvider, in *ssm.StartSessionInput) erro
 		return err
 	}
 
+	var ep aws.Endpoint
+	ep, err = cfg.EndpointResolver.ResolveEndpoint(ssm.ServiceID, cfg.Region)
+	if err != nil {
+		return err
+	}
+
 	// the empty string after StartSession would normally be where a named profile would be specified, but
 	// that's unnecessary when wrapping with aws-runas, which handles profile and credential stuff for us
 	// session-manager-plugin executable must be found in PATH
-	c := exec.Command("session-manager-plugin", string(outJ), s.SigningRegion, "StartSession", "", string(inJ), s.Endpoint) //nolint:gosec
+	c := exec.Command("session-manager-plugin", string(outJ), cfg.Region, "StartSession", "", string(inJ), ep.URL) //nolint:gosec
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

@@ -1,8 +1,9 @@
 package cli
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"context"
+	"errors"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"testing"
 	"time"
@@ -13,16 +14,18 @@ func TestHelpers_installSignalHandler(t *testing.T) {
 }
 
 func TestHelpers_printCredIdentity(t *testing.T) {
-	creds := credentials.Credentials{
-		AccessKeyId:     "AKIAmock",
-		SecretAccessKey: "mockSecret",
-	}
+	t.Run("good", func(t *testing.T) {
+		if err := printCredIdentity(new(mockStsApi)); err != nil {
+			t.Error(err)
+		}
+	})
 
-	s := mock.Session
-	s.Config.Region = aws.String("us-east-2")
-	if err := printCredIdentity(s, &creds); err != nil {
-		t.Error(err)
-	}
+	t.Run("bad", func(t *testing.T) {
+		var api mockStsApi = true
+		if err := printCredIdentity(&api); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
 }
 
 func TestHelpers_printCredExpiration(t *testing.T) {
@@ -56,4 +59,14 @@ func TestHelpers_refreshCreds(t *testing.T) {
 		c := mockAwsClient(true)
 		refreshCreds(&c)
 	})
+}
+
+type mockStsApi bool
+
+func (m *mockStsApi) GetCallerIdentity(ctx context.Context, in *sts.GetCallerIdentityInput, opts ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error) {
+	if *m {
+		return nil, errors.New("failed")
+	}
+
+	return new(sts.GetCallerIdentityOutput), nil
 }

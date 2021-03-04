@@ -1,11 +1,10 @@
 package cli
 
 import (
+	"context"
+	"errors"
 	"flag"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
-	"github.com/aws/aws-sdk-go/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/urfave/cli/v2"
@@ -34,23 +33,15 @@ func TestListMfaCmd_Action(t *testing.T) {
 			t.Error("did not receive expected error")
 		}
 	})
-}
 
-func TestListMfaCmd_sessionOptions(t *testing.T) {
-	cfg := &config.AwsConfig{Region: "mock", ProfileName: "p", SrcProfile: "sp"}
-	o := sessionOptions(cfg)
+	t.Run("arn", func(t *testing.T) {
+		_ = os.Setenv("AWS_PROFILE", "arn:aws:iam::0123456789:role/my_role")
+		defer os.Unsetenv("AWS_PROFILE")
 
-	if o.SharedConfigState != session.SharedConfigEnable {
-		t.Error("shared config state was not enabled")
-	}
-
-	if o.Profile != cfg.SrcProfile {
-		t.Error("profile mismatch")
-	}
-
-	if *o.Config.Region != cfg.Region {
-		t.Error("region mismatch")
-	}
+		if err := mfaCmd.Run(ctx); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
 }
 
 func TestListMfaCmd_getIdentity(t *testing.T) {
@@ -67,9 +58,7 @@ func TestListMfaCmd_getIdentity(t *testing.T) {
 
 func TestListMfaCmd_listMfa(t *testing.T) {
 	t.Run("user", func(t *testing.T) {
-		s := mock.Session
-		s.Config.Region = aws.String("mock")
-		_ = listMfa(iam.New(s), &identity.Identity{IdentityType: "user"})
+		_ = listMfa(new(mockIam), &identity.Identity{IdentityType: "user"})
 	})
 
 	t.Run("not user", func(t *testing.T) {
@@ -77,4 +66,21 @@ func TestListMfaCmd_listMfa(t *testing.T) {
 			t.Error(err)
 		}
 	})
+
+	t.Run("bad", func(t *testing.T) {
+		var c mockIam = true
+		if err := listMfa(&c, &identity.Identity{IdentityType: "user"}); err == nil {
+			t.Error(err)
+		}
+	})
+}
+
+type mockIam bool
+
+func (m *mockIam) ListMFADevices(ctx context.Context, in *iam.ListMFADevicesInput, opts ...func(*iam.Options)) (*iam.ListMFADevicesOutput, error) {
+	if *m {
+		return nil, errors.New("failed")
+	}
+
+	return new(iam.ListMFADevicesOutput), nil
 }
