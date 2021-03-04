@@ -154,10 +154,14 @@ func printCredIdentity(api identity.StsApi) error {
 		return err
 	}
 
-	idMap := map[string]string{
-		"UserId":  *id.UserId,
-		"Arn":     *id.Arn,
-		"Account": *id.Account,
+	idMap := struct {
+		UserId  string
+		Arn     string
+		Account string
+	}{
+		UserId:  *id.UserId,
+		Arn:     *id.Arn,
+		Account: *id.Account,
 	}
 
 	log.Infof("%+v", idMap)

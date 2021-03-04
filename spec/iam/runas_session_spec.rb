@@ -26,8 +26,8 @@ shared_examples_for 'iam session credentials' do |profile|
 
     describe command("aws-runas --whoami #{profile}") do
         its(:exit_status) { should eq 0 }
-        its(:stderr) { should match /^\s+Account: "686784119290",$/}
-        its(:stderr) { should match /^\s+Arn: "arn:aws:iam::686784119290:user\/circleci",$/}
+        its(:stderr) { should match /\s+Account:686784119290/}
+        its(:stderr) { should match /\s+Arn:arn:aws:iam::686784119290:user\/circleci/}
     end
 end
 
