@@ -18,7 +18,7 @@ import (
 const ProviderAws = "AwsIdentityProvider"
 
 type awsIdentityProvider struct {
-	stsClient stsApi
+	stsClient StsApi
 	iamClient iamApi
 	logger    shared.Logger
 	wg        *sync.WaitGroup
@@ -150,7 +150,7 @@ func (p *awsIdentityProvider) getInlineUserRoles(user string, ch chan<- string) 
 		}
 
 		for _, pol := range out.PolicyNames {
-			pIn.PolicyName = &pol
+			pIn.PolicyName = aws.String(pol)
 
 			r, e := p.iamClient.GetUserPolicy(context.Background(), pIn)
 			if e != nil {
@@ -205,7 +205,7 @@ func (p *awsIdentityProvider) getInlineGroupRoles(group string, ch chan<- string
 		}
 
 		for _, pol := range out.PolicyNames {
-			pIn.PolicyName = &pol
+			pIn.PolicyName = aws.String(pol)
 
 			r, e := p.iamClient.GetGroupPolicy(context.Background(), pIn)
 			if e != nil {

@@ -57,7 +57,7 @@ func (c *baseIamClient) CredentialsWithContext(ctx context.Context) (*credential
 }
 
 // ConfigProvider returns the AWS SDK aws.Config for this client.
-// AWS SDK v1 terminology retained due to laziness
+// AWS SDK v1 terminology retained due to laziness.
 func (c *baseIamClient) ConfigProvider() aws.Config {
 	// Don't simply return c.session, since that will only get the credentials which underpin the actual
 	// credentials we're looking for. Return a new session object with the credentials set to our internal

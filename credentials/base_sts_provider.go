@@ -10,7 +10,6 @@ import (
 )
 
 type baseStsProvider struct {
-	//credentials.Expiry
 	Client        stsApi
 	Cache         CredentialCacher
 	Duration      time.Duration
@@ -37,9 +36,7 @@ func (p *baseStsProvider) CheckCache() *Credentials {
 	if p.Cache != nil {
 		if creds = p.Cache.Load(); creds.Value().HasKeys() {
 			p.Logger.Debugf("loaded sts credentials from cache")
-			//p.SetExpiration(creds.Expiration, 0)
 		} else {
-			//p.SetExpiration(time.Unix(0, 0), 0)
 			creds.Expiration = time.Unix(0, 0)
 		}
 	}

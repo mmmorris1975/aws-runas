@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -55,7 +56,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 	}
 
 	opts := []func(*awsconfig.LoadOptions) error{
-		//awsconfig.WithLogger(),
+		awsconfig.WithLogger(new(logging.Nop)), // fixme - use a real logger
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
 	}

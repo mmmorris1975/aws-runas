@@ -84,7 +84,7 @@ func (c *Credentials) CredentialsProcess() ([]byte, error) {
 }
 
 // Value returns an aws.Credentials type for programmatic use.
-// AWS SDK v1 terminology retained due to laziness
+// AWS SDK v1 terminology retained due to laziness.
 func (c *Credentials) Value() aws.Credentials {
 	return aws.Credentials{
 		AccessKeyID:     c.AccessKeyId,

@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
@@ -19,8 +20,8 @@ var (
 		MfaInputProvider:        helpers.NewMfaTokenProvider(os.Stdin).ReadInput,
 		CredentialInputProvider: helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput,
 		Logger:                  new(shared.DefaultLogger),
-		//AwsLogLevel:             aws.LogOff,
-		CommandCredentials: new(config.AwsCredentials),
+		AwsLogLevel:             logging.Warn,
+		CommandCredentials:      new(config.AwsCredentials),
 	}
 )
 
@@ -54,6 +55,6 @@ type Options struct {
 	MfaInputProvider        func() (string, error)
 	CredentialInputProvider func(string, string) (string, string, error)
 	Logger                  shared.Logger
-	//AwsLogLevel             aws.LogLevelType
-	CommandCredentials *config.AwsCredentials
+	AwsLogLevel             logging.Classification
+	CommandCredentials      *config.AwsCredentials
 }

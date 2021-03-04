@@ -48,7 +48,6 @@ func NewAssumeRoleClient(cfg aws.Config, clientCfg *AssumeRoleClientConfig) *ass
 	}
 
 	c.provider = p
-	//c.creds = awscreds.NewCredentials(p)
 	c.creds = aws.NewCredentialsCache(p, func(o *aws.CredentialsCacheOptions) {
 		o.ExpiryWindow = p.ExpiryWindow
 	})

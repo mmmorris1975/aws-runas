@@ -3,6 +3,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 )
 
@@ -28,11 +29,13 @@ type IdentityTokenCacher interface {
 }
 
 type SamlRoleProvider interface {
+	aws.CredentialsProvider
 	SamlAssertion(saml *SamlAssertion)
 	ClearCache() error
 }
 
 type WebRoleProvider interface {
+	aws.CredentialsProvider
 	WebIdentityToken(token *OidcIdentityToken)
 	ClearCache() error
 }

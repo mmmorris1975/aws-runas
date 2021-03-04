@@ -37,13 +37,6 @@ func (p *samlRoleProvider) SamlAssertion(saml *SamlAssertion) {
 	p.samlAssertion = saml
 }
 
-// Retrieve implements the AWS credentials.Provider interface to return a set of Assume Role with SAML credentials.
-// If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
-// are expired, the credentials will be refreshed, and stored back in the cache.
-//func (p *samlRoleProvider) Retrieve() (aws.Credentials, error) {
-//	return p.RetrieveWithContext(context.Background())
-//}
-
 // RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role with
 // SAML credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed, and stored back
@@ -94,7 +87,6 @@ func (p *samlRoleProvider) retrieve(ctx context.Context) (*Credentials, error) {
 	if p.ExpiryWindow < 1 {
 		p.ExpiryWindow = p.Duration / 10
 	}
-	//p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
 
 	c := FromStsCredentials(out.Credentials)
 	return c, nil

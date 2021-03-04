@@ -83,7 +83,7 @@ func (c *samlRoleClient) CredentialsWithContext(ctx context.Context) (*credentia
 }
 
 // ConfigProvider returns the AWS SDK aws.Config for this client.
-// AWS SDK v1 terminology retained due to laziness
+// AWS SDK v1 terminology retained due to laziness.
 func (c *samlRoleClient) ConfigProvider() aws.Config {
 	return c.session
 }

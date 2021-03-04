@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -52,7 +52,7 @@ type Options struct {
 	Path        string
 	Profile     string
 	Logger      shared.Logger
-	AwsLogLevel aws.LogLevelType
+	AwsLogLevel logging.Classification
 	Headless    bool
 }
 

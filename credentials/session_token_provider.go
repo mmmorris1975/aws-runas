@@ -35,13 +35,6 @@ func NewSessionTokenProvider(cfg aws.Config) *SessionTokenProvider {
 	return &SessionTokenProvider{b}
 }
 
-// Retrieve implements the AWS credentials.Provider interface to return a set of Session Token credentials.
-// If the provider is configured to use a cache, it will be consulted to load the credentials.  If the credentials
-// are expired, the credentials will be refreshed (prompting for MFA, if necessary), and stored back in the cache.
-//func (p *SessionTokenProvider) Retrieve() (aws.Credentials, error) {
-//	return p.RetrieveWithContext(context.Background())
-//}
-
 // RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Session Token
 // credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed (prompting for
@@ -92,7 +85,6 @@ func (p *SessionTokenProvider) retrieve(ctx context.Context) (*Credentials, erro
 	if p.ExpiryWindow < 1 {
 		p.ExpiryWindow = p.Duration / 10
 	}
-	//p.SetExpiration(*out.Credentials.Expiration, p.ExpiryWindow)
 
 	c := FromStsCredentials(out.Credentials)
 	c.Expiration = *out.Credentials.Expiration

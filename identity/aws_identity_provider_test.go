@@ -122,7 +122,6 @@ func Example_awsIdentityProvider_Roles() {
 
 // An STS client we can use for testing to avoid calls out to AWS.
 type mockStsClient struct {
-	//stsApi
 	sendError bool
 }
 

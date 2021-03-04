@@ -24,7 +24,7 @@ type Provider interface {
 	Roles(user ...string) (*Roles, error)
 }
 
-type stsApi interface {
+type StsApi interface {
 	GetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
 }
 

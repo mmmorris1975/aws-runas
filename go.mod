@@ -4,10 +4,17 @@ go 1.16
 
 require (
 	github.com/PuerkitoBio/goquery v1.6.0
-	github.com/aws/aws-sdk-go v1.36.31
+	github.com/aws/aws-sdk-go-v2 v1.2.0
+	github.com/aws/aws-sdk-go-v2/config v1.1.1
+	github.com/aws/aws-sdk-go-v2/credentials v1.1.1
+	github.com/aws/aws-sdk-go-v2/service/iam v1.1.1
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.1.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.1.1
+	github.com/aws/smithy-go v1.1.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.2.3
+	github.com/mmmorris1975/ssm-session-client v0.200.0
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924
