@@ -14,8 +14,8 @@ shared_examples_for 'saml role credentials' do |profile, params|
 
     describe command("aws-runas --whoami #{params} #{profile}") do
         its(:exit_status) { should eq 0 }
-        its(:stderr) { should match /^\s+Account: "686784119290",$/}
-        its(:stderr) { should match /^\s+Arn:\s+"arn:aws:sts::686784119290:assumed-role\/aws-runas-testing\//}
+        its(:stderr) { should match /\s+Account:686784119290/}
+        its(:stderr) { should match /\s+Arn:arn:aws:sts::686784119290:assumed-role\/aws-runas-testing\//}
     end
 
     describe command ("aws-runas -vl #{params} #{profile}") do

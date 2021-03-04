@@ -56,9 +56,10 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 	}
 
 	opts := []func(*awsconfig.LoadOptions) error{
-		awsconfig.WithLogger(new(logging.Nop)), // fixme - use a real logger
+		awsconfig.WithLogger(new(logging.StandardLogger)), // fixme - use a real logger
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
+		awsconfig.WithLogConfigurationWarnings(true),
 	}
 
 	f.options.Logger.Debugf("CLIENT CONFIG: %+v", cfg)

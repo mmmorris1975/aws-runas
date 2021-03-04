@@ -62,7 +62,7 @@ func (c *baseIamClient) ConfigProvider() aws.Config {
 	// Don't simply return c.session, since that will only get the credentials which underpin the actual
 	// credentials we're looking for. Return a new session object with the credentials set to our internal
 	// AWS Credentials resource so the returned client.ConfigProvider will fetch the correct credentials.
-	cfg := c.session.Copy()
-	cfg.Credentials = c.creds
-	return cfg
+	// cfg := c.session.Copy()
+	// cfg.Credentials = c.creds
+	return c.session
 }
