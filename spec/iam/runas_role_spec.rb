@@ -24,7 +24,7 @@ shared_examples_for 'iam role credentials' do |profile|
 
     describe command("aws-runas --whoami #{profile}") do
         its(:exit_status) { should eq 0 }
-        its(:stderr) { should match /\s+Account686784119290/}
+        its(:stderr) { should match /\s+Account:686784119290/}
         its(:stderr) { should match /\s+Arn:arn:aws:sts::686784119290:assumed-role\/aws-runas-testing\/circleci/}
     end
 

@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/urfave/cli/v2"
@@ -39,7 +40,10 @@ var mfaCmd = &cli.Command{
 			return err
 		}
 
-		s, err := awsconfig.LoadDefaultConfig(context.Background())
+		s, err := awsconfig.LoadDefaultConfig(context.Background(),
+			awsconfig.WithLogger(new(logging.Nop)), // fixme - use a real logger
+			awsconfig.WithRegion(cfg.Region),
+			awsconfig.WithSharedConfigProfile(cfg.ProfileName))
 		if err != nil {
 			return err
 		}
@@ -57,7 +61,7 @@ func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
 	return c.Identity()
 }
 
-// mfa command-specific, but set as a distinct function so it's testable with a mock iamiface.IAMAPI.
+// mfa command-specific, but use a distinct function so it's testable with a mock iam.ListMFADevicesAPIClient.
 func listMfa(i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
 	if id.IdentityType == "user" {
 		res, err := i.ListMFADevices(context.Background(), new(iam.ListMFADevicesInput))
