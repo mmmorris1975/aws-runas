@@ -154,7 +154,13 @@ func printCredIdentity(api identity.StsApi) error {
 		return err
 	}
 
-	log.Infof("%+v", id)
+	idMap := map[string]string{
+		"UserId":  *id.UserId,
+		"Arn":     *id.Arn,
+		"Account": *id.Account,
+	}
+
+	log.Infof("%+v", idMap)
 	return nil
 }
 
