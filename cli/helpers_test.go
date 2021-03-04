@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"testing"
@@ -68,5 +69,11 @@ func (m *mockStsApi) GetCallerIdentity(ctx context.Context, in *sts.GetCallerIde
 		return nil, errors.New("failed")
 	}
 
-	return new(sts.GetCallerIdentityOutput), nil
+	out := &sts.GetCallerIdentityOutput{
+		Account: aws.String("mockAccount"),
+		Arn:     aws.String("arn:aws:iam::0123456789:user/Mock"),
+		UserId:  aws.String("mockUser"),
+	}
+
+	return out, nil
 }
