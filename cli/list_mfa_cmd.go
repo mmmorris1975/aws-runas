@@ -43,12 +43,21 @@ var mfaCmd = &cli.Command{
 		s, err := awsconfig.LoadDefaultConfig(context.Background(),
 			awsconfig.WithLogger(new(logging.Nop)), // fixme - use a real logger
 			awsconfig.WithRegion(cfg.Region),
-			awsconfig.WithSharedConfigProfile(cfg.ProfileName))
+			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
+		)
 		if err != nil {
 			return err
 		}
 		return listMfa(iam.NewFromConfig(s), id)
 	},
+}
+
+func getSharedProfile(cfg *config.AwsConfig) string {
+	profile := cfg.ProfileName
+	if len(cfg.SrcProfile) > 0 {
+		profile = cfg.SrcProfile
+	}
+	return profile
 }
 
 // mfa command-specific? really just to wrap multiple error paths to a single return value.
