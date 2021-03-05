@@ -232,7 +232,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write(data)
+		_, _ = w.Write(data)
 	case p == "/api/1/login/auth":
 		// User login endpoint
 		data := make(map[string]string)
@@ -332,7 +332,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		w.Write(b)
+		_, _ = w.Write(b)
 	case strings.HasPrefix(p, "/api/1/users/") && strings.HasSuffix(p, "/otp_devices"):
 		reply := new(oneloginEnrolledFactorsV1)
 		reply.Status = &oneloginApiStatus{
@@ -371,7 +371,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		body, _ := json.Marshal(&reply)
-		w.Write(body)
+		_, _ = w.Write(body)
 	case p == "/api/1/login/verify_factor":
 		data := new(oneloginVerifyFactorRequest)
 
@@ -433,7 +433,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		b, _ := json.Marshal(&reply)
-		w.Write(b)
+		_, _ = w.Write(b)
 	case p == "/session_via_api_token":
 		// Post login session token exchange
 		body, err := ioutil.ReadAll(r.Body)
@@ -449,7 +449,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if v.Get("session_token") == "AllGoodInDaHood" {
-			w.Write([]byte("OK"))
+			_, _ = w.Write([]byte("OK"))
 		}
 	case p == fmt.Sprintf("/trust/saml2/launch/%s", olAppId):
 		// SAML assertion fetching URL
@@ -463,7 +463,7 @@ func mockOneloginHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		fmt.Fprintf(w, body, r.Host)
+		_, _ = fmt.Fprintf(w, body, r.Host)
 	default:
 		http.NotFound(w, r)
 	}

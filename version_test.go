@@ -62,7 +62,7 @@ func Example_versionCheck() {
 	defer s.Close()
 
 	ghUrl = s.URL
-	versionCheck("")
+	_ = versionCheck("")
 	// Output:
 	// New version of aws-runas available: 0.0.0
 	// Download available at: https://example.org/aws-runas/releases/0.0.0/

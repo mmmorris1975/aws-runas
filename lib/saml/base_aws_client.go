@@ -69,7 +69,7 @@ func (c *BaseAwsClient) GetIdentity() (*identity.Identity, error) {
 }
 
 // Roles retrieves the list of roles available to user from the data returned by AwsSaml()
-func (c *BaseAwsClient) Roles(user ...string) (identity.Roles, error) {
+func (c *BaseAwsClient) Roles(...string) (identity.Roles, error) {
 	return c.roles()
 }
 
@@ -129,13 +129,11 @@ func (c *BaseAwsClient) roleDetails() (*RoleDetails, error) {
 	re := regexp.MustCompile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
 
 	m := re.FindAllStringSubmatch(c.decodedSaml, -1)
-	if m != nil {
-		for _, r := range m {
-			if strings.Contains(r[1], ":role/") {
-				rd.details[r[1]] = r[2]
-			} else {
-				rd.details[r[2]] = r[1]
-			}
+	for _, r := range m {
+		if strings.Contains(r[1], ":role/") {
+			rd.details[r[1]] = r[2]
+		} else {
+			rd.details[r[2]] = r[1]
 		}
 	}
 

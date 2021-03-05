@@ -23,7 +23,6 @@ func NewOktaSamlClient(authUrl string) (*oktaSamlClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	bsc.MfaType = MfaTypeAuto
 
 	// the Okta authentication path uses redirects to get you from authUrl to a SAMLResponse,
 	// so we need to allow them for this client
@@ -104,6 +103,8 @@ func (c oktaSamlClient) doMFA(token string, factors []*mfaFactor) (*apiResponse,
 		}
 	}
 
+	factorList := []string{"push", "token:software:totp", "token:hotp", "token"}
+
 	switch len(index) {
 	case 0:
 		// fall through
@@ -113,9 +114,22 @@ func (c oktaSamlClient) doMFA(token string, factors []*mfaFactor) (*apiResponse,
 			return c.handleMfa(token, factors[v])
 		}
 	default:
-		for _, e := range []string{"push", "token:software:totp", "token:hotp", "token"} {
-			if v, ok := index[e]; ok {
+		switch strings.ToLower(c.MfaType) {
+		case MfaTypePush:
+			if v, ok := index[c.MfaType]; ok {
 				return c.handleMfa(token, factors[v])
+			}
+		case MfaTypeCode:
+			for _, e := range factorList[1:] {
+				if v, ok := index[e]; ok {
+					return c.handleMfa(token, factors[v])
+				}
+			}
+		default:
+			for _, e := range factorList {
+				if v, ok := index[e]; ok {
+					return c.handleMfa(token, factors[v])
+				}
 			}
 		}
 	}
@@ -234,7 +248,7 @@ func handleApiResponse(res *http.Response) (*apiResponse, error) {
 
 	if res.StatusCode != http.StatusOK {
 		r := new(apiError)
-		json.Unmarshal(body, r)
+		_ = json.Unmarshal(body, r)
 		return nil, fmt.Errorf("HTTP %d - %s (%s)", res.StatusCode, r.Message, r.Code)
 	}
 

@@ -234,7 +234,7 @@ func TestCheckProfileCfg(t *testing.T) {
 			if r.URL.Path == "/bad" {
 				http.Error(w, "error", http.StatusInternalServerError)
 			}
-			w.Write([]byte("ok"))
+			_, _ = w.Write([]byte("ok"))
 		}))
 		defer s.Close()
 

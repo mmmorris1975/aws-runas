@@ -30,6 +30,7 @@ Flags:
   -a, --role-duration=ROLE-DURATION  
                                  Duration of the assume role credentials
   -o, --otp=OTP                  MFA token code
+  -t, --mfa_type=MFA_TYPE        Use specific MFA type instead of provider auto-detection logic
   -M, --mfa-serial=MFA-SERIAL    Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation
   -X, --external-id=EXTERNAL-ID  External ID to use to Assume the Role
   -J, --jump-role=JUMP-ROLE      ARN of the 'jump role' to use with SAML integration
@@ -67,6 +68,7 @@ command line arguments, or config file properties, to affect the behavior of aws
   * CREDENTIALS_DURATION ([duration](https://golang.org/pkg/time/#ParseDuration)) - A golang time.Duration string to set the lifetime of the role credentials (1 hour default), like the `-a` flag
   * MFA_CODE (string) - The MFA token code to use for credentials requiring MFA, like the `-o` flag
   * MFA_SERIAL (string) - The MFA device serial number of the IAM user, like the `-m` flag
+  * MFA_TYPE (string) - The MFA factor type for SAML authentication, like the `-t` flag.  Default value is `auto`, acceptable values are `push` and `code`
   * EXTERNAL_ID (string) - The External ID value to pass in the AssumeRole operation, like the `-X` flag
   * JUMP_ROLE_ARN (string) - The ARN of the role to initially assume using SAML credentials, before assuming the actual role for the operation, like the `-J` flag
   * SAML_AUTH_URL (URL) - The URL of the SAML authentication endpoint to authenticate against, like the `-S` flag

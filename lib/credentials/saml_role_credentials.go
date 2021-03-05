@@ -119,12 +119,10 @@ func (p *SamlRoleProvider) setPrincipalArn() {
 	}
 
 	m := re.FindAllStringSubmatch(string(d), -1)
-	if m != nil {
-		for _, r := range m {
-			if strings.EqualFold(r[1], p.RoleARN) {
-				p.principalArn = r[2]
-				return
-			}
+	for _, r := range m {
+		if strings.EqualFold(r[1], p.RoleARN) {
+			p.principalArn = r[2]
+			return
 		}
 	}
 }

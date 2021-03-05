@@ -92,7 +92,7 @@ func (c *forgerockSamlClient) AwsSaml() (string, error) {
 func (c *forgerockSamlClient) auth() error {
 	u := c.authUrl.String()
 
-	switch c.MfaType {
+	switch strings.ToLower(c.MfaType) {
 	case MfaTypeNone:
 		// no mfa ... require that someone explicitly requests no MFA, instead of this being the default case
 		res, err := c.doAuth(u)

@@ -22,7 +22,7 @@ func TestGetClientMock(t *testing.T) {
 
 func TestGetClientUnknown(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("body"))
+		_, _ = w.Write([]byte("body"))
 	}))
 	defer s.Close()
 
@@ -35,7 +35,7 @@ func TestGetClientUnknown(t *testing.T) {
 func TestGetClientForgerock(t *testing.T) {
 	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Headers", "X-OpenAM-Username,X-OpenAM-Password")
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <EntityDescriptor entityID="https://localhost:443/auth" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
   <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">
     <SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST" Location="https://%s/auth/SSOPOST/metaAlias/realm/saml-idp"/>
@@ -67,7 +67,7 @@ func TestGetClientKeycloak(t *testing.T) {
 			Value: "yyyyyy",
 		})
 
-		fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+		_, _ = fmt.Fprintf(w, `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <EntitiesDescriptor Name="urn:keycloak" xmlns="urn:oasis:names:tc:SAML:2.0:metadata">
   <EntityDescriptor entityID="http://%s/auth/realms/master">
     <IDPSSODescriptor WantAuthnRequestsSigned="false" protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol">

@@ -270,8 +270,7 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 					}
 
 					b, _ := json.Marshal(frm)
-					w.Write(b)
-					return
+					_, _ = w.Write(b)
 				} else {
 					http.Error(w, "Unauthorized", http.StatusUnauthorized)
 				}
@@ -292,7 +291,7 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			w.Write(b)
+			_, _ = w.Write(b)
 			return
 		} else if user == "pushuser" && pass == "pushpassword" && q.Get("authIndexValue") == frPushSvcName {
 			cb := frCallback{
@@ -305,7 +304,7 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			w.Write(b)
+			_, _ = w.Write(b)
 			return
 		} else {
 			w.WriteHeader(http.StatusUnauthorized)
@@ -322,7 +321,7 @@ func mockForgerockHttpHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		fmt.Fprint(w, body)
+		_, _ = fmt.Fprint(w, body)
 	} else {
 		http.NotFound(w, r)
 	}

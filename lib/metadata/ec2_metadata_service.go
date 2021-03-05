@@ -432,6 +432,7 @@ func createSamlClient() *handlerError {
 		s.MfaTokenProvider = func() (string, error) {
 			return "", errMfaRequired
 		}
+		s.MfaType = profile.MfaType
 		s.SetCookieJar(jar)
 	})
 

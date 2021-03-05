@@ -4,7 +4,7 @@ PATH := build:$(PATH)
 GOOS ?= $(shell go env GOOS)
 GOARCH ?= $(shell go env GOARCH)
 
-.PHONY: darwin linux windows release clean dist-clean test docs
+.PHONY: darwin linux windows release clean dist-clean test docs lint
 
 $(EXE): go.mod *.go lib/*/*.go
 	go build -v -ldflags '-X main.Version=$(VER)' -o $@
@@ -28,6 +28,9 @@ clean:
 
 dist-clean: clean
 	rm -f go.sum
+
+lint:
+	docker run --rm -v $${PWD}:/app -w /app -t golangci/golangci-lint:v1.37 golangci-lint run -v
 
 test: $(EXE)
 	mv $(EXE) build

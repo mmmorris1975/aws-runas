@@ -210,7 +210,6 @@ func ntpTime() (time.Time, error) {
 
 	for !gotResponse {
 		if deadlineDuration > 10*time.Second {
-			gotResponse = true
 			return time.Time{}, fmt.Errorf("retry attempt limit exceeded")
 		}
 
@@ -248,18 +247,18 @@ func fetchTime(deadline time.Duration) (time.Time, error) {
 	defer c.Close()
 
 	if deadline > 0 {
-		if err := c.SetReadDeadline(time.Now().Add(deadline)); err != nil {
+		if err = c.SetReadDeadline(time.Now().Add(deadline)); err != nil {
 			return time.Time{}, err
 		}
 	}
 
 	// NTPv3 client request packet
-	if err := binary.Write(c, binary.BigEndian, &ntpPacket{Settings: 0x1B}); err != nil {
+	if err = binary.Write(c, binary.BigEndian, &ntpPacket{Settings: 0x1B}); err != nil {
 		return time.Time{}, err
 	}
 
 	resp := new(ntpPacket)
-	if err := binary.Read(c, binary.BigEndian, resp); err != nil {
+	if err = binary.Read(c, binary.BigEndian, resp); err != nil {
 		return time.Time{}, err
 	}
 

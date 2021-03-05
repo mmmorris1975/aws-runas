@@ -17,6 +17,7 @@ type AwsConfig struct {
 	SamlAuthUrl          *url.URL
 	SamlUsername         string
 	SamlProvider         string
+	MfaType              string
 }
 
 // Wrap converts an aws-config/config.AwsConfig type to our local AwsConfig type
@@ -25,6 +26,7 @@ func Wrap(c *config.AwsConfig) (*AwsConfig, error) {
 		AwsConfig:    c,
 		SamlUsername: c.Get("saml_username"),
 		SamlProvider: strings.ToLower(c.Get("saml_provider")),
+		MfaType:      strings.ToLower(c.Get("mfa_type")),
 	}
 
 	if c.DurationSeconds < 1 {

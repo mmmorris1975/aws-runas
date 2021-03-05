@@ -446,7 +446,7 @@ func resolveConfig() error {
 	}
 
 	if len(usrCfg.MfaSerial) > 0 {
-		mergedCfg.MfaSerial = usrCfg.ExternalId
+		mergedCfg.MfaSerial = usrCfg.MfaSerial
 	}
 
 	if len(usrCfg.Profile) > 0 {
@@ -499,6 +499,14 @@ func finalConfig(cfg *cfglib.AwsConfig) (*config.AwsConfig, error) {
 
 	if samlProvider != nil && len(*samlProvider) > 0 {
 		newCfg.SamlProvider = *samlProvider
+	}
+
+	if mfaType != nil && len(*mfaType) > 0 {
+		newCfg.MfaType = *mfaType
+	}
+
+	if len(newCfg.MfaType) < 1 {
+		newCfg.MfaType = saml.MfaTypeAuto
 	}
 
 	log.Debugf("FINAL Config: %+v", newCfg)
@@ -586,6 +594,7 @@ func samlClientWithReauth() (saml.AwsClient, error) {
 		s.Username = cfg.SamlUsername
 		s.Password = *samlPass
 		s.MfaToken = *mfaCode
+		s.MfaType = cfg.MfaType
 		s.SetCookieJar(jar)
 	})
 	if err != nil {
@@ -898,7 +907,7 @@ func setSamlPassword() {
 	if err := cf.SaveTo(cf.Path); err != nil {
 		log.Fatalf("error saving credentials to file: %v", err)
 	}
-	os.Chmod(cf.Path, 0600)
+	_ = os.Chmod(cf.Path, 0600)
 }
 
 func getSamlPassword() (string, error) {

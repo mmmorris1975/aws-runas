@@ -221,8 +221,8 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		if creds["username"] == "gooduser" && creds["password"] == "agoodboi" {
 			res := apiResponse{Status: "SUCCESS", SessionToken: "allG00D"}
-			body, _ := json.Marshal(&res)
-			w.Write(body)
+			body, _ = json.Marshal(&res)
+			_, _ = w.Write(body)
 			return
 		} else if creds["username"] == "mfauser" {
 			res := apiResponse{
@@ -244,8 +244,8 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 				}
 				res.Details.MfaFactors = []*mfaFactor{&f}
 
-				body, _ := json.Marshal(&res)
-				w.Write(body)
+				body, _ = json.Marshal(&res)
+				_, _ = w.Write(body)
 				return
 			}
 		} else {
@@ -260,12 +260,12 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 
 		if strings.HasSuffix(r.URL.Path, "tokenmfa") {
 			res := new(mfaResponse)
-			json.Unmarshal(body, &res)
+			_ = json.Unmarshal(body, &res)
 
 			if res.Token == "StateOfDelirium" && res.Code == "123456" {
 				s := apiResponse{Status: "SUCCESS", SessionToken: "MySession"}
 				bytes, _ := json.Marshal(&s)
-				w.Write(bytes)
+				_, _ = w.Write(bytes)
 				return
 			}
 
@@ -283,7 +283,7 @@ func mockOktaHttpHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-		fmt.Fprint(w, body)
+		_, _ = fmt.Fprint(w, body)
 	} else {
 		http.NotFound(w, r)
 	}

@@ -236,7 +236,7 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </html>
 `
 		}
-		fmt.Fprintf(w, body, r.Host)
+		_, _ = fmt.Fprintf(w, body, r.Host)
 	} else if r.URL.Path == "/auth/realms/master/login-actions/authenticate" {
 		if err := r.ParseForm(); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -254,7 +254,7 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-			fmt.Fprintf(w, body, r.Host)
+			_, _ = fmt.Fprintf(w, body, r.Host)
 		} else if r.PostForm.Get("username") == "mfauser" || len(r.PostForm.Get("totp")) > 0 {
 			// return the MFA form
 			body := `
@@ -267,10 +267,10 @@ func mockKeycloakHandler(w http.ResponseWriter, r *http.Request) {
 </body>
 </html>
 `
-			fmt.Fprintf(w, body, r.Host)
+			_, _ = fmt.Fprintf(w, body, r.Host)
 			return
 		} else {
-			w.Write([]byte("whachutalkinbout"))
+			_, _ = w.Write([]byte("whachutalkinbout"))
 			return
 		}
 	} else {

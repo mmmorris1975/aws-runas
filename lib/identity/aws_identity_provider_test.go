@@ -68,10 +68,8 @@ func ExampleAwsIdentityProvider_Roles() {
 		wg: new(sync.WaitGroup), logDebug: false}
 
 	r, _ := p.Roles()
-	if r != nil {
-		for _, i := range r {
-			fmt.Println(i)
-		}
+	for _, i := range r {
+		fmt.Println(i)
 	}
 	// Output:
 	// arn:aws:iam::111111111:role/p1
@@ -90,7 +88,7 @@ type mockStsClient struct {
 	stsiface.STSAPI
 }
 
-func (c *mockStsClient) GetCallerIdentity(in *sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+func (c *mockStsClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
 	return new(sts.GetCallerIdentityOutput).
 		SetAccount("123456789012").
 		SetArn("arn:aws:iam::123456789012:user/bob").
@@ -149,13 +147,13 @@ func (c *mockIamClient) lookupPolicy(f *string) *mockIamPolicy {
 	return nil
 }
 
-func (c *mockIamClient) ListGroupsForUserPages(in *iam.ListGroupsForUserInput, fn func(*iam.ListGroupsForUserOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupsForUserPages(_ *iam.ListGroupsForUserInput, fn func(*iam.ListGroupsForUserOutput, bool) bool) error {
 	out := new(iam.ListGroupsForUserOutput).SetGroups(c.groups())
 	fn(out, true)
 	return nil
 }
 
-func (c *mockIamClient) ListUserPoliciesPages(in *iam.ListUserPoliciesInput, fn func(*iam.ListUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListUserPoliciesPages(_ *iam.ListUserPoliciesInput, fn func(*iam.ListUserPoliciesOutput, bool) bool) error {
 	out := new(iam.ListUserPoliciesOutput).SetPolicyNames(c.policyNames())
 	fn(out, true)
 	return nil
@@ -171,13 +169,13 @@ func (c *mockIamClient) GetUserPolicy(in *iam.GetUserPolicyInput) (*iam.GetUserP
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedUserPoliciesPages(in *iam.ListAttachedUserPoliciesInput, fn func(*iam.ListAttachedUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedUserPoliciesPages(_ *iam.ListAttachedUserPoliciesInput, fn func(*iam.ListAttachedUserPoliciesOutput, bool) bool) error {
 	out := new(iam.ListAttachedUserPoliciesOutput).SetAttachedPolicies(c.attachedPolicies())
 	fn(out, true)
 	return nil
 }
 
-func (c *mockIamClient) ListGroupPoliciesPages(in *iam.ListGroupPoliciesInput, fn func(*iam.ListGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupPoliciesPages(_ *iam.ListGroupPoliciesInput, fn func(*iam.ListGroupPoliciesOutput, bool) bool) error {
 	out := new(iam.ListGroupPoliciesOutput).SetPolicyNames(c.policyNames())
 	fn(out, true)
 	return nil
@@ -193,7 +191,7 @@ func (c *mockIamClient) GetGroupPolicy(in *iam.GetGroupPolicyInput) (*iam.GetGro
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedGroupPoliciesPages(in *iam.ListAttachedGroupPoliciesInput, fn func(*iam.ListAttachedGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedGroupPoliciesPages(_ *iam.ListAttachedGroupPoliciesInput, fn func(*iam.ListAttachedGroupPoliciesOutput, bool) bool) error {
 	out := new(iam.ListAttachedGroupPoliciesOutput).SetAttachedPolicies(c.attachedPolicies())
 	fn(out, true)
 	return nil

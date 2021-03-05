@@ -24,6 +24,7 @@ var (
 	roleDuration *time.Duration
 	mfaCode      *string
 	mfaSerial    *string
+	mfaType      *string
 	extnId       *string
 	jumpArn      *string
 	samlUrl      **url.URL
@@ -67,6 +68,7 @@ func init() {
 		roleDurationArgDesc = "Duration of the assume role credentials"
 		mfaCodeDesc         = "MFA token code"
 		mfaSerialDesc       = "Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation"
+		mfaTypeDesc         = "Use specific MFA type instead of provider auto-detection logic\n"
 		extnIdDesc          = "External ID to use to Assume the Role"
 		jumpArnDesc         = "ARN of the 'jump role' to use with SAML integration"
 		samlUrlDesc         = "URL of the SAML authentication endpoint"
@@ -100,7 +102,8 @@ func init() {
 	sesCreds = kingpin.Flag("session", sesCredArgDesc).Short('s').Envar("RUNAS_SESSION_CREDENTIALS").Bool()
 	duration = kingpin.Flag("duration", durationArgDesc).Short('d').Envar("SESSION_TOKEN_DURATION").Duration()
 	roleDuration = kingpin.Flag("role-duration", roleDurationArgDesc).Short('a').Envar("CREDENTIALS_DURATION").Duration()
-	mfaCode = kingpin.Flag("otp", mfaCodeDesc).Short('o').Envar("MFA_CODE").String() // valid for SAML and non-SAML profiles
+	mfaCode = kingpin.Flag("otp", mfaCodeDesc).Short('o').Envar("MFA_CODE").String()      // valid for SAML and non-SAML profiles
+	mfaType = kingpin.Flag("mfa_type", mfaTypeDesc).Short('t').Envar("MFA_TYPE").String() // only used with SAML profiles
 
 	// flags which are only valid for non-SAML profiles
 	mfaSerial = kingpin.Flag("mfa-serial", mfaSerialDesc).Short('M').Envar("MFA_SERIAL").String()

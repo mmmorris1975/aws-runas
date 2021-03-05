@@ -46,7 +46,7 @@ func (c *mockSamlClient) GetIdentity() (*identity.Identity, error) {
 }
 
 // Roles returns an empty role list with no error
-func (c *mockSamlClient) Roles(user ...string) (identity.Roles, error) {
+func (c *mockSamlClient) Roles(...string) (identity.Roles, error) {
 	return []string{}, nil
 }
 

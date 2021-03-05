@@ -74,7 +74,7 @@ func (s *ecsMetadataService) Run() {
 	}
 }
 
-func ecsHandler(w http.ResponseWriter, r *http.Request) {
+func ecsHandler(w http.ResponseWriter, _ *http.Request) {
 	var rc = http.StatusOK
 
 	v, err := cred.Get()
@@ -111,7 +111,7 @@ func ecsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(rc)
-	w.Write(j)
+	_, _ = w.Write(j)
 }
 
 type ecsCredentialError struct {

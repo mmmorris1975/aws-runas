@@ -54,14 +54,21 @@ the [] brackets), this is an oddity of the logic AWS uses to process the config 
 profile you'll configure.
 
 If the SAML authentication flow requires that you use multi-factor authentication, you will be prompted to perform the MFA
-action, depending on which types of multi-factor authentication is supported by the identity provider.
+action, depending on which types of multi-factor authentication is supported by the identity provider.  By default, the
+type of MFA factor is auto-detected based on the facilities available from the identity provider.  It is possible to
+override the auto-detection logic, and explicitly state the type of multi-factor authentication you wish to use with the
+profile.  The override can be configured in the .aws/config file using the `mfa_type` profile attribute, or it can be
+provided on the command line by using the `-t` flag or the `MFA_TYPE` environment variable.  Regardless of the method used
+to configure the override, acceptable values are `auto` (the default), and `push` (for push-style notifications to your device)
+or `code` (for Google Authenticator/OTP codes), which are generally supported by all supported external identity providers.
+Individual identity providers may support additional MFA factors, which will be detailed in the provider-specific documentation.
 
 A profile's configuration also allows you to override settings set in the default profile. For example, if the default
 section configures the region as 'us-east-1' (like above), you can set the region attribute inside the profile configuration,
 which will override the default value when using that profile.
 
 If you have multiple profiles configured, all using the same saml_auth_url, it can become tedious, and redundant, to copy
-the saml_auth_url attribute between all of the profiles. The aws-runas tool configure the setting in the profile referenced
+the saml_auth_url attribute between all the profiles. The aws-runas tool configure the setting in the profile referenced
 in the source_profile attribute, or in the default section.
 
 The following example demonstrates how to set up the .aws/config file using the common saml_auth_url attribute
@@ -83,7 +90,7 @@ role_arn = arn:aws:iam::567890123456:role/other-role
 
 
 #### Custom Configuration File Attributes
-In addition to the required parameters shown abive, the program supports other custom configuration attributes in the profiles
+In addition to the required parameters shown above, the program supports other custom configuration attributes in the profiles
 defined in the .aws/config file to other configuration for using SAML integration. These attributes are specific to aws-runas
 and will be ignored by other tools leveraging the AWS SDK.
 
@@ -103,6 +110,9 @@ and will be ignored by other tools leveraging the AWS SDK.
     values are between 15m and 12h, however setting this value above the default 1h requires the IAM role in AWS to be
     configured to allow the extended duration. Attempts to set a duration longer than the IAM role can support will cause
     aws-runas to fail with an error.
+  * `mfa_type` Override the MFA factor auto-detection logic and use the requested type only. Values supported by all
+    providers are `push` and `code`.  Individual providers may support other methods which will be detailed in the
+    provider-specific documentation.
 
 Values for the `session_token_duration` and `credentials_duration` properties are specified as golang time.Duration strings.
 (See [https://golang.org/pkg/time/#ParseDuration](https://golang.org/pkg/time/#ParseDuration) for more info)  The scope

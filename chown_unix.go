@@ -18,7 +18,7 @@ func chown(f string) {
 		}
 
 		if uid > 0 {
-			os.Chown(cookieFile, int(uid), -1)
+			_ = os.Chown(cookieFile, int(uid), -1)
 		}
 	}
 }

@@ -18,7 +18,7 @@ func TestNewEcsMetadataService(t *testing.T) {
 				t.Errorf("Did not receive expected panic calling NewEcsMetadataService with nil config")
 			}
 		}()
-		NewEcsMetadataService(nil)
+		_, _ = NewEcsMetadataService(nil)
 	})
 
 	t.Run("empty opts", func(t *testing.T) {
