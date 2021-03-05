@@ -34,6 +34,8 @@ func NewSamlRoleClient(cfg aws.Config, url string, clientCfg *SamlRoleClientConf
 	p.Cache = clientCfg.Cache
 	p.Logger = clientCfg.Logger
 
+	cfg.Credentials = p
+
 	return &samlRoleClient{
 		samlClient:   external.MustGetSamlClient(clientCfg.IdentityProviderName, url, clientCfg.AuthenticationClientConfig),
 		roleProvider: p,

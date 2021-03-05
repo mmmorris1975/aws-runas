@@ -83,7 +83,10 @@ rspec: $(EXE)
 	@if [ -z $${CIRCLECI} ]; then \
 		DOCKER_ARGS="--user root"; \
 	fi; \
-	docker run $${DOCKER_ARGS} --rm -it -w /app -e AWS_SHARED_CREDENTIALS_FILE=testdata/aws_credentials \
+	docker run $${DOCKER_ARGS} --rm -it -w /app \
+	  -e AWS_SHARED_CREDENTIALS_FILE=testdata/aws_credentials \
+	  -e OKTA_SAML_URL -e OKTA_OIDC_URL -e OKTA_OIDC_CLIENT_ID \
+	  -e ONELOGIN_SAML_URL -e ONELOGIN_OIDC_URL -e ONELOGIN_OIDC_CLIENT_ID \
 	  --mount type=bind,src=$${PWD},dst=/app \
 	  --mount type=bind,src=$${HOME}/.aws/credentials,dst=/app/testdata/aws_credentials,ro \
 	  --entrypoint scripts/run_rspec.sh cimg/ruby:2.7

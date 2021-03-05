@@ -65,6 +65,7 @@ func NewWebRoleClient(cfg aws.Config, url string, clientCfg *WebRoleClientConfig
 		}
 	}
 	c.roleProvider = p
+	c.session.Credentials = p
 
 	return c
 }
