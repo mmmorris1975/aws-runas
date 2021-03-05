@@ -122,7 +122,7 @@ func (c *aadClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 }
 
 // todo - this is unverified.
-func (c *aadClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
 	oauthUrlBase := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0", c.tenantId)
 
 	pkce, err := newPkceCode()
@@ -304,7 +304,7 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 		MfaTokenProvider:        c.MfaTokenProvider,
 		IdentityProviderName:    aadIdentityProvider,
 		Logger:                  c.Logger,
-		MfaType:                 MfaTypeAuto,
+		MfaType:                 c.MfaType,
 		Username:                c.Username,
 		Password:                c.Password,
 	}
@@ -418,7 +418,7 @@ func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) 
 func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	factors := make([]aadUserProof, 0)
 
-	switch c.MfaType {
+	switch strings.ToLower(c.MfaType) {
 	case MfaTypeAuto:
 		for _, v := range mfaCfg {
 			switch v.AuthMethodID {

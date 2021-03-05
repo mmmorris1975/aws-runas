@@ -112,7 +112,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 			Password:                f.decodePassword(cfg.SamlUrl, creds.SamlPassword),
 			MfaTokenCode:            cfg.MfaCode,
 			MfaTokenProvider:        f.options.MfaInputProvider,
-			MfaType:                 external.MfaTypeAuto, // not supplied by config resolver, should it be?
+			MfaType:                 cfg.MfaType,
 			CredentialInputProvider: f.options.CredentialInputProvider,
 			IdentityProviderName:    cfg.SamlProvider,
 			FederatedUsername:       cfg.FederatedUsername,
@@ -191,7 +191,7 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 	}
 	webCfg.RoleArn = cfg.RoleArn
 	webCfg.Duration = cfg.RoleCredentialDuration()
-	webCfg.MfaType = external.MfaTypeAuto // not supplied by config resolver, should it be?
+	webCfg.MfaType = cfg.MfaType
 	webCfg.MfaTokenCode = cfg.MfaCode
 	webCfg.MfaTokenProvider = f.options.MfaInputProvider
 	webCfg.CredentialInputProvider = f.options.CredentialInputProvider

@@ -10,7 +10,7 @@ import (
 
 var shortcutFlags = []cli.Flag{mfaFlag, rolesFlag, updateFlag, diagFlag, vFlag}
 var otherFlags = []cli.Flag{envFlag, fmtFlag, sessionFlag, refreshFlag, expFlag, whoamiFlag}
-var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag, mfaSerialFlag, externalIdFlag,
+var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag, mfaSerialFlag, mfaTypeFlag, externalIdFlag,
 	jumpRoleFlag, samlUrlFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
 
 /*
@@ -75,6 +75,15 @@ var mfaSerialFlag = &cli.StringFlag{
 	Usage:       "serial number (or AWS ARN) of MFA device needed to perform Assume Role operation",
 	EnvVars:     []string{"MFA_SERIAL"},
 	Destination: &cmdlineCfg.MfaSerial,
+}
+
+var mfaTypeFlag = &cli.StringFlag{
+	Name:        "mfa-type",
+	Aliases:     []string{"t"},
+	Usage:       "use specific MFA type instead of provider auto-detection logic",
+	EnvVars:     []string{"MFA_TYPE"},
+	Destination: &cmdlineCfg.MfaType,
+	Value:       "auto",
 }
 
 var externalIdFlag = &cli.StringFlag{

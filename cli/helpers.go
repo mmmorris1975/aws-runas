@@ -9,6 +9,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/sts"
 	"github.com/dustin/go-humanize"
 	"github.com/mmmorris1975/aws-runas/client"
+	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/urfave/cli/v2"
@@ -38,6 +39,10 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 	cfg, err := configResolver.Config(profile)
 	if err != nil {
 		return profile, nil, err
+	}
+
+	if len(cfg.MfaType) < 1 {
+		cfg.MfaType = external.MfaTypeAuto
 	}
 
 	// return config for source profile, if any

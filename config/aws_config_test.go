@@ -15,6 +15,7 @@ func TestAwsConfig_MergeIn(t *testing.T) {
 		ExternalId:             "ext",
 		MfaSerial:              "mfa",
 		MfaCode:                "code",
+		MfaType:                "auto",
 		Region:                 "region",
 		RoleArn:                "role",
 		RoleSessionName:        "name",

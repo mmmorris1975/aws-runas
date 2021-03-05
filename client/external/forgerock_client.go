@@ -82,7 +82,7 @@ func (c *forgerockClient) IdentityToken() (*credentials.OidcIdentityToken, error
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Forgerock.  The Authenticate() (or AuthenticateWithContext())
 // methods must be called before using this method, otherwise an error will be returned.
-func (c *forgerockClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *forgerockClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
 	pkce, err := newPkceCode()
 	if err != nil {
 		return nil, err
@@ -182,7 +182,7 @@ func (c *forgerockClient) parseBaseUrl() error {
 func (c *forgerockClient) auth(ctx context.Context) (err error) {
 	frAuthUrl := fmt.Sprintf("%s/json/realms/%s/authenticate", c.baseUrl.String(), c.realm)
 
-	switch c.MfaType {
+	switch strings.ToLower(c.MfaType) {
 	case MfaTypeNone:
 		// no mfa ... require that someone explicitly requests no MFA, instead of this being the default case
 		_, err = c.doAuth(ctx, frAuthUrl)

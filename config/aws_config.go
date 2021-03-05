@@ -18,6 +18,7 @@ type AwsConfig struct {
 	ExternalId             string        `ini:"external_id,omitempty" env:"EXTERNAL_ID"` // only relevant to IAM identities
 	MfaSerial              string        `ini:"mfa_serial,omitempty" env:"MFA_SERIAL"`   // only relevant to IAM identities
 	MfaCode                string        `ini:"-" env:"MFA_CODE"`                        // only env var supported, since this value frequently changes over time
+	MfaType                string        `ini:"mfa_type" env:"MFA_TYPE"`                 // only relevant for external IdP clients
 	Region                 string        `ini:"region,omitempty" env:"AWS_REGION,AWS_DEFAULT_REGION"`
 	RoleArn                string        `ini:"role_arn"`                                                // env var not supported, comes in as command argument
 	RoleSessionName        string        `ini:"role_session_name,omitempty" env:"AWS_ROLE_SESSION_NAME"` // don't use? (only use IAM identity info or *_username for value?)
@@ -105,6 +106,10 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 
 		if len(cfg.MfaCode) > 0 {
 			c.MfaCode = cfg.MfaCode
+		}
+
+		if len(cfg.MfaType) > 0 {
+			c.MfaType = cfg.MfaType
 		}
 
 		if len(cfg.Region) > 0 {

@@ -59,7 +59,8 @@ func MustGetWebIdentityClient(provider, authUrl string, cfg OidcClientConfig) We
 	return c
 }
 
-//nolint:gocyclo // the switch statement will continue to grow as new providers are added
+// the switch statement will continue to grow as new providers are added, so keep the linter quiet
+//nolint:gocyclo,funlen
 func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, error) {
 	if len(provider) < 1 {
 		provider = divineClient(authUrl, http.MethodHead)
@@ -77,6 +78,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	case keycloakProvider:
 		c, err := NewKeycloakClient(authUrl)
@@ -85,6 +87,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	case oneloginProvider:
 		c, err := NewOneloginClient(authUrl)
@@ -93,6 +96,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	case oktaProvider:
 		c, err := NewOktaClient(authUrl)
@@ -101,6 +105,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	case mockProvider:
 		c, err := NewMockClient(authUrl)
@@ -109,6 +114,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	case azureadProvider:
 		c, err := NewAadClient(authUrl)
@@ -117,6 +123,7 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		}
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
 		return c, nil
 	default:
 		return nil, errUnknownProvider

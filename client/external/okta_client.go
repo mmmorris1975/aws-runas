@@ -170,6 +170,7 @@ func (c *oktaClient) sendAuthnRequest(ctx context.Context) (*oktaAuthnResponse, 
 	return c.handleAuthResponse(res)
 }
 
+//nolint:gocognit // won't simplify
 func (c *oktaClient) doMfa(ctx context.Context, stateToken string, factors []*oktaMfaFactor) (*oktaAuthnResponse, error) {
 	// don't try to short-circuit with a len(factors) == 1 case, since it could be a factor we dont' support
 	// we need to loop through the provided factors, and choose only the supported types
@@ -188,9 +189,22 @@ func (c *oktaClient) doMfa(ctx context.Context, stateToken string, factors []*ok
 			return c.handleMfa(ctx, stateToken, factors[v])
 		}
 	default:
-		for _, e := range []string{"push", "token:software:totp", "token:hotp", "token"} {
-			if v, ok := index[e]; ok {
+		switch strings.ToLower(c.MfaType) {
+		case MfaTypePush:
+			if v, ok := index[c.MfaType]; ok {
 				return c.handleMfa(ctx, stateToken, factors[v])
+			}
+		case MfaTypeCode:
+			for _, e := range []string{"token:software:totp", "token:hotp", "token"} {
+				if v, ok := index[e]; ok {
+					return c.handleMfa(ctx, stateToken, factors[v])
+				}
+			}
+		default:
+			for _, e := range []string{"push", "token:software:totp", "token:hotp", "token"} {
+				if v, ok := index[e]; ok {
+					return c.handleMfa(ctx, stateToken, factors[v])
+				}
 			}
 		}
 	}
