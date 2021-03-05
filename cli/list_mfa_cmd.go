@@ -7,7 +7,6 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
-	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/urfave/cli/v2"
@@ -41,7 +40,7 @@ var mfaCmd = &cli.Command{
 		}
 
 		s, err := awsconfig.LoadDefaultConfig(context.Background(),
-			awsconfig.WithLogger(new(logging.Nop)), // fixme - use a real logger
+			awsconfig.WithLogger(logFunc),
 			awsconfig.WithRegion(cfg.Region),
 			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
 		)

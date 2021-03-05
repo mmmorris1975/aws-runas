@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go/logging"
 	"github.com/dustin/go-humanize"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
@@ -189,5 +190,18 @@ func bashCompleteProfile(ctx *cli.Context) {
 
 	for _, v := range vals {
 		fmt.Println(v)
+	}
+}
+
+var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+	if log != nil {
+		switch c {
+		case logging.Warn:
+			log.Warningf(fmt, v...)
+		case logging.Debug:
+			log.Debugf(fmt, v...)
+		default:
+			log.Infof(fmt, v...)
+		}
 	}
 }

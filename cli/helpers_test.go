@@ -3,9 +3,13 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/simple-logger/logger"
+	"strings"
 	"testing"
 	"time"
 )
@@ -62,9 +66,44 @@ func TestHelpers_refreshCreds(t *testing.T) {
 	})
 }
 
+func Test_logFunc(t *testing.T) {
+	sb := new(strings.Builder)
+	log = logger.NewLogger(sb, "", 0)
+
+	t.Run("debug", func(t *testing.T) {
+		log.SetLevel(logger.DEBUG)
+		logFunc(logging.Debug, "%s", t.Name())
+
+		if sb.String() != fmt.Sprintf("DEBUG %s\n", t.Name()) {
+			t.Error("data mismatch")
+		}
+		sb.Reset()
+	})
+
+	t.Run("warn", func(t *testing.T) {
+		log.SetLevel(logger.WARN)
+		logFunc(logging.Warn, "%s", t.Name())
+
+		if sb.String() != fmt.Sprintf("WARN %s\n", t.Name()) {
+			t.Error("data mismatch")
+		}
+		sb.Reset()
+	})
+
+	t.Run("other", func(t *testing.T) {
+		log.SetLevel(logger.DEBUG)
+		logFunc("other", "%s", t.Name())
+
+		if sb.String() != fmt.Sprintf("INFO %s\n", t.Name()) {
+			t.Error("data mismatch")
+		}
+		sb.Reset()
+	})
+}
+
 type mockStsApi bool
 
-func (m *mockStsApi) GetCallerIdentity(ctx context.Context, in *sts.GetCallerIdentityInput, opts ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error) {
+func (m *mockStsApi) GetCallerIdentity(context.Context, *sts.GetCallerIdentityInput, ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error) {
 	if *m {
 		return nil, errors.New("failed")
 	}

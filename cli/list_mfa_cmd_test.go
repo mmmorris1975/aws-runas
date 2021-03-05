@@ -75,9 +75,25 @@ func TestListMfaCmd_listMfa(t *testing.T) {
 	})
 }
 
+func Test_getSharedProfile(t *testing.T) {
+	t.Run("with SrcProfile", func(t *testing.T) {
+		cfg := &config.AwsConfig{SrcProfile: "my_src", ProfileName: "my_profile"}
+		if getSharedProfile(cfg) != "my_src" {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("no SrcProfile", func(t *testing.T) {
+		cfg := &config.AwsConfig{ProfileName: "my_profile"}
+		if getSharedProfile(cfg) != "my_profile" {
+			t.Error("data mismatch")
+		}
+	})
+}
+
 type mockIam bool
 
-func (m *mockIam) ListMFADevices(ctx context.Context, in *iam.ListMFADevicesInput, opts ...func(*iam.Options)) (*iam.ListMFADevicesOutput, error) {
+func (m *mockIam) ListMFADevices(context.Context, *iam.ListMFADevicesInput, ...func(*iam.Options)) (*iam.ListMFADevicesOutput, error) {
 	if *m {
 		return nil, errors.New("failed")
 	}

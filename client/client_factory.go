@@ -55,8 +55,21 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		cfg.ProfileName = ""
 	}
 
+	var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+		if f.options.Logger != nil {
+			switch c {
+			case logging.Warn:
+				f.options.Logger.Warningf(fmt, v)
+			case logging.Debug:
+				f.options.Logger.Debugf(fmt, v)
+			default:
+				f.options.Logger.Infof(fmt, v)
+			}
+		}
+	}
+
 	opts := []func(*awsconfig.LoadOptions) error{
-		awsconfig.WithLogger(new(logging.StandardLogger)), // fixme - use a real logger
+		awsconfig.WithLogger(logFunc),
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
 		awsconfig.WithLogConfigurationWarnings(true),
