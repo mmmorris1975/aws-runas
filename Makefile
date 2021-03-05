@@ -8,7 +8,7 @@ PATH := $(BUILDDIR):${GOROOT}/bin:${PATH}
 GOOS ?= $(shell ${GOROOT}/bin/go env GOOS)
 GOARCH ?= $(shell ${GOROOT}/bin/go env GOARCH)
 
-.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test docs lint
+.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test-setup gotest rspec test docs lint
 
 $(EXE): go.mod *.go **/*.go
 	go build -v $(LDFLAGS)
@@ -73,11 +73,22 @@ clean:
 distclean: clean
 	rm -f go.sum
 
-test: $(EXE)
+gotest:
+	go vet -tests=false ./...
+	AWS_REGION=us-east-2 go test -race -count 1 -v ./...
+
+rspec: $(EXE)
 	mv $(EXE) $(BUILDDIR)
-	go test -race -count 1 -v ./...
-	bundle install
-	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
+
+	@if [ -z $${CIRCLECI} ]; then \
+		DOCKER_ARGS="--user root"; \
+	fi; \
+	docker run $${DOCKER_ARGS} --rm -it -w /app -e AWS_SHARED_CREDENTIALS_FILE=testdata/aws_credentials \
+	  --mount type=bind,src=$${PWD},dst=/app \
+	  --mount type=bind,src=$${HOME}/.aws/credentials,dst=/app/testdata/aws_credentials,ro \
+	  --entrypoint scripts/run_rspec.sh cimg/ruby:2.7
+
+test: gotest rspec
 
 docs:
 	@if [ -z $${CIRCLECI} ]; then \

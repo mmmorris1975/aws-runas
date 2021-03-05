@@ -60,9 +60,9 @@ func (c *baseIamClient) CredentialsWithContext(ctx context.Context) (*credential
 // AWS SDK v1 terminology retained due to laziness.
 func (c *baseIamClient) ConfigProvider() aws.Config {
 	// Don't simply return c.session, since that will only get the credentials which underpin the actual
-	// credentials we're looking for. Return a new session object with the credentials set to our internal
-	// AWS Credentials resource so the returned client.ConfigProvider will fetch the correct credentials.
-	// cfg := c.session.Copy()
-	// cfg.Credentials = c.creds
-	return c.session
+	// credentials we're looking for. Return a new config object with the credentials set to our internal
+	// AWS Credentials resource so the returned aws.Config will fetch the correct credentials.
+	cfg := c.session.Copy()
+	cfg.Credentials = c.creds
+	return cfg
 }
