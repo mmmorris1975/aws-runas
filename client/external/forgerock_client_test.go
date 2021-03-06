@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -233,6 +234,7 @@ func newMockForgerockClient() *forgerockClient {
 	c := &forgerockClient{baseClient: new(baseClient)}
 	c.authUrl, _ = url.Parse(forgerockMock.URL)
 	c.authUrl.Path = "/json/"
+	c.Logger = new(shared.DefaultLogger)
 
 	c.httpClient = forgerockMock.Client()
 	c.realm = "mockRealm"

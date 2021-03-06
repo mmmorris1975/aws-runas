@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -264,6 +265,7 @@ func newMockOktaClient() *oktaClient {
 	}
 	c.authUrl, _ = url.Parse(oktaMock.URL)
 	c.httpClient = oktaMock.Client()
+	c.Logger = new(shared.DefaultLogger)
 	return c
 }
 

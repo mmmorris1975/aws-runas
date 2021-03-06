@@ -7,7 +7,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
-	"github.com/mmmorris1975/aws-runas/shared"
 	"time"
 )
 
@@ -24,7 +23,6 @@ type SamlRoleClientConfig struct {
 	Cache    credentials.CredentialCacher
 	Duration time.Duration
 	RoleArn  string
-	Logger   shared.Logger
 }
 
 // NewSamlRoleClient returns a new SAML aware AwsClient for obtaining identity information from the external IdP, and

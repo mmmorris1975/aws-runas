@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/shared"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -327,6 +328,7 @@ func newMockKeycloakClient() *keycloakClient {
 	c := &keycloakClient{baseClient: new(baseClient)}
 	c.authUrl, _ = url.Parse(keycloakMock.URL)
 	c.httpClient = keycloakMock.Client()
+	c.Logger = new(shared.DefaultLogger)
 	return c
 }
 

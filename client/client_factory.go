@@ -116,10 +116,10 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 			CredentialInputProvider: f.options.CredentialInputProvider,
 			IdentityProviderName:    cfg.SamlProvider,
 			FederatedUsername:       cfg.FederatedUsername,
+			Logger:                  logger,
 		},
 		Duration: cfg.RoleCredentialDuration(),
 		RoleArn:  cfg.RoleArn,
-		Logger:   logger,
 	}
 
 	if f.options.EnableCache {

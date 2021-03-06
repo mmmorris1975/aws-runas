@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/shared"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -305,6 +306,7 @@ func newMockOneloginClient() *oneloginClient {
 	c := &oneloginClient{baseClient: new(baseClient)}
 	c.authUrl, _ = url.Parse(oneloginMock.URL)
 	c.httpClient = oneloginMock.Client()
+	c.Logger = new(shared.DefaultLogger)
 	c.subdomain = strings.Split(c.authUrl.Host, `.`)[0]
 	c.setApiBaseUrl()
 

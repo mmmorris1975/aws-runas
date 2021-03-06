@@ -35,7 +35,6 @@ type WebRoleClientConfig struct {
 	Duration             time.Duration
 	RoleArn              string
 	WebIdentityTokenFile string
-	Logger               shared.Logger
 }
 
 // NewWebRoleClient returns a new SAML aware AwsClient for obtaining identity information from the external IdP, and

@@ -62,7 +62,7 @@ func (c *baseClient) SetCookieJar(jar http.CookieJar) {
 
 // Roles retrieves the available roles for SamlClients.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *baseClient) Roles(user ...string) (*identity.Roles, error) {
+func (c *baseClient) Roles(...string) (*identity.Roles, error) {
 	if len(c.ClientId) > 0 && len(c.RedirectUri) > 0 {
 		return nil, errors.New("OIDC clients are not role aware")
 	}
@@ -137,6 +137,10 @@ func (c *baseClient) handleSamlResponse(r io.Reader) error {
 			v, _ := s.Attr("value")
 			saml := credentials.SamlAssertion(v)
 			c.saml = &saml
+
+			c.Logger.Debugf("SAMLResponse:\n%s", saml)
+			rd, _ := saml.RoleDetails()
+			c.Logger.Debugf("SAML Role Details:\n%s", rd)
 		}
 	})
 
