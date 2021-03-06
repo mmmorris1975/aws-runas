@@ -1,13 +1,13 @@
 package identity
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
-	"github.com/aws/aws-sdk-go/service/sts"
-	"github.com/aws/aws-sdk-go/service/sts/stsiface"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
+	"github.com/aws/aws-sdk-go-v2/service/iam/types"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"sync"
 	"testing"
@@ -15,23 +15,14 @@ import (
 
 func TestNewAwsIdentityProvider(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		p := NewAwsIdentityProvider(mock.Session)
+		p := NewAwsIdentityProvider(aws.Config{})
 		if p == nil {
 			t.Error("nil provider returned")
 		}
 	})
 
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewSessionTokenCredentials with nil config")
-			}
-		}()
-		NewAwsIdentityProvider(nil)
-	})
-
 	t.Run("with logger", func(t *testing.T) {
-		p := NewAwsIdentityProvider(mock.Session).WithLogger(nil)
+		p := NewAwsIdentityProvider(aws.Config{}).WithLogger(nil)
 		if p.logger == nil {
 			t.Errorf("data mismatch")
 		}
@@ -131,34 +122,33 @@ func Example_awsIdentityProvider_Roles() {
 
 // An STS client we can use for testing to avoid calls out to AWS.
 type mockStsClient struct {
-	stsiface.STSAPI
 	sendError bool
 }
 
-func (c *mockStsClient) GetCallerIdentity(*sts.GetCallerIdentityInput) (*sts.GetCallerIdentityOutput, error) {
+func (c *mockStsClient) GetCallerIdentity(context.Context, *sts.GetCallerIdentityInput, ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error) {
 	if c.sendError {
 		return nil, errors.New("error: GetCallerIdentity()")
 	}
 
-	return new(sts.GetCallerIdentityOutput).
-		SetAccount("123456789012").
-		SetArn("arn:aws:iam::123456789012:user/bob").
-		SetUserId("AIDAB0B"), nil
+	return &sts.GetCallerIdentityOutput{
+		Account: aws.String("123456789012"),
+		Arn:     aws.String("arn:aws:iam::123456789012:user/bob"),
+		UserId:  aws.String("AIDAB0B")}, nil
 }
 
 // An IAM client we can use for testing to avoid calls out to AWS
 // In addition to the IAM API, we also create a number of private methods in order to manage that data used
 // by the various IAM API calls.
 type mockIamClient struct {
-	iamiface.IAMAPI
+	iamApi
 	sendError bool
 }
 
-func (c *mockIamClient) groups() []*iam.Group {
-	return []*iam.Group{
-		new(iam.Group).SetGroupName("group1"),
-		new(iam.Group).SetGroupName("group2"),
-		new(iam.Group).SetGroupName("group3"),
+func (c *mockIamClient) groups() []types.Group {
+	return []types.Group{
+		{GroupName: aws.String("group1")},
+		{GroupName: aws.String("group2")},
+		{GroupName: aws.String("group3")},
 	}
 }
 
@@ -166,24 +156,24 @@ func (c *mockIamClient) policies() []*mockIamPolicy {
 	return []*mockIamPolicy{p1, p2, p3, p4, p5, p6, p7, p8, p9}
 }
 
-func (c *mockIamClient) policyNames() []*string {
-	a := make([]*string, 0)
+func (c *mockIamClient) policyNames() []string {
+	a := make([]string, len(c.policies()))
 
-	for _, p := range c.policies() {
-		a = append(a, p.Policy.PolicyName)
+	for i, p := range c.policies() {
+		a[i] = *p.Policy.PolicyName
 	}
 
 	return a
 }
 
-func (c *mockIamClient) attachedPolicies() []*iam.AttachedPolicy {
-	a := make([]*iam.AttachedPolicy, 0)
+func (c *mockIamClient) attachedPolicies() []types.AttachedPolicy {
+	a := make([]types.AttachedPolicy, len(c.policies()))
 
-	for _, p := range c.policies() {
-		a = append(a, &iam.AttachedPolicy{
+	for i, p := range c.policies() {
+		a[i] = types.AttachedPolicy{
 			PolicyArn:  p.Arn,
 			PolicyName: p.Policy.PolicyName,
-		})
+		}
 	}
 
 	return a
@@ -199,137 +189,141 @@ func (c *mockIamClient) lookupPolicy(f *string) *mockIamPolicy {
 	return nil
 }
 
-func (c *mockIamClient) ListGroupsForUserPages(_ *iam.ListGroupsForUserInput,
-	fn func(*iam.ListGroupsForUserOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupsForUser(context.Context, *iam.ListGroupsForUserInput, ...func(*iam.Options)) (*iam.ListGroupsForUserOutput, error) {
 	if c.sendError {
-		return errors.New("error: ListGroupsForUserPages()")
+		return nil, errors.New("error: ListGroupsForUserPages()")
 	}
 
-	out := new(iam.ListGroupsForUserOutput).SetGroups(c.groups())
-	fn(out, true)
-	return nil
+	out := &iam.ListGroupsForUserOutput{Groups: c.groups()}
+	return out, nil
 }
 
-func (c *mockIamClient) ListUserPoliciesPages(_ *iam.ListUserPoliciesInput,
-	fn func(*iam.ListUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListUserPolicies(context.Context, *iam.ListUserPoliciesInput, ...func(*iam.Options)) (*iam.ListUserPoliciesOutput, error) {
 	if c.sendError {
-		return errors.New("error: ListUserPoliciesPages()")
+		return nil, errors.New("error: ListUserPoliciesPages()")
 	}
 
-	out := new(iam.ListUserPoliciesOutput).SetPolicyNames(c.policyNames())
-	fn(out, true)
-	return nil
+	out := &iam.ListUserPoliciesOutput{PolicyNames: c.policyNames()}
+	return out, nil
 }
 
-func (c *mockIamClient) GetUserPolicy(in *iam.GetUserPolicyInput) (*iam.GetUserPolicyOutput, error) {
+func (c *mockIamClient) GetUserPolicy(_ context.Context, in *iam.GetUserPolicyInput, _ ...func(*iam.Options)) (*iam.GetUserPolicyOutput, error) {
 	if c.sendError {
 		return nil, errors.New("error: GetUserPolicy()")
 	}
 
 	p := c.lookupPolicy(in.PolicyName)
 	if p == nil {
-		return nil, fmt.Errorf(iam.ErrCodeNoSuchEntityException)
+		return nil, new(types.NoSuchEntityException)
 	}
 
-	out := new(iam.GetUserPolicyOutput).SetPolicyName(*p.Policy.PolicyName).SetPolicyDocument(*p.PolicyDocument)
+	out := &iam.GetUserPolicyOutput{
+		PolicyDocument: p.PolicyDocument,
+		PolicyName:     p.Policy.PolicyName,
+	}
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedUserPoliciesPages(_ *iam.ListAttachedUserPoliciesInput,
-	fn func(*iam.ListAttachedUserPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedUserPolicies(context.Context, *iam.ListAttachedUserPoliciesInput, ...func(*iam.Options)) (*iam.ListAttachedUserPoliciesOutput, error) {
 	if c.sendError {
-		return errors.New("error: ListAttachedUserPoliciesPages()")
+		return nil, errors.New("error: ListAttachedUserPoliciesPages()")
 	}
 
-	out := new(iam.ListAttachedUserPoliciesOutput).SetAttachedPolicies(c.attachedPolicies())
-	fn(out, true)
-	return nil
+	out := &iam.ListAttachedUserPoliciesOutput{AttachedPolicies: c.attachedPolicies()}
+	return out, nil
 }
 
-func (c *mockIamClient) ListGroupPoliciesPages(_ *iam.ListGroupPoliciesInput,
-	fn func(*iam.ListGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListGroupPolicies(context.Context, *iam.ListGroupPoliciesInput, ...func(*iam.Options)) (*iam.ListGroupPoliciesOutput, error) {
 	if c.sendError {
-		return errors.New("error: ListGroupPoliciesPages()")
+		return nil, errors.New("error: ListGroupPoliciesPages()")
 	}
 
-	out := new(iam.ListGroupPoliciesOutput).SetPolicyNames(c.policyNames())
-	fn(out, true)
-	return nil
+	out := &iam.ListGroupPoliciesOutput{PolicyNames: c.policyNames()}
+	return out, nil
 }
 
-func (c *mockIamClient) GetGroupPolicy(in *iam.GetGroupPolicyInput) (*iam.GetGroupPolicyOutput, error) {
+func (c *mockIamClient) GetGroupPolicy(_ context.Context, in *iam.GetGroupPolicyInput, _ ...func(*iam.Options)) (*iam.GetGroupPolicyOutput, error) {
 	if c.sendError {
 		return nil, errors.New("error: GetGroupPolicy()")
 	}
 
 	p := c.lookupPolicy(in.GroupName)
 	if p == nil {
-		return nil, fmt.Errorf(iam.ErrCodeNoSuchEntityException)
+		return nil, new(types.NoSuchEntityException)
 	}
 
-	out := new(iam.GetGroupPolicyOutput).SetPolicyName(*p.Policy.PolicyName).SetPolicyDocument(*p.PolicyDocument)
+	out := &iam.GetGroupPolicyOutput{
+		PolicyName:     p.Policy.PolicyName,
+		PolicyDocument: p.PolicyDocument,
+	}
 	return out, nil
 }
 
-func (c *mockIamClient) ListAttachedGroupPoliciesPages(_ *iam.ListAttachedGroupPoliciesInput,
-	fn func(*iam.ListAttachedGroupPoliciesOutput, bool) bool) error {
+func (c *mockIamClient) ListAttachedGroupPolicies(context.Context, *iam.ListAttachedGroupPoliciesInput, ...func(*iam.Options)) (*iam.ListAttachedGroupPoliciesOutput, error) {
 	if c.sendError {
-		return errors.New("error: ListAttachedGroupPoliciesPages()")
+		return nil, errors.New("error: ListAttachedGroupPoliciesPages()")
 	}
 
-	out := new(iam.ListAttachedGroupPoliciesOutput).SetAttachedPolicies(c.attachedPolicies())
-	fn(out, true)
-	return nil
+	out := &iam.ListAttachedGroupPoliciesOutput{AttachedPolicies: c.attachedPolicies()}
+	return out, nil
 }
 
-func (c *mockIamClient) GetPolicy(in *iam.GetPolicyInput) (*iam.GetPolicyOutput, error) {
+func (c *mockIamClient) GetPolicy(_ context.Context, in *iam.GetPolicyInput, _ ...func(*iam.Options)) (*iam.GetPolicyOutput, error) {
 	if c.sendError {
 		return nil, errors.New("error: GetPolicy()")
 	}
 
 	p := c.lookupPolicy(in.PolicyArn)
 	if p == nil {
-		return nil, fmt.Errorf(iam.ErrCodeNoSuchEntityException)
+		return nil, new(types.NoSuchEntityException)
 	}
 
-	out := new(iam.GetPolicyOutput).SetPolicy(p.Policy)
+	out := &iam.GetPolicyOutput{Policy: &p.Policy}
 	return out, nil
 }
 
-func (c *mockIamClient) GetPolicyVersion(in *iam.GetPolicyVersionInput) (*iam.GetPolicyVersionOutput, error) {
+func (c *mockIamClient) GetPolicyVersion(_ context.Context, in *iam.GetPolicyVersionInput, _ ...func(*iam.Options)) (*iam.GetPolicyVersionOutput, error) {
 	if c.sendError {
 		return nil, errors.New("error: GetPolicyVersion()")
 	}
 
 	p := c.lookupPolicy(in.PolicyArn)
 	if p == nil {
-		return nil, fmt.Errorf(iam.ErrCodeNoSuchEntityException)
+		return nil, new(types.NoSuchEntityException)
 	}
 
-	ver := new(iam.PolicyVersion).SetVersionId(*p.DefaultVersionId).SetIsDefaultVersion(true).
-		SetDocument(*p.PolicyDocument)
-	out := new(iam.GetPolicyVersionOutput).SetPolicyVersion(ver)
+	out := &iam.GetPolicyVersionOutput{
+		PolicyVersion: &types.PolicyVersion{
+			Document:         p.PolicyDocument,
+			IsDefaultVersion: true,
+			VersionId:        p.DefaultVersionId,
+		},
+	}
 	return out, nil
 }
 
 // A type combining the capabilities of the iam.Policy and iam.PolicyDetail types so that we can manage
 // the identity and policy document information in a single place.
 type mockIamPolicy struct {
-	*iam.Policy
-	*iam.PolicyDetail
+	types.Policy
+	types.PolicyDetail
 }
 
 func NewMockIamPolicy(name string) *mockIamPolicy {
 	arn := `arn:aws:iam::9876543210:policy/` + name
 
 	return &mockIamPolicy{
-		Policy:       new(iam.Policy).SetPolicyName(name).SetArn(arn).SetDefaultVersionId("default"),
-		PolicyDetail: new(iam.PolicyDetail).SetPolicyName(name),
+		Policy: types.Policy{
+			Arn:              &arn,
+			DefaultVersionId: aws.String("default"),
+			PolicyName:       &name,
+		},
+		PolicyDetail: types.PolicyDetail{PolicyName: &name},
 	}
 }
 
 func (m *mockIamPolicy) WithPolicyDocument(doc string) *mockIamPolicy {
-	m.SetPolicyDocument(doc)
+	m.PolicyDocument = &doc
 	return m
 }
 

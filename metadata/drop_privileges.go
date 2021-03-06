@@ -4,7 +4,7 @@ package metadata
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/defaults"
+	"github.com/aws/aws-sdk-go-v2/config"
 	"golang.org/x/sys/unix"
 	"os"
 	"runtime"
@@ -27,7 +27,7 @@ func dropPrivileges() (err error) {
 	}
 	logger.Debugf("Error checking sudo env vars: %v", err)
 
-	uid, gid, err = stat(defaults.SharedConfigFilename())
+	uid, gid, err = stat(config.DefaultSharedConfigFilename())
 	if err == nil {
 		logger.Debugf("Found UID/GID from cache directory ownership: UID: %d, GID: %d", uid, gid)
 		return setPrivileges(uid, gid)

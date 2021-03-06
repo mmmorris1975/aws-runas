@@ -8,7 +8,7 @@ PATH := $(BUILDDIR):${GOROOT}/bin:${PATH}
 GOOS ?= $(shell ${GOROOT}/bin/go env GOOS)
 GOARCH ?= $(shell ${GOROOT}/bin/go env GOARCH)
 
-.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test docs lint
+.PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test-setup gotest rspec test docs lint
 
 $(EXE): go.mod *.go **/*.go
 	go build -v $(LDFLAGS)
@@ -73,11 +73,30 @@ clean:
 distclean: clean
 	rm -f go.sum
 
-test: $(EXE)
-	mv $(EXE) $(BUILDDIR)
+gotest:
+	go vet -tests=false ./...
 	go test -race -count 1 -v ./...
-	bundle install
-	AWS_CONFIG_FILE=.aws/config AWS_PROFILE=arn:aws:iam::686784119290:role/circleci-role AWS_DEFAULT_PROFILE=circleci bundle exec rspec
+
+# Pass through certain OKTA_* and ONELOGIN_* environment variables which could be considered sensitive.
+# If the *_URL env var for a provider is not set, the rspec tests for that provider will be skipped.
+# Other configuration is loaded from the testdata/aws_config file. Create matching profile names in your local
+# .aws/credentials file, and the container will mount that and use it for testing.  Otherwise, set the OKTA_PASSWORD
+# and/or ONELOGIN_PASSWORD env var to provide the idp credentials
+rspec: $(EXE)
+	mv $(EXE) $(BUILDDIR)
+
+	@if [ -z $${CIRCLECI} ]; then \
+		DOCKER_ARGS="--user root"; \
+	fi; \
+	docker run $${DOCKER_ARGS} --rm -it -w /app \
+	  -e AWS_SHARED_CREDENTIALS_FILE=testdata/aws_credentials \
+	  -e OKTA_SAML_URL -e OKTA_OIDC_URL -e OKTA_OIDC_CLIENT_ID -e OKTA_PASSWORD \
+	  -e ONELOGIN_SAML_URL -e ONELOGIN_OIDC_URL -e ONELOGIN_OIDC_CLIENT_ID -e ONELOGIN_PASSWORD \
+	  --mount type=bind,src=$${PWD},dst=/app \
+	  --mount type=bind,src=$${HOME}/.aws/credentials,dst=/app/testdata/aws_credentials,ro \
+	  --entrypoint scripts/run_rspec.sh cimg/ruby:2.7
+
+test: gotest rspec
 
 docs:
 	@if [ -z $${CIRCLECI} ]; then \

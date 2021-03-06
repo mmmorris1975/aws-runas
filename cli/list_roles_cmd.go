@@ -3,7 +3,7 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"github.com/urfave/cli/v2"
 	"sort"
 	"strings"

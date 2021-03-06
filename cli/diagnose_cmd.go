@@ -4,8 +4,7 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/defaults"
-	"github.com/aws/aws-sdk-go/aws/session"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/ini.v1"
@@ -38,7 +37,7 @@ var diagCmd = &cli.Command{
 
 		if len(cfg.ProfileName) < 1 {
 			log.Warning("No profile specified, will only check default section. Provide a profile name for more validation")
-			cfg.ProfileName = session.DefaultSharedConfigProfile
+			cfg.ProfileName = awsconfig.DefaultSharedConfigProfile
 		}
 
 		checkEnv()
@@ -175,7 +174,7 @@ func checkProvider(url string) {
 }
 
 func checkCredentialProfile(profile string) bool {
-	src := defaults.SharedCredentialsFilename()
+	src := awsconfig.DefaultSharedCredentialsFilename()
 	if v, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 		src = v
 	}
@@ -273,18 +272,18 @@ func fetchTime(deadline time.Duration) (time.Time, error) {
 	defer c.Close()
 
 	if deadline > 0 {
-		if err := c.SetReadDeadline(time.Now().Add(deadline)); err != nil {
+		if err = c.SetReadDeadline(time.Now().Add(deadline)); err != nil {
 			return time.Time{}, err
 		}
 	}
 
 	// NTPv3 client request packet
-	if err := binary.Write(c, binary.BigEndian, &ntpPacket{Settings: 0x1B}); err != nil {
+	if err = binary.Write(c, binary.BigEndian, &ntpPacket{Settings: 0x1B}); err != nil {
 		return time.Time{}, err
 	}
 
 	resp := new(ntpPacket)
-	if err := binary.Read(c, binary.BigEndian, resp); err != nil {
+	if err = binary.Read(c, binary.BigEndian, resp); err != nil {
 		return time.Time{}, err
 	}
 

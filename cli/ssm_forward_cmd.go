@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/ssm"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mmmorris1975/ssm-session-client/ssmclient"
 	"github.com/urfave/cli/v2"
 	"strconv"
@@ -47,9 +47,9 @@ var ssmForwardCmd = &cli.Command{
 		}
 
 		if ctx.Bool(ssmUsePluginFlag.Name) {
-			params := map[string][]*string{
-				"localPortNumber": {aws.String(lp)},
-				"portNumber":      {aws.String(rp)},
+			params := map[string][]string{
+				"localPortNumber": {lp},
+				"portNumber":      {rp},
 			}
 
 			in := &ssm.StartSessionInput{

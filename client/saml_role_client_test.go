@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
@@ -17,20 +17,11 @@ func TestNewSamlRoleClient(t *testing.T) {
 		cfg := &SamlRoleClientConfig{
 			AuthenticationClientConfig: external.AuthenticationClientConfig{IdentityProviderName: "okta"},
 		}
-		c := NewSamlRoleClient(mock.Session, "http://saml.mock.local/saml", cfg)
+		c := NewSamlRoleClient(aws.Config{}, "http://saml.mock.local/saml", cfg)
 		if c == nil {
 			t.Error("nil client returned")
 			return
 		}
-	})
-
-	t.Run("nil client", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewSamlRoleClient with nil config")
-			}
-		}()
-		NewSamlRoleClient(nil, "", new(SamlRoleClientConfig))
 	})
 
 	t.Run("nil client config", func(t *testing.T) {
@@ -39,7 +30,7 @@ func TestNewSamlRoleClient(t *testing.T) {
 				t.Errorf("Did not receive expected panic calling NewSamlRoleClient with nil client config")
 			}
 		}()
-		NewSamlRoleClient(mock.Session, "", nil)
+		NewSamlRoleClient(aws.Config{}, "", nil)
 	})
 }
 
@@ -121,15 +112,15 @@ func TestSamlRoleClient_Credentials(t *testing.T) {
 }
 
 func TestSamlRoleClient_ConfigProvider(t *testing.T) {
-	c := &samlRoleClient{session: mock.Session}
-	if cp := c.ConfigProvider(); cp == nil {
+	c := &samlRoleClient{session: aws.Config{}}
+	if cp := c.ConfigProvider(); cp.Credentials != c.session.Credentials {
 		t.Error("invalid config provider")
 	}
 }
 
 func TestSamlRoleClient_ClearCache(t *testing.T) {
 	saml := credentials.SamlAssertion("bogus")
-	c := &samlRoleClient{roleProvider: credentials.NewSamlRoleProvider(mock.Session, "mock_role", &saml)}
+	c := &samlRoleClient{roleProvider: credentials.NewSamlRoleProvider(aws.Config{}, "mock_role", &saml)}
 	if err := c.ClearCache(); err != nil {
 		t.Error(err)
 	}
@@ -168,7 +159,7 @@ func (c *mockSamlClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
 
-func (c *mockSamlClient) AuthenticateWithContext(ctx context.Context) error {
+func (c *mockSamlClient) AuthenticateWithContext(context.Context) error {
 	if c.sendError {
 		return errors.New("error: Authenticate()")
 	}

@@ -1,8 +1,8 @@
 package credentials
 
 import (
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"context"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"testing"
 	"time"
@@ -25,19 +25,8 @@ func TestNewWebRoleProvider(t *testing.T) {
 		}
 	})
 
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
-			}
-		}()
-		NewWebRoleProvider(nil, "")
-	})
-
 	t.Run("session options", func(t *testing.T) {
-		cfg := new(aws.Config).WithLogLevel(aws.LogDebug)
-		ses := mock.Session.Copy(cfg)
-		p := NewWebRoleProvider(ses, "")
+		p := NewWebRoleProvider(aws.Config{}, "")
 
 		if p.Client == nil {
 			t.Error("invalid Client")
@@ -57,13 +46,13 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		p := newWebRoleProvider()
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != WebRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != WebRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -72,13 +61,13 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.Duration = 0 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != WebRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != WebRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -87,13 +76,13 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.Duration = 1 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != WebRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != WebRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -102,13 +91,13 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.Duration = 100 * time.Hour
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != WebRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != WebRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -117,7 +106,7 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.RoleArn = ""
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -128,7 +117,7 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.RoleSessionName = ""
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -139,7 +128,7 @@ func TestWebRoleProvider_Retrieve(t *testing.T) {
 		p := newWebRoleProvider()
 		p.webIdentityToken = new(OidcIdentityToken)
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -160,7 +149,7 @@ func TestWebRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newWebRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -184,7 +173,7 @@ func TestWebRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newWebRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -229,7 +218,7 @@ func TestWebRoleProvider_ClearCache(t *testing.T) {
 }
 
 func newWebRoleProvider() *webRoleProvider {
-	p := NewWebRoleProvider(mock.Session, "mockRole")
+	p := NewWebRoleProvider(aws.Config{}, "mockRole")
 	p.Client = new(stsMock)
 	p.RoleSessionName = "mySession"
 	p.Logger = new(shared.DefaultLogger)

@@ -1,9 +1,10 @@
 package credentials
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"testing"
 	"time"
@@ -25,15 +26,6 @@ func TestNewSamlRoleProvider(t *testing.T) {
 			t.Error("invalid default logger")
 		}
 	})
-
-	t.Run("nil config", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewAssumeRoleProvider with nil config")
-			}
-		}()
-		NewSamlRoleProvider(nil, "", new(SamlAssertion))
-	})
 }
 
 func TestSamlRoleProvider_Retrieve(t *testing.T) {
@@ -41,13 +33,13 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Cache = new(memCredCache)
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SamlRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SamlRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -56,13 +48,13 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Duration = 0 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SamlRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SamlRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -71,13 +63,13 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Duration = 1 * time.Second
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SamlRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SamlRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -86,13 +78,13 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Duration = 100 * time.Hour
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
 		}
 
-		if !v.HasKeys() || len(v.SessionToken) < 1 || v.ProviderName != SamlRoleProviderName {
+		if !v.HasKeys() || len(v.SessionToken) < 1 || v.Source != SamlRoleProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -101,7 +93,7 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.RoleArn = ""
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -112,7 +104,7 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.samlAssertion = new(SamlAssertion)
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -123,7 +115,7 @@ func TestSamlRoleProvider_Retrieve(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.RoleArn = "badRole"
 
-		_, err := p.Retrieve()
+		_, err := p.Retrieve(context.Background())
 		if err == nil {
 			t.Error("did not receive expected error")
 			return
@@ -144,7 +136,7 @@ func TestSamlRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -168,7 +160,7 @@ func TestSamlRoleProvider_Retrieve_Cache(t *testing.T) {
 		p := newSamlRoleProvider()
 		p.Cache = c
 
-		v, err := p.Retrieve()
+		v, err := p.Retrieve(context.Background())
 		if err != nil {
 			t.Error(err)
 			return
@@ -217,7 +209,7 @@ func newSamlRoleProvider() *samlRoleProvider {
 	a := fmt.Sprintf(">%s,arn:aws:iam::1234567890:saml-provider/mockPrincipal<", r)
 	saml := SamlAssertion(base64.StdEncoding.EncodeToString([]byte(a)))
 
-	p := NewSamlRoleProvider(mock.Session, r, &saml)
+	p := NewSamlRoleProvider(aws.Config{}, r, &saml)
 	p.Client = new(stsMock)
 	p.Logger = new(shared.DefaultLogger)
 	return p

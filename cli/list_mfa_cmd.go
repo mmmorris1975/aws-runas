@@ -1,17 +1,15 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/iam"
-	"github.com/aws/aws-sdk-go/service/iam/iamiface"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	awsconfig "github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/urfave/cli/v2"
-	"strings"
 )
 
 var mfaCmd = &cli.Command{
@@ -41,39 +39,24 @@ var mfaCmd = &cli.Command{
 			return err
 		}
 
-		s := session.Must(session.NewSessionWithOptions(sessionOptions(cfg)))
-		return listMfa(iam.New(s), id)
+		s, err := awsconfig.LoadDefaultConfig(context.Background(),
+			awsconfig.WithLogger(logFunc),
+			awsconfig.WithRegion(cfg.Region),
+			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
+		)
+		if err != nil {
+			return err
+		}
+		return listMfa(iam.NewFromConfig(s), id)
 	},
 }
 
-// possibly reusable? may only be used with mfa lookup, since it should be the only place we need a hand-rolled
-// session. All others should(?) be relying on the client factory.
-func sessionOptions(cfg *config.AwsConfig) session.Options {
-	return session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-
-		// we may want to eventually incorporate this to the client factory session options setup?
-		Profile: func() string {
-			profile := cfg.ProfileName
-			if len(cfg.SrcProfile) > 0 {
-				profile = cfg.SrcProfile
-			}
-
-			if strings.EqualFold(profile, session.DefaultSharedConfigProfile) {
-				// Don't set Profile in options if it's the default value.
-				// See release notes for v1.22.0 of the AWS SDK for the rationale
-				return ""
-			}
-			return profile
-		}(),
-
-		Config: *new(aws.Config).
-			WithRegion(cfg.Region).WithCredentialsChainVerboseErrors(true).
-			WithLogLevel(opts.AwsLogLevel).
-			WithLogger(aws.LoggerFunc(func(i ...interface{}) {
-				log.Debug(i...)
-			})),
+func getSharedProfile(cfg *config.AwsConfig) string {
+	profile := cfg.ProfileName
+	if len(cfg.SrcProfile) > 0 {
+		profile = cfg.SrcProfile
 	}
+	return profile
 }
 
 // mfa command-specific? really just to wrap multiple error paths to a single return value.
@@ -86,10 +69,10 @@ func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
 	return c.Identity()
 }
 
-// mfa command-specific, but set as a distinct function so it's testable with a mock iamiface.IAMAPI.
-func listMfa(i iamiface.IAMAPI, id *identity.Identity) error {
+// mfa command-specific, but use a distinct function so it's testable with a mock iam.ListMFADevicesAPIClient.
+func listMfa(i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
 	if id.IdentityType == "user" {
-		res, err := i.ListMFADevices(new(iam.ListMFADevicesInput))
+		res, err := i.ListMFADevices(context.Background(), new(iam.ListMFADevicesInput))
 		if err != nil {
 			return err
 		}

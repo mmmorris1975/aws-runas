@@ -2,9 +2,8 @@ package credentials
 
 import (
 	"bytes"
-	"github.com/aws/aws-sdk-go/aws"
-	awscred "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"testing"
 	"time"
 )
@@ -204,7 +203,7 @@ func TestCredentials_Value(t *testing.T) {
 
 		v := c.Value()
 		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey ||
-			v.SessionToken != c.Token || v.ProviderName != c.ProviderName {
+			v.SessionToken != c.Token || v.Source != c.ProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -212,7 +211,7 @@ func TestCredentials_Value(t *testing.T) {
 	t.Run("no token", func(t *testing.T) {
 		v := c.Value()
 		if !v.HasKeys() || v.AccessKeyID != c.AccessKeyId || v.SecretAccessKey != c.SecretAccessKey ||
-			v.SessionToken != "" || v.ProviderName != c.ProviderName {
+			v.SessionToken != "" || v.Source != c.ProviderName {
 			t.Error("invalid credentials")
 		}
 	})
@@ -259,17 +258,17 @@ func TestCredentials_StsCredentials(t *testing.T) {
 }
 
 func TestCredentials_FromValue(t *testing.T) {
-	v := awscred.Value{
+	v := aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",
 		SessionToken:    "mockToken",
-		ProviderName:    "mockProvider",
+		Source:          "mockProvider",
 	}
 
 	c := FromValue(v)
 
 	if c.AccessKeyId != v.AccessKeyID || c.SecretAccessKey != v.SecretAccessKey ||
-		c.Token != v.SessionToken || c.ProviderName != v.ProviderName {
+		c.Token != v.SessionToken || c.ProviderName != v.Source {
 		t.Error("data mismatch")
 	}
 
@@ -280,7 +279,7 @@ func TestCredentials_FromValue(t *testing.T) {
 
 func TestCredentials_FromStsCredentials(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		in := &sts.Credentials{
+		in := &types.Credentials{
 			AccessKeyId:     aws.String("mockAK"),
 			Expiration:      aws.Time(time.Unix(12345, 67890)),
 			SecretAccessKey: aws.String("mockSK"),
@@ -321,7 +320,7 @@ func TestCredentials_FromStsCredentials(t *testing.T) {
 	})
 
 	t.Run("zero value", func(t *testing.T) {
-		v := FromStsCredentials(new(sts.Credentials))
+		v := FromStsCredentials(new(types.Credentials))
 
 		if v == nil {
 			t.Error("nil output")

@@ -1,10 +1,9 @@
 package client
 
 import (
+	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/client"
-	awscred "github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/cache"
@@ -23,7 +22,7 @@ type webRoleClient struct {
 	roleProvider credentials.WebRoleProvider
 	idpUrl       string
 	tokenFile    string
-	session      client.ConfigProvider
+	session      aws.Config
 	logger       shared.Logger
 }
 
@@ -39,7 +38,7 @@ type WebRoleClientConfig struct {
 
 // NewWebRoleClient returns a new SAML aware AwsClient for obtaining identity information from the external IdP, and
 // for making the AWS Assume Role with Web Identity API call.
-func NewWebRoleClient(cfg client.ConfigProvider, url string, clientCfg *WebRoleClientConfig) *webRoleClient {
+func NewWebRoleClient(cfg aws.Config, url string, clientCfg *WebRoleClientConfig) *webRoleClient {
 	c := new(webRoleClient)
 	c.webClient = external.MustGetWebIdentityClient(clientCfg.IdentityProviderName, url, clientCfg.OidcClientConfig)
 	c.idpUrl = url
@@ -65,6 +64,7 @@ func NewWebRoleClient(cfg client.ConfigProvider, url string, clientCfg *WebRoleC
 		}
 	}
 	c.roleProvider = p
+	c.session.Credentials = p
 
 	return c
 }
@@ -83,12 +83,12 @@ func (c *webRoleClient) Roles() (*identity.Roles, error) {
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a
 // background context.
 func (c *webRoleClient) Credentials() (*credentials.Credentials, error) {
-	return c.CredentialsWithContext(aws.BackgroundContext())
+	return c.CredentialsWithContext(context.Background())
 }
 
 // CredentialsWithContext is the implementation of the CredentialClient interface for retrieving temporary AWS
 // credentials using the Assume Role with Web Identity operation.
-func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credentials.Credentials, error) {
+func (c *webRoleClient) CredentialsWithContext(ctx context.Context) (*credentials.Credentials, error) {
 	tok, err := c.FetchToken(ctx)
 	if err != nil {
 		return nil, err
@@ -97,7 +97,7 @@ func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credential
 	tt := credentials.OidcIdentityToken(tok)
 	c.roleProvider.WebIdentityToken(&tt)
 
-	v, err := c.roleProvider.RetrieveWithContext(ctx)
+	v, err := c.roleProvider.Retrieve(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -106,8 +106,8 @@ func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credential
 		AccessKeyId:     v.AccessKeyID,
 		SecretAccessKey: v.SecretAccessKey,
 		Token:           v.SessionToken,
-		Expiration:      c.roleProvider.ExpiresAt(),
-		ProviderName:    v.ProviderName,
+		Expiration:      v.Expires,
+		ProviderName:    v.Source,
 	}
 
 	return cred, nil
@@ -117,7 +117,7 @@ func (c *webRoleClient) CredentialsWithContext(ctx awscred.Context) (*credential
 // configured, this implementation will consult a Web Identity Token file.  Otherwise, if caching is enabled, it will
 // be checked.  If no cache is configured or the token retrieved from cache is expired, a new token will be retrieved
 // from the external IdP.
-func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
+func (c *webRoleClient) FetchToken(ctx context.Context) ([]byte, error) {
 	// support retrieval via Web Identity token file
 	// The file is treated as an always available, always valid, source of truth for providing an identity token
 	// It will bypass any communication with an IdP and use the data from the file directly
@@ -147,7 +147,7 @@ func (c *webRoleClient) FetchToken(ctx awscred.Context) ([]byte, error) {
 }
 
 // ConfigProvider returns the AWS SDK client.ConfigProvider for this client.
-func (c *webRoleClient) ConfigProvider() client.ConfigProvider {
+func (c *webRoleClient) ConfigProvider() aws.Config {
 	return c.session
 }
 

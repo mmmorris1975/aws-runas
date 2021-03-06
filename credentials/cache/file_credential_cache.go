@@ -3,7 +3,7 @@ package cache
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/service/sts/types"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"os"
 	"path/filepath"
@@ -27,7 +27,7 @@ func (f *fileCredentialCache) Load() *credentials.Credentials {
 	defer f.mu.RUnlock()
 
 	creds := new(credentials.Credentials)
-	stsCreds := new(sts.Credentials)
+	stsCreds := new(types.Credentials)
 
 	data, err := os.ReadFile(f.path)
 	if err != nil {
@@ -63,14 +63,15 @@ func (f *fileCredentialCache) Clear() error {
 }
 
 func (f *fileCredentialCache) writeFile(creds *credentials.Credentials) error {
-	if err := os.MkdirAll(filepath.Dir(f.path), 0755); err != nil {
+	dir := filepath.Dir(f.path)
+	if err := os.MkdirAll(dir, 0750); err != nil {
 		return err
 	}
 
 	f.mu.Lock()
 	defer f.mu.Unlock()
 
-	tmp, err := os.CreateTemp("", fmt.Sprintf("%s_*.tmp", filepath.Base(f.path)))
+	tmp, err := os.CreateTemp(dir, fmt.Sprintf("%s_*.tmp", filepath.Base(f.path)))
 	if err != nil {
 		return err
 	}

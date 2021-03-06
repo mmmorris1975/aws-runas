@@ -6,9 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	awsclient "github.com/aws/aws-sdk-go/aws/client"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -64,7 +62,7 @@ func TestNewMetadataCredentialService(t *testing.T) {
 			Path:        "/mock",
 			Profile:     "mock",
 			Logger:      new(shared.DefaultLogger),
-			AwsLogLevel: aws.LogOff,
+			AwsLogLevel: "",
 		}
 
 		mcs, err := NewMetadataCredentialService(":0", o)
@@ -773,7 +771,7 @@ func mockMetadataCredentialService() *metadataCredentialService {
 
 	factoryOptions := client.DefaultOptions
 	factoryOptions.EnableCache = false
-	factoryOptions.AwsLogLevel = aws.LogOff
+	factoryOptions.AwsLogLevel = ""
 	factoryOptions.Logger = new(shared.DefaultLogger)
 	factoryOptions.CommandCredentials = new(config.AwsCredentials)
 
@@ -842,8 +840,8 @@ func (m *mockAwsClient) CredentialsWithContext(context.Context) (*credentials.Cr
 	return creds, nil
 }
 
-func (m *mockAwsClient) ConfigProvider() awsclient.ConfigProvider {
-	return mock.Session
+func (m *mockAwsClient) ConfigProvider() aws.Config {
+	return aws.Config{}
 }
 
 func (m *mockAwsClient) ClearCache() error {

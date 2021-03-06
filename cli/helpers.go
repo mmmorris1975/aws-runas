@@ -1,17 +1,17 @@
 package cli
 
 import (
+	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/aws/arn"
-	awsclient "github.com/aws/aws-sdk-go/aws/client"
-	awscreds "github.com/aws/aws-sdk-go/aws/credentials"
-	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go/logging"
 	"github.com/dustin/go-humanize"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
@@ -154,15 +154,23 @@ func printCredExpiration(creds *credentials.Credentials) {
 	_, _ = fmt.Fprintln(os.Stderr, msg)
 }
 
-func printCredIdentity(cfg awsclient.ConfigProvider, creds *credentials.Credentials) error {
-	credOverlay := awscreds.NewStaticCredentialsFromCreds(creds.Value())
-	id, err := sts.New(cfg, new(aws.Config).WithCredentials(credOverlay)).
-		GetCallerIdentity(new(sts.GetCallerIdentityInput))
+func printCredIdentity(api identity.StsApi) error {
+	id, err := api.GetCallerIdentity(context.Background(), new(sts.GetCallerIdentityInput))
 	if err != nil {
 		return err
 	}
 
-	log.Infof("%+v", id)
+	idMap := struct {
+		UserId  string
+		Arn     string
+		Account string
+	}{
+		UserId:  *id.UserId,
+		Arn:     *id.Arn,
+		Account: *id.Account,
+	}
+
+	log.Infof("%+v", idMap)
 	return nil
 }
 
@@ -187,5 +195,18 @@ func bashCompleteProfile(ctx *cli.Context) {
 
 	for _, v := range vals {
 		fmt.Println(v)
+	}
+}
+
+var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+	if log != nil {
+		switch c {
+		case logging.Warn:
+			log.Warningf(fmt, v...)
+		case logging.Debug:
+			log.Debugf(fmt, v...)
+		default:
+			log.Infof(fmt, v...)
+		}
 	}
 }

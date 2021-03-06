@@ -2,7 +2,8 @@ package cli
 
 import (
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -64,7 +65,7 @@ var App = &cli.App{
 				log.SetLevel(logger.DEBUG)
 
 				if len(verbose) > 1 {
-					opts.AwsLogLevel = aws.LogDebug
+					opts.AwsLogLevel = logging.Debug
 				}
 			}
 		}
@@ -175,7 +176,7 @@ func execCmd(ctx *cli.Context) error {
 	}
 
 	if ctx.Bool(whoamiFlag.Name) {
-		if err = printCredIdentity(c.ConfigProvider(), creds); err != nil {
+		if err = printCredIdentity(sts.NewFromConfig(c.ConfigProvider())); err != nil {
 			return err
 		}
 	}

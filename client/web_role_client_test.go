@@ -3,7 +3,7 @@ package client
 import (
 	"context"
 	"errors"
-	"github.com/aws/aws-sdk-go/awstesting/mock"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
@@ -23,20 +23,11 @@ func TestNewWebRoleClient(t *testing.T) {
 			},
 		}
 
-		c := NewWebRoleClient(mock.Session, "http://oidc.mock.local/auth", cfg)
+		c := NewWebRoleClient(aws.Config{}, "http://oidc.mock.local/auth", cfg)
 		if c == nil {
 			t.Error("nil client returned")
 			return
 		}
-	})
-
-	t.Run("nil client", func(t *testing.T) {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Errorf("Did not receive expected panic calling NewWebRoleClient with nil config")
-			}
-		}()
-		NewWebRoleClient(nil, "", new(WebRoleClientConfig))
 	})
 
 	t.Run("nil client config", func(t *testing.T) {
@@ -45,7 +36,7 @@ func TestNewWebRoleClient(t *testing.T) {
 				t.Errorf("Did not receive expected panic calling NewWebRoleClient with nil client config")
 			}
 		}()
-		NewWebRoleClient(mock.Session, "", nil)
+		NewWebRoleClient(aws.Config{}, "", nil)
 	})
 }
 
@@ -129,14 +120,14 @@ func TestWebRoleClient_Credentials(t *testing.T) {
 }
 
 func TestWebRoleClient_ConfigProvider(t *testing.T) {
-	c := &webRoleClient{session: mock.Session}
-	if cp := c.ConfigProvider(); cp == nil {
+	c := &webRoleClient{session: aws.Config{}}
+	if cp := c.ConfigProvider(); cp.Credentials != c.session.Credentials {
 		t.Error("invalid config provider")
 	}
 }
 
 func TestWebRoleClient_ClearCache(t *testing.T) {
-	c := &webRoleClient{roleProvider: credentials.NewWebRoleProvider(mock.Session, "mock_role")}
+	c := &webRoleClient{roleProvider: credentials.NewWebRoleProvider(aws.Config{}, "mock_role")}
 	c.logger = new(shared.DefaultLogger)
 
 	if err := c.ClearCache(); err != nil {
