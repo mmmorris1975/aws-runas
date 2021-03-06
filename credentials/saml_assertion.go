@@ -66,7 +66,8 @@ func (s *SamlAssertion) ExpiresAt() (time.Time, error) {
 	}
 
 	// could be saml:Assertion, or saml2:Assertion, static regex should never error
-	re := regexp.MustCompile(`<saml\d*:Assertion.*\sIssueInstant="([[:graph:]]+)"`)
+	// also handle Assertion tag without the namespace prefix (thanks Azure AD!)
+	re := regexp.MustCompile(`<(?:saml\d*:)?Assertion.*\sIssueInstant="([[:graph:]]+)"`)
 
 	m := re.FindStringSubmatch(saml)
 	if m != nil {
