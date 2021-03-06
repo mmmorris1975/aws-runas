@@ -76,9 +76,21 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
+
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	reader := bytes.NewReader(body)
 
 	authRes := new(aadAuthResponse)
-	if err = parseResponseNoClose(res.Body, authRes); err != nil {
+	if err = parseResponseNoClose(reader, authRes); err != nil {
+		// we are seeing the OIDC tokens show up here in certain cases, so if we don't see the expected
+		// response (triggering the error), try submitting the result before returning an error.
+		c.Logger.Debugf("parseResponseNoClose() err: %v, attempting to directly submit response", err)
+		_, _ = reader.Seek(0, io.SeekStart)
+		_, err = c.submitResponse(res.Request.URL, io.NopCloser(reader))
 		return err
 	}
 
@@ -90,7 +102,6 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// equal 50058 too ... isn't really an error, other than signalling you've reached this KMSI prompt
 	if strings.HasSuffix(authRes.UrlPost, "/kmsi") {
 		c.Logger.Debugf("handling kmsi")
-		res.Body.Close()
 		kmsiUrl := authRes.LoginUrl(res.Request.URL)
 
 		kmsiForm := url.Values{}
@@ -109,7 +120,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// The OIDC ID token probably isn't sufficient for use with the IdentityToken* methods, since
 	// there aren't any useful claims in the token, afaict just basic profile info.
 	// However, this should be sufficient to say authentication is complete, if successful.
-	_, err = c.submitResponse(res)
+	_, err = c.submitResponse(res.Request.URL, res.Body)
 	return err
 }
 
@@ -201,10 +212,10 @@ func (c *aadClient) parseAppId() error {
 	return nil
 }
 
-func (c *aadClient) submitResponse(r *http.Response) (*http.Response, error) {
-	defer r.Body.Close()
+func (c *aadClient) submitResponse(u *url.URL, r io.ReadCloser) (*http.Response, error) {
+	defer r.Close()
 
-	doc, err := goquery.NewDocumentFromReader(r.Body)
+	doc, err := goquery.NewDocumentFromReader(r)
 	if err != nil {
 		return nil, err
 	}
@@ -222,7 +233,7 @@ func (c *aadClient) submitResponse(r *http.Response) (*http.Response, error) {
 	}
 
 	if len(submitUrl.Scheme) < 1 {
-		submitUrl = r.Request.URL.ResolveReference(submitUrl)
+		submitUrl = u.ResolveReference(submitUrl)
 	}
 
 	vals := url.Values{}
@@ -325,7 +336,7 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 		return nil, err
 	}
 
-	return c.submitResponse(res)
+	return c.submitResponse(res.Request.URL, res.Body)
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
@@ -552,7 +563,7 @@ func parseResponse(body io.ReadCloser, out interface{}) error {
 	return parseResponseNoClose(body, out)
 }
 
-func parseResponseNoClose(body io.ReadCloser, out interface{}) error {
+func parseResponseNoClose(body io.Reader, out interface{}) error {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return err
