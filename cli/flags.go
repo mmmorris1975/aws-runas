@@ -83,7 +83,6 @@ var mfaTypeFlag = &cli.StringFlag{
 	Usage:       "use specific MFA type instead of provider auto-detection logic",
 	EnvVars:     []string{"MFA_TYPE"},
 	Destination: &cmdlineCfg.MfaType,
-	Value:       "auto",
 }
 
 var externalIdFlag = &cli.StringFlag{
