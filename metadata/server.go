@@ -163,7 +163,7 @@ func (s *metadataCredentialService) Run() error {
 	return srv.Serve(s.listener)
 }
 
-func (s *metadataCredentialService) RunNoApi() error {
+func (s *metadataCredentialService) RunNoApi(readyCh chan<- bool) error {
 	s.clientOptions.MfaInputProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
 	s.clientOptions.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput
 
@@ -196,6 +196,9 @@ func (s *metadataCredentialService) RunNoApi() error {
 	srv.Handler = mux
 	defer cleanup(srv)
 
+	if readyCh != nil {
+		readyCh <- true
+	}
 	return srv.Serve(s.listener)
 }
 

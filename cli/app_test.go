@@ -57,7 +57,7 @@ func TestApp_runEcsSvc(t *testing.T) {
 	_ = os.Setenv("AWS_ACCESS_KEY_ID", "mock")
 	_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", "x")
 
-	if err := runEcsSvc("p"); err != nil {
+	if _, err := runEcsSvc("p"); err != nil {
 		t.Error(err)
 		return
 	}

@@ -195,10 +195,13 @@ func execCmd(ctx *cli.Context) error {
 				_ = os.Setenv(k, v)
 			}
 		} else {
-			err = runEcsSvc(profile)
+			var ch <-chan bool
+			ch, err = runEcsSvc(profile)
 			if err != nil {
 				return err
 			}
+			<-ch
+			log.Debugf("ECS endpoint ready")
 		}
 
 		wrapped := wrapCmd(cmd)
@@ -262,7 +265,7 @@ func printCreds(env map[string]string) {
 	}
 }
 
-func runEcsSvc(profile string) error {
+func runEcsSvc(profile string) (<-chan bool, error) {
 	// modify the execution environment to force use of ECS credential URL
 	unsetEnv := []string{
 		"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY",
@@ -288,13 +291,14 @@ func runEcsSvc(profile string) error {
 	// since this is internal consumption only, use a random port and default path.
 	mcs, err := metadata.NewMetadataCredentialService("127.0.0.1:0", in)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ep := fmt.Sprintf("http://%s%s", mcs.Addr().String(), in.Path)
 	_ = os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", ep)
-	go mcs.RunNoApi() //nolint:errcheck
-	return nil
+	ch := make(chan bool, 1)
+	go mcs.RunNoApi(ch) //nolint:errcheck
+	return ch, nil
 }
 
 // If on a non-windows platform, with the SHELL environment variable set, and a call to exec.LookPath()
