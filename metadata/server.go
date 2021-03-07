@@ -163,11 +163,13 @@ func (s *metadataCredentialService) Run() error {
 	return srv.Serve(s.listener)
 }
 
-func (s *metadataCredentialService) RunNoApi(readyCh chan<- bool) error {
+func (s *metadataCredentialService) RunNoApi(cl client.AwsClient, cfg *config.AwsConfig, readyCh chan<- bool) error {
 	s.clientOptions.MfaInputProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
 	s.clientOptions.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput
 
 	s.clientFactory = client.NewClientFactory(s.configResolver, s.clientOptions)
+	s.awsClient = cl
+	s.awsConfig = cfg
 
 	// only configure the handlers useful when running without a browser, do not use request logging
 	mux := http.NewServeMux()
@@ -230,23 +232,25 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 	}
 }
 
+//nolint:gocognit
 func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	if r.Method == http.MethodPost {
 		buf := make([]byte, 256) // if there's a profile name longer than this ... I mean, really
 		n, err := r.Body.Read(buf)
-
 		if err != nil && !errors.Is(err, io.EOF) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
 
-		s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
-		if err != nil {
-			// this could possibly be an auth error trying to initialize a saml or oidc client
-			s.handleAuthError(err, w)
-			return
+		if s.awsConfig == nil || s.awsClient == nil {
+			s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
+			if err != nil {
+				// this could possibly be an auth error trying to initialize a saml or oidc client
+				s.handleAuthError(err, w)
+				return
+			}
 		}
 
 		// fetch credentials after switching profile to see if we should re-auth while we have their attention

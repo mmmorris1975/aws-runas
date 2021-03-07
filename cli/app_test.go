@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"os"
 	"strings"
@@ -57,7 +58,7 @@ func TestApp_runEcsSvc(t *testing.T) {
 	_ = os.Setenv("AWS_ACCESS_KEY_ID", "mock")
 	_ = os.Setenv("AWS_SHARED_CREDENTIALS_FILE", "x")
 
-	if _, err := runEcsSvc("p"); err != nil {
+	if _, err := runEcsSvc(nil, &config.AwsConfig{ProfileName: "mock"}); err != nil {
 		t.Error(err)
 		return
 	}

@@ -196,7 +196,7 @@ func execCmd(ctx *cli.Context) error {
 			}
 		} else {
 			var ch <-chan bool
-			ch, err = runEcsSvc(profile)
+			ch, err = runEcsSvc(c, cfg)
 			if err != nil {
 				return err
 			}
@@ -265,7 +265,7 @@ func printCreds(env map[string]string) {
 	}
 }
 
-func runEcsSvc(profile string) (<-chan bool, error) {
+func runEcsSvc(client client.AwsClient, cfg *config.AwsConfig) (<-chan bool, error) {
 	// modify the execution environment to force use of ECS credential URL
 	unsetEnv := []string{
 		"AWS_ACCESS_KEY_ID", "AWS_ACCESS_KEY",
@@ -283,7 +283,7 @@ func runEcsSvc(profile string) (<-chan bool, error) {
 
 	in := &metadata.Options{
 		Path:        metadata.DefaultEcsCredPath,
-		Profile:     profile,
+		Profile:     cfg.ProfileName,
 		Logger:      log,
 		AwsLogLevel: opts.AwsLogLevel,
 	}
@@ -297,7 +297,7 @@ func runEcsSvc(profile string) (<-chan bool, error) {
 	ep := fmt.Sprintf("http://%s%s", mcs.Addr().String(), in.Path)
 	_ = os.Setenv("AWS_CONTAINER_CREDENTIALS_FULL_URI", ep)
 	ch := make(chan bool, 1)
-	go mcs.RunNoApi(ch) //nolint:errcheck
+	go mcs.RunNoApi(client, cfg, ch) //nolint:errcheck
 	return ch, nil
 }
 
