@@ -765,6 +765,97 @@ func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
 	})
 }
 
+func Test_cleanup(t *testing.T) {
+	// just here for some test coverage numbers
+	cleanup(new(http.Server))
+}
+
+func Test_handleAuthError(t *testing.T) {
+	s := mockMetadataCredentialService()
+
+	t.Run("MFA", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		err := NewWebAuthenticationError()
+		s.handleAuthError(err, w)
+
+		if w.Code != http.StatusUnauthorized {
+			t.Errorf("unexpected http status %d", w.Code)
+		}
+
+		if h := w.Header().Get("X-AwsRunas-Authentication-Type"); h != err.Error() {
+			t.Errorf("missing/unexpected header value: '%s'", h)
+		}
+	})
+
+	t.Run("Auth", func(t *testing.T) {
+		t.Run("no user", func(t *testing.T) {
+			w := httptest.NewRecorder()
+			err := NewWebAuthenticationError()
+			s.handleAuthError(err, w)
+
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("unexpected http status %d", w.Code)
+			}
+
+			if h := w.Header().Get("X-AwsRunas-Authentication-Type"); h != err.Error() {
+				t.Errorf("missing/unexpected header value: '%s'", h)
+			}
+		})
+
+		t.Run("with user", func(t *testing.T) {
+			defer func() { s.awsConfig = new(config.AwsConfig) }()
+
+			s.awsConfig = &config.AwsConfig{SamlUsername: "mock"}
+			w := httptest.NewRecorder()
+			err := NewWebAuthenticationError()
+			s.handleAuthError(err, w)
+
+			if w.Code != http.StatusUnauthorized {
+				t.Errorf("unexpected http status %d", w.Code)
+			}
+
+			if h := w.Header().Get("X-AwsRunas-Authentication-Type"); h != err.Error() {
+				t.Errorf("missing/unexpected header value: '%s'", h)
+			}
+
+			if !bytes.Contains(w.Body.Bytes(), []byte("mock")) {
+				t.Error("did not receive expected body content")
+			}
+		})
+	})
+
+	t.Run("other", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		s.handleAuthError(errors.New("other"), w)
+
+		if w.Code != http.StatusInternalServerError {
+			t.Errorf("unexpected http status %d", w.Code)
+		}
+	})
+}
+
+func Test_listProfilesHandler(t *testing.T) {
+	defer os.Unsetenv("AWS_CONFIG_FILE")
+	os.Setenv("AWS_CONFIG_FILE", "../testdata/aws_config")
+
+	s := mockMetadataCredentialService()
+	w := httptest.NewRecorder()
+	s.listProfilesHandler(w, nil)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("unexpected http status code: %d", w.Code)
+	}
+
+	data := make([]string, 0)
+	if err := json.Unmarshal(w.Body.Bytes(), &data); err != nil {
+		t.Error(err)
+	}
+
+	if len(data) < 1 {
+		t.Error("received empty profile list")
+	}
+}
+
 func mockMetadataCredentialService() *metadataCredentialService {
 	mcs := new(metadataCredentialService)
 	mcs.configResolver = new(mockConfigResolver)
