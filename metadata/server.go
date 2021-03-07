@@ -630,9 +630,10 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 }
 
 func (s *metadataCredentialService) handleAuthError(err error, w http.ResponseWriter) {
-	if e, ok := err.(WebAuthenticationError); ok {
+	authErr := new(WebAuthenticationError)
+	if errors.As(err, authErr) {
 		m := make(map[string]string)
-		switch e.Error() {
+		switch authErr.Error() {
 		case "MFA":
 		default:
 			m["username"] = ""
@@ -643,7 +644,7 @@ func (s *metadataCredentialService) handleAuthError(err error, w http.ResponseWr
 
 		body, _ := json.Marshal(m)
 		w.WriteHeader(http.StatusUnauthorized)
-		w.Header().Set("X-AwsRunas-Authentication-Type", e.Error())
+		w.Header().Set("X-AwsRunas-Authentication-Type", authErr.Error())
 		_, _ = w.Write(body)
 		return
 	}

@@ -338,7 +338,11 @@ func (f *Factory) sessionClient(cfg *config.AwsConfig, opts ...func(*awsconfig.L
 	}
 
 	if f.options.EnableCache {
-		cacheFile := cacheFileName(".aws_session_token", cfg.ProfileName, "")
+		name := cfg.ProfileName
+		if cfg.SourceProfile() != nil {
+			name = cfg.SourceProfile().ProfileName
+		}
+		cacheFile := cacheFileName(".aws_session_token", name, "")
 		sesCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
