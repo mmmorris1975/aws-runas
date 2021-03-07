@@ -27,6 +27,8 @@ to make interacting with AWS role credentials easier
     clearer. (See Usage section below)
   * Integration/functional tests now include testing SAML and Web Identity functionality with external public IdPs
     (currently Okta and Onelogin)
+  * Support Apple M1 based systems
+  * Enable configuration to specify the type of MFA to use with external identity providers, overriding the auto detection logic
 
 Version 3.0 TODO list (in no particular order)
   * Documentation
@@ -43,13 +45,13 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ## Usage
     NAME:
-    aws-runas-v3 - Create an environment for interacting with the AWS API using an assumed role
+    aws-runas - Create an environment for interacting with the AWS API using an assumed role
     
     USAGE:
-    aws-runas-v3 [global options] [subcommand] profile [arguments...]
+    aws-runas [global options] [subcommand] profile [arguments...]
     
     VERSION:
-    3.0-alpha
+    3.0-beta
     
     COMMANDS:
     list, ls              Shows IAM roles or MFA device configuration
@@ -64,6 +66,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --role-duration value, -a value  duration of the assume role credentials (default: 1 hours) [$CREDENTIALS_DURATION]
     --otp value, -o value            MFA token code [$MFA_CODE]
     --mfa-serial value, -M value     serial number (or AWS ARN) of MFA device needed to perform Assume Role operation [$MFA_SERIAL]
+    --mfa-type value, -t value       use specific MFA type instead of provider auto-detection logic [$MFA_TYPE]
     --external-id value, -X value    external ID to use with Assume Role [$EXTERNAL_ID]
     --jump-role value, -J value      ARN of the 'jump role' to use with SAML or Web Identity integration [$JUMP_ROLE_ARN]
     --saml-url value, -S value       URL of the SAML authentication endpoint [$SAML_AUTH_URL]
@@ -81,7 +84,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --whoami, -w                     print the AWS identity information for the provided profile credentials (default: false)
     --list-mfa, -m                   list the ARN of the MFA device associated with your IAM account (default: false)
     --list-roles, -l                 list role ARNs you are able to assume (default: false)
-    --update, -u                     check for updates to aws-runas-v3 (default: false)
+    --update, -u                     check for updates to aws-runas (default: false)
     --diagnose, -D                   run diagnostics to gather information to aid in troubleshooting (default: false)
     --verbose value, -v value        output debug logging, use twice for AWS call tracing (default: standard logging)
     --help, -h                       show help (default: false)
@@ -91,8 +94,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.16 tool chain and aws-sdk-go v1.36.31  
-*NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
+Developed and tested using the go 1.16 tool chain and aws-sdk-go-v2
 
 ### Build Steps
 
