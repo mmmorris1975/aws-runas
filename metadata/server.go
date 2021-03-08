@@ -45,7 +45,7 @@ var (
 	//go:embed templates
 	content embed.FS
 
-	indexHtml, siteCss []byte
+	indexHtml, siteCss, favicon []byte
 )
 
 type Options struct {
@@ -93,6 +93,11 @@ func NewMetadataCredentialService(addr string, opts *Options) (*metadataCredenti
 	}
 
 	siteCss, err = content.ReadFile("templates/site.css")
+	if err != nil {
+		return nil, err
+	}
+
+	favicon, err = content.ReadFile("templates/favicon.ico")
 	if err != nil {
 		return nil, err
 	}
@@ -227,6 +232,9 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 	case "/site.css":
 		w.Header().Set("Content-Type", "text/css")
 		_, _ = w.Write(siteCss)
+	case "/favicon.ico":
+		w.Header().Set("Content-Type", "image/png")
+		_, _ = w.Write(favicon)
 	default:
 		http.NotFound(w, r)
 	}
