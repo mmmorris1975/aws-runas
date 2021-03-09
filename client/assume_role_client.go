@@ -56,6 +56,10 @@ func NewAssumeRoleClient(cfg aws.Config, clientCfg *AssumeRoleClientConfig) *ass
 
 // ClearCache cleans the cache for this client's AWS credential cache.
 func (c *assumeRoleClient) ClearCache() error {
+	if c.creds != nil {
+		c.creds.Invalidate()
+	}
+
 	if c.provider.Cache != nil {
 		c.provider.Logger.Debugf("clearing cached assume role credentials")
 		return c.provider.Cache.Clear()

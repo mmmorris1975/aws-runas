@@ -164,6 +164,10 @@ func (c *webRoleClient) ConfigProvider() aws.Config {
 // ClearCache cleans the cache for this client's OIDC token and AWS credential cache.
 func (c *webRoleClient) ClearCache() error {
 	c.logger.Debugf("clearing cached web identity token")
+	if c.awsCredCache != nil {
+		c.awsCredCache.Invalidate()
+	}
+
 	e1 := tokenCache.Clear()
 	e2 := c.roleProvider.ClearCache()
 

@@ -41,6 +41,10 @@ func NewSessionTokenClient(cfg aws.Config, clientCfg *SessionTokenClientConfig) 
 
 // ClearCache cleans the cache for this client's AWS credential cache.
 func (c *sessionTokenClient) ClearCache() error {
+	if c.creds != nil {
+		c.creds.Invalidate()
+	}
+
 	if c.provider.Cache != nil {
 		c.provider.Logger.Debugf("clearing cached session token credentials")
 		return c.provider.Cache.Clear()

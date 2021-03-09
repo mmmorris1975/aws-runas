@@ -33,8 +33,10 @@ roleList.addEventListener("mousedown", function () {
 	return false;
 })
 
-roleList.addEventListener("change", function () {
-	const profile = this.selectedOptions[0].value;
+roleList.onchange = postProfile;
+function postProfile() {
+	let roles = document.getElementById("roles");
+	let profile = roles.selectedOptions[0].value;
 	const xhr = new XMLHttpRequest();
 
 	xhr.onreadystatechange = function () {
@@ -96,15 +98,24 @@ roleList.addEventListener("change", function () {
 	xhr.open("POST", "{{.profile_ep}}");
 	xhr.send(profile);
 	return false
-})
+}
 
-/*
 document.getElementById("refresh").addEventListener("click", function () {
-    // todo - handle profile credential refresh
-    // maybe this dies too? it can only ever handle AWS STS creds, and will never
-    // refresh/handle an external auth provider session
+	const xhr = new XMLHttpRequest();
+	xhr.onreadystatechange = function () {
+		if (this.readyState === 4) {
+			if (this.status === 200) {
+				postProfile()
+			} else {
+				console.log("refresh returned " + this.status + ": " + this.responseText);
+			}
+		}
+	}
+
+	xhr.open("POST", "{{.refresh_ep}}");
+	xhr.send();
+	return false
 })
-*/
 
 let advType = document.getElementById("adv-type")
 advType.addEventListener("change", function () {

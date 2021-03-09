@@ -111,5 +111,9 @@ func (c *samlRoleClient) ConfigProvider() aws.Config {
 
 // ClearCache cleans the cache for this client's AWS credential cache.
 func (c *samlRoleClient) ClearCache() error {
+	if c.awsCredCache != nil {
+		c.awsCredCache.Invalidate()
+	}
+
 	return c.roleProvider.ClearCache()
 }

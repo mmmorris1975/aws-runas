@@ -222,6 +222,7 @@ func (s *metadataCredentialService) rootHandler(w http.ResponseWriter, r *http.R
 			"mfa_ep":      mfaPath,
 			"custom_ep":   newProfilePath,
 			"profiles_ep": listProfilesPath,
+			"refresh_ep":  refreshPath,
 		}
 
 		tmpl := template.Must(template.ParseFS(content, "templates/site.js"))
@@ -251,14 +252,14 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		profile := string(buf[:n])
 
-		if s.awsConfig == nil || s.awsClient == nil {
-			s.awsConfig, s.awsClient, err = s.getConfigAndClient(string(buf[:n]))
-			if err != nil {
-				// this could possibly be an auth error trying to initialize a saml or oidc client
-				s.handleAuthError(err, w)
-				return
-			}
+		// Do this unconditionally so we can get any potential changes in the config or credentials files
+		s.awsConfig, s.awsClient, err = s.getConfigAndClient(profile)
+		if err != nil {
+			// this could be an auth error trying to initialize a saml or oidc client
+			s.handleAuthError(err, w)
+			return
 		}
 
 		// fetch credentials after switching profile to see if we should re-auth while we have their attention
@@ -396,7 +397,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 
 func (s *metadataCredentialService) refreshHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost && s.awsClient != nil {
-		logger.Debugf("Expiring credentials for refresh")
+		logger.Debugf("Refreshing credentials")
 		if err := s.awsClient.ClearCache(); err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
