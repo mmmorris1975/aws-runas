@@ -53,7 +53,7 @@ func (p *samlRoleProvider) Retrieve(ctx context.Context) (aws.Credentials, error
 		}
 
 		if p.Cache != nil {
-			if err := p.Cache.Store(creds); err != nil {
+			if err = p.Cache.Store(creds); err != nil {
 				p.Logger.Debugf("error caching credentials: %v", err)
 			}
 		}
