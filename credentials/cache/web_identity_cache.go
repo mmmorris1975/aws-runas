@@ -108,7 +108,7 @@ func (c *webIdentityCache) loadCache() error {
 }
 
 func (c *webIdentityCache) flush() error {
-	tmp, err := os.CreateTemp("", ".aws_runas_id_tokens_*.tmp")
+	tmp, err := os.CreateTemp(filepath.Dir(c.path), ".aws_runas_id_tokens_*.tmp")
 	if err != nil {
 		return err
 	}
