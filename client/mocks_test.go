@@ -138,6 +138,10 @@ func (p *mockWebRoleProvider) IsExpired() bool {
 }
 
 func (p *mockWebRoleProvider) Retrieve(context.Context) (aws.Credentials, error) {
+	if *p {
+		return aws.Credentials{}, errors.New("failed")
+	}
+
 	return aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",
@@ -170,6 +174,10 @@ func (p *mockSamlRoleProvider) IsExpired() bool {
 }
 
 func (p *mockSamlRoleProvider) Retrieve(context.Context) (aws.Credentials, error) {
+	if *p {
+		return aws.Credentials{}, errors.New("failed")
+	}
+
 	return aws.Credentials{
 		AccessKeyID:     "mockAK",
 		SecretAccessKey: "mockSK",

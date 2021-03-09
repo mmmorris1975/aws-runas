@@ -20,6 +20,7 @@ var tokenCache = cache.WebIdentityCache(filepath.Join(cachePath(), ".aws_runas_i
 type webRoleClient struct {
 	webClient    external.WebIdentityClient
 	roleProvider credentials.WebRoleProvider
+	awsCredCache *aws.CredentialsCache
 	idpUrl       string
 	tokenFile    string
 	session      aws.Config
@@ -65,6 +66,9 @@ func NewWebRoleClient(cfg aws.Config, url string, clientCfg *WebRoleClientConfig
 	}
 	c.roleProvider = p
 	c.session.Credentials = p
+	c.awsCredCache = aws.NewCredentialsCache(p, func(o *aws.CredentialsCacheOptions) {
+		o.ExpiryWindow = p.ExpiryWindow
+	})
 
 	return c
 }
@@ -89,17 +93,23 @@ func (c *webRoleClient) Credentials() (*credentials.Credentials, error) {
 // CredentialsWithContext is the implementation of the CredentialClient interface for retrieving temporary AWS
 // credentials using the Assume Role with Web Identity operation.
 func (c *webRoleClient) CredentialsWithContext(ctx context.Context) (*credentials.Credentials, error) {
-	tok, err := c.FetchToken(ctx)
+	// check if we can retrieve valid credentials from cache, assume any error means
+	// we should re-fetch credentials from the IdP and AWS
+	v, err := c.awsCredCache.Retrieve(ctx)
 	if err != nil {
-		return nil, err
-	}
+		var tok []byte
+		tok, err = c.FetchToken(ctx)
+		if err != nil {
+			return nil, err
+		}
 
-	tt := credentials.OidcIdentityToken(tok)
-	c.roleProvider.WebIdentityToken(&tt)
+		tt := credentials.OidcIdentityToken(tok)
+		c.roleProvider.WebIdentityToken(&tt)
 
-	v, err := c.roleProvider.Retrieve(ctx)
-	if err != nil {
-		return nil, err
+		v, err = c.awsCredCache.Retrieve(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cred := &credentials.Credentials{

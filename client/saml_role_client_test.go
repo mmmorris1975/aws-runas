@@ -87,6 +87,7 @@ func TestSamlRoleClient_Credentials(t *testing.T) {
 			samlClient:   new(mockSamlClient),
 			roleProvider: new(mockSamlRoleProvider),
 		}
+		c.awsCredCache = aws.NewCredentialsCache(c.roleProvider)
 
 		creds, err := c.Credentials()
 		if err != nil {
@@ -100,10 +101,12 @@ func TestSamlRoleClient_Credentials(t *testing.T) {
 	})
 
 	t.Run("bad saml fetch", func(t *testing.T) {
+		var p mockSamlRoleProvider = true
 		c := &samlRoleClient{
 			samlClient:   &mockSamlClient{sendError: true},
-			roleProvider: new(mockSamlRoleProvider),
+			roleProvider: &p,
 		}
+		c.awsCredCache = aws.NewCredentialsCache(c.roleProvider)
 
 		if _, err := c.Credentials(); err == nil {
 			t.Error("did not receive expected error")

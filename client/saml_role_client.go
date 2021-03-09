@@ -12,6 +12,7 @@ import (
 type samlRoleClient struct {
 	samlClient   external.SamlClient
 	roleProvider credentials.SamlRoleProvider
+	awsCredCache *aws.CredentialsCache
 	session      aws.Config
 }
 
@@ -38,6 +39,9 @@ func NewSamlRoleClient(cfg aws.Config, url string, clientCfg *SamlRoleClientConf
 		samlClient:   external.MustGetSamlClient(clientCfg.IdentityProviderName, url, clientCfg.AuthenticationClientConfig),
 		roleProvider: p,
 		session:      cfg,
+		awsCredCache: aws.NewCredentialsCache(p, func(o *aws.CredentialsCacheOptions) {
+			o.ExpiryWindow = p.ExpiryWindow
+		}),
 	}
 }
 
@@ -48,7 +52,18 @@ func (c *samlRoleClient) Identity() (*identity.Identity, error) {
 
 // Roles is the implementation of the IdentityClient interface for retrieving IAM role information from the external IdP.
 func (c *samlRoleClient) Roles() (*identity.Roles, error) {
-	return c.samlClient.Roles()
+	roles, err := c.samlClient.Roles()
+	if err != nil {
+		var saml *credentials.SamlAssertion
+		saml, err = c.samlClient.SamlAssertion()
+		if err != nil {
+			return nil, err
+		}
+
+		c.roleProvider.SamlAssertion(saml)
+		roles, err = c.samlClient.Roles()
+	}
+	return roles, err
 }
 
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a
@@ -60,15 +75,21 @@ func (c *samlRoleClient) Credentials() (*credentials.Credentials, error) {
 // CredentialsWithContext is the implementation of the CredentialClient interface for retrieving temporary AWS
 // credentials using the Assume Role with SAML operation.
 func (c *samlRoleClient) CredentialsWithContext(ctx context.Context) (*credentials.Credentials, error) {
-	saml, err := c.samlClient.SamlAssertion()
+	// check if we can retrieve valid credentials from cache, assume any error means
+	// we should re-fetch credentials from the IdP and AWS
+	v, err := c.awsCredCache.Retrieve(ctx)
 	if err != nil {
-		return nil, err
-	}
-	c.roleProvider.SamlAssertion(saml)
+		var saml *credentials.SamlAssertion
+		saml, err = c.samlClient.SamlAssertionWithContext(ctx)
+		if err != nil {
+			return nil, err
+		}
+		c.roleProvider.SamlAssertion(saml)
 
-	v, err := c.roleProvider.Retrieve(ctx)
-	if err != nil {
-		return nil, err
+		v, err = c.awsCredCache.Retrieve(ctx)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	cred := &credentials.Credentials{

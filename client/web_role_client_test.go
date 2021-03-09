@@ -94,6 +94,7 @@ func TestWebRoleClient_Credentials(t *testing.T) {
 			roleProvider: new(mockWebRoleProvider),
 			logger:       new(shared.DefaultLogger),
 		}
+		c.awsCredCache = aws.NewCredentialsCache(c.roleProvider)
 
 		creds, err := c.Credentials()
 		if err != nil {
@@ -107,11 +108,13 @@ func TestWebRoleClient_Credentials(t *testing.T) {
 	})
 
 	t.Run("bad fetch", func(t *testing.T) {
+		var p mockWebRoleProvider = true
 		c := &webRoleClient{
 			webClient:    new(mockWebClient),
-			roleProvider: new(mockWebRoleProvider),
+			roleProvider: &p,
 			tokenFile:    "i am not a real file",
 		}
+		c.awsCredCache = aws.NewCredentialsCache(c.roleProvider)
 
 		if _, err := c.Credentials(); err == nil {
 			t.Error("did not receive expected error")

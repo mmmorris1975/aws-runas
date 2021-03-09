@@ -152,16 +152,19 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		baseCl := NewSamlRoleClient(awsCfg, cfg.SamlUrl, samlCfg)
 		baseCl.samlClient.SetCookieJar(cookieJar)
 
-		logger.Debugf("fetching initial SAML assertion")
-		saml, err := baseCl.samlClient.SamlAssertion()
-		if err != nil {
-			return nil, err
-		}
-		baseCl.roleProvider.SamlAssertion(saml)
-
 		awsCfg.Credentials = baseCl.roleProvider
 
-		// use assume role client configured with web identity (oidc) creds for role chaining
+		// if we don't have an explicit RoleSessionName set, NewAssumeRoleClient() will try calling
+		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
+		// means we should have valid AWS credentials loaded (we don't need the value here)
+		if len(cfg.RoleSessionName) < 2 {
+			_, err = baseCl.Credentials()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// use assume role client configured with saml creds for role chaining
 		roleCfg := &AssumeRoleClientConfig{
 			SessionTokenClientConfig: SessionTokenClientConfig{
 				Logger:   f.options.Logger,
@@ -182,10 +185,6 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 	logger.Debugf("no jump role found, only configuring SAML client")
 	cl := NewSamlRoleClient(awsCfg, cfg.SamlUrl, samlCfg)
 	cl.samlClient.SetCookieJar(cookieJar)
-
-	logger.Debugf("fetching initial SAML assertion")
-	saml, _ := cl.samlClient.SamlAssertion()
-	cl.roleProvider.SamlAssertion(saml)
 	return cl, nil
 }
 
@@ -238,15 +237,17 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		baseCl := NewWebRoleClient(awsCfg, cfg.WebIdentityUrl, webCfg)
 		baseCl.webClient.SetCookieJar(cookieJar)
 
-		logger.Debugf("fetching initial Web Identity token")
-		tokBytes, err := baseCl.FetchToken(context.Background())
-		if err != nil {
-			return nil, err
-		}
-		idToken := credentials.OidcIdentityToken(tokBytes)
-		baseCl.roleProvider.WebIdentityToken(&idToken)
-
 		awsCfg.Credentials = baseCl.roleProvider
+
+		// if we don't have an explicit RoleSessionName set, NewAssumeRoleClient() will try calling
+		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
+		// means we should have valid AWS credentials loaded (we don't need the value here)
+		if len(cfg.RoleSessionName) < 2 {
+			_, err = baseCl.Credentials()
+			if err != nil {
+				return nil, err
+			}
+		}
 
 		// use assume role client configured with web identity (oidc) creds for role chaining
 		roleCfg := &AssumeRoleClientConfig{
