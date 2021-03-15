@@ -10,6 +10,7 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
     <link href="{{ '/assets/css/site.css?v=' | append: site.github.build_revision | relative_url }}" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ '/assets/images/favicon.ico' | relative_url }}">
 </head>
 <body>
 
@@ -18,7 +19,8 @@
     <div class="w3-bar w3-theme-dark w3-top w3-left-align w3-large">
         <a class="w3-bar-item w3-button w3-left w3-hide-large w3-hover-white w3-hover-text-theme w3-large"
            href="javascript:void(0)" onclick="w3_open()"><i class="fa fa-bars"></i></a>
-        <a class="w3-bar-item w3-button w3-text-theme w3-hover-theme" href="{{ '/' | relative_url }}">
+        <a class="w3-bar-item w3-button w3-text-theme w3-hover-white w3-hover-text-theme" href="{{ '/' | relative_url }}">
+            <img src="{{ '/assets/images/aws-runas-icon.png' | relative_url }}" height="25" width="25">
             <b>{{ site.title | default: site.github.repository_name }}</b>
         </a>
         <span class="w3-button w3-hide-medium w3-hide-small w3-hover-theme-dark">
@@ -32,8 +34,8 @@
     </div>
 </div>
 
-<!-- Sidebar -->
-<nav class="w3-sidebar w3-bar-block w3-collapse w3-large w3-theme-light w3-animate-left" id="mySidebar">
+<!-- Left Sidebar -->
+<nav class="w3-sidebar w3-bar-block w3-collapse w3-large w3-theme-light" id="left-sidebar">
     <a class="w3-right w3-xlarge w3-padding w3-tag w3-text-theme w3-hover-theme w3-hide-large" href="javascript:void(0)" onclick="w3_close()" title="Close Menu">
         <i class="fa fa-remove"></i>
     </a>
@@ -68,11 +70,11 @@
     </main>
 </div>
 
-<footer class="w3-bottom">
-    <div id="sectionNav" class="w3-container w3-theme w3-hide-medium w3-hide-small">
-<!--        Jump to section:&nbsp;<a href="#top">Top</a>-->
-    </div>
+<!-- Right Sidebar -->
+<nav class="w3-sidebar w3-bar-block w3-collapse w3-theme-light w3-animate-right" id="right-sidebar">
+</nav>
 
+<footer class="w3-bottom">
     <div class="w3-container w3-theme-dark w3-small w3-padding-large w3-right-align">
         <span>
             Powered by <a class="w3-text-theme" href="https://jekyllrb.com/" target="_blank">Jekyll</a> and
