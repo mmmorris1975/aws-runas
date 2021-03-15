@@ -72,7 +72,7 @@ var mfaCodeFlag = &cli.StringFlag{
 var mfaSerialFlag = &cli.StringFlag{
 	Name:        "mfa-serial",
 	Aliases:     []string{"M"},
-	Usage:       "serial number (or AWS ARN) of MFA device needed to perform Assume Role operation",
+	Usage:       "serial number (or AWS ARN) of MFA device needed to assume role",
 	EnvVars:     []string{"MFA_SERIAL"},
 	Destination: &cmdlineCfg.MfaSerial,
 }

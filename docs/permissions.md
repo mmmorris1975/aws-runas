@@ -23,8 +23,8 @@ The following API calls are used by the -l option to find assumable roles for th
 ### Sample IAM Policy
 
 This <a href="{{ 'iam_policy.json' | relative_url }}" target="_blank">sample IAM policy</a> provides you with a starting
-point for granting users the ability to use aws-runas effectively. One important omission is the permissions to call the
-`sts:AssumeRole` action, since that operation is highly-privileged it should be created as needed outside this policy,
+point for granting IAM users the ability to use aws-runas effectively. One important omission is the permissions to call
+the `sts:AssumeRole` action, since that operation is highly-privileged it should be created as needed outside this policy,
 restricting access to only the necessary IAM roles. Also consider removing the '*' character in the account number field
 of the `Resource` ARN values, and replace with your specific AWS account number (The `Resource: *` configuration for the
 ListMFA permission is required as part of the AWS API spec, and should not be changed)
