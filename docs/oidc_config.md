@@ -4,9 +4,9 @@ title: Web Identity (OIDC) Configuration Guide
 This page provides a deeper look at the configuration used by aws-runas with OIDC single sign-on integration.  One
 benefit of the OIDC capability is that there is no requirement to store a set of static AWS credentials on the system,
 with the drawback of needing to be an engaged participant in the OIDC authentication process (supplying username, password
-and any necessary multi-factor actions).  This page, in particular, is meant as a generic configuration reference for
-using aws-runas with OIDC authentication.  For information about the configuration for a specific OIDC provider (Okta,
-Keycloak, etc) see the [OIDC Client Configuration Guide]({{ "oidc_client_config.html" | relative_url }})
+and any necessary multi-factor actions).  This page is meant as a generic configuration reference for using aws-runas
+with OIDC authentication.  For information about the configuration for a specific OIDC provider (Okta, Keycloak, etc)
+see the [OIDC Client Configuration Guide]({{ "oidc_client_config.html" | relative_url }})
 
 AWS uses the term Web Identity when referring to assuming roles using an OIDC identity.  You will see both terms in the
 aws-runas documentation, and the terms can be considered equivalent (except for cases where the Assume Role With Web Identity
@@ -50,7 +50,7 @@ web_identity_redirect_uri = app:/callback
 role_arn                  = arn:aws:iam::012345678901:role/my-role
 ```
 
-This configures profile called 'my-profile' to assume a role called 'my-role' in the fictitious AWS account
+This configures a profile named 'my-profile' to assume a role called 'my-role' in the fictitious AWS account
 012345678901 using the credentials obtained from the OIDC identity provider identified in the `web_identity_auth_url`
 attribute. One thing to make note of is the word 'profile' before the actual profile name in the section heading (the
 stuff between the [] brackets), this is an oddity of the logic AWS uses to process the config file, and is necessary for
@@ -97,7 +97,7 @@ In addition to the required parameters shown above, the program supports other c
 defined in the .aws/config file for using OIDC integration. These attributes are specific to aws-runas and will be
 ignored by other tools leveraging the AWS SDK.
 
-* `web_identity_username` This attribute sets the username to use when performing the OIDC authentication.  If not set,
+* `web_identity_username` This attribute sets the username to use when performing OIDC authentication.  If not set,
   aws-runas will prompt for the value to be input via the command line.
 * `web_identity_provider` This attribute allows you to explicitly specify the OIDC provider to use, and bypass the
   auto-detection logic.  This may be useful for cases where the auto-detection logic fails, or is blocked by a CDN or WAF.
@@ -106,21 +106,23 @@ ignored by other tools leveraging the AWS SDK.
 * `jump_role_arn` For cases where you will perform OIDC authentication to assume an initial (jump) role to retrieve
   credentials which allow you to assume a role in the target AWS account, configure this value with the role ARN needed
   for the initial role.  Your AWS IAM or identity provider administrator should know if you need to configure this
-  attribute.
+  attribute, and the value to set.
 * `credentials_duration` This attribute specifies the lifetime of the assume role credentials requested by aws-runas.
   Except for a narrow set of cases, it's usually safe to leave this setting at the default value of 1h. Valid
   values are between 15m and 12h, however setting this value above the default 1h requires the IAM role in AWS to be
   configured to allow the extended duration. Attempts to set a duration longer than the IAM role can support will cause
   aws-runas to fail with an error.
+* `mfa_type` Use this attribute to force a specific MFA type instead of the provider auto-detection logic.
 
-Values for the `credentials_duration` properties are specified as golang time.Duration strings.
+Values for the `credentials_duration` property are specified as golang time.Duration strings.
 (See [https://golang.org/pkg/time/#ParseDuration](https://golang.org/pkg/time/#ParseDuration) for more info)  The scope
-of these setting is determined by where they are set in the profiles.  The most specific setting is used, so a value
+of these settings are determined by where they are set in the profiles.  The most specific setting is used, so a value
 specified in a role profile will be used instead of a value defined in the default section.
 
 
 ### Web Identity Credentials
-There are multiple ways to provide an OIDC password to aws-runas for you to authenticate with the identity provider.
+There are multiple ways to provide an OIDC password to aws-runas for you to authenticate with the identity provider. If
+none of the below methods are used, aws-runas will prompt for the password when required.
 
 #### Credentials File (preferred)
 A password can be set in the AWS credentials file, which will be used if neither the command line option, nor environment
@@ -149,7 +151,7 @@ environment will be able to see the raw password value.
 ### Environment Variables
 Standard AWS SDK environment variables are supported by this program. (See
 [https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/config#EnvConfig](https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/config#EnvConfig))
-Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable which will be explicitly
+Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable, which will be explicitly
 unset before aws-runas executes the program supplied as an argument to aws-runas. (It only affects the environment
 variable for the execution of aws-runas, the setting in the original environment is unaffected)  If your code relies on
 the value of that `AWS_PROFILE` environment variable, it will be reflected to the program under a new environment
@@ -163,7 +165,8 @@ $ AWS_PROFILE=my_profile aws-runas aws s3 ls
 ```
 
 Additionally, the custom config attributes mentioned above are also available as the environment variables
-`CREDENTIALS_DURATION`, `WEB_IDENTITY_AUTH_URL`, `WEB_IDENTITY_USERNAME`, `WEB_IDENTITY_PROVIDER`, and `JUMP_ROLE_ARN`
+`CREDENTIALS_DURATION`, `WEB_IDENTITY_AUTH_URL`, `WEB_IDENTITY_USERNAME`, `WEB_IDENTITY_PROVIDER`, `JUMP_ROLE_ARN`,
+and `MFA_TYPE`
 
 
 ### Additional References

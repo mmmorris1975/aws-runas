@@ -46,6 +46,19 @@ saml_auth_url = https://myapps.microsoft.com/signin/__app-name__/__app-id__?tena
 saml_provider = azuread
 ```
 
+The Azure AD client is also configured to allow "guest" account access (which federates the authentication of an Azure
+AD principal with an external identity provider).  If the AAD username of the guest user matches the username configured
+in the federated identity provider, no additional configuration is required.  If the username is different between AAD and
+the external identity provider, you can set the `federated_username` attribute in the profile to the value of the username
+in the external identity provider.  The following example shows how this might be configured:
+
+```text
+saml_auth_url = https://myapps.microsoft.com/signin/__app-name__/__app-id__?tenantId=__tenant-id__
+saml_provider = azuread
+saml_username = azure-username
+federated_username = external-idp-username
+```
+
 ### Okta
 Okta is a commercial identity management service which provides the necessary infrastructure and services to integrate
 with numerous 3rd party applications.  The 'App Embed Link' for the AWS Okta application is used for the URL in the

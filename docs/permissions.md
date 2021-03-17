@@ -7,7 +7,7 @@ AWS APIs:
 
   * AssumeRole (to get the credentials for running under an assumed role)
   * GetSessionToken (to get the session token credentials for running a command or calling AssumeRole)
-  * ListMFADevices (get MFA devices for -m option)
+  * ListMFADevices (get MFA devices via the -m option)
 
 The following API calls are used by the -l option to find assumable roles for the calling user:
 

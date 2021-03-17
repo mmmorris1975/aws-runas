@@ -3,14 +3,14 @@ title: SSM Session Support
 ---
 
 aws-runas provides built-in support for accessing EC2 instances via SSM sessions.  If the built-in code is insufficient,
-or there is a new SSM feature which aws-runas doesn't support, there is an option to utilize the external AWS SSM session
-plugin.
+or there is a new SSM feature which aws-runas doesn't support, there is an option to utilize the external AWS-provided
+SSM session plugin.
 
 ### Prerequisites
 
-First, and probably most obvious, is that the EC2 instance must have the SSM agent installed and properly registered
-with the SSM service.  Shell access to the instance should be supported by any agent version.  Port forwarding and SSH
-support require at least agent version 2.3.672.0 installed on the instance.
+First, and probably most obvious, the EC2 instance must have the SSM agent installed and properly registered with the
+SSM service.  Shell access to the instance should be supported by any agent version.  Port forwarding and SSH support
+require at least agent version 2.3.672.0 installed on the instance.
 
 If you plan on using the AWS-provided SSM session plugin (versus the built-in client), you will need version 1.1.26.0, or
 higher, installed on your local system.  Instructions for installing the AWS helper plugin can be found
@@ -22,7 +22,7 @@ for interacting with AWS outside the web console.
 ### EC2 Target Resolution
 
 The SSM session API requires that you know the EC2 instance ID in order to establish a session with it.  You are free to
-use instance IDs, but aws-runas also allows other, friendlier, methods to resolve additional instance attributes to an
+use instance IDs, but aws-runas also provides other, friendlier, methods to resolve additional instance attributes to an
 instance ID.  If the target argument does not look like an EC2 instance ID, the following methods will be used in an
 attempt to find the desired instance ID:
 

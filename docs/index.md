@@ -21,5 +21,10 @@ in the middle of the called program execution) If MFA is not required for the as
 without user intervention when aws-runas is next executed.
 
 There are no external libraries, or language or runtime dependencies, necessary to run the program. The compiled
-platform-specific executables contain everything necessary so you can simply download the file and do a small bit of setup;
-after that, you're off and running.
+platform-specific executables contain everything necessary to run. Simply download the file and do a small bit of
+[setup]({{ '/quickstart.html' | relative_url }}).
+After that, you're off and running.
+
+Documentation updates to clarify instructions, add missing info, or to correct grammar and spelling are always welcome!
+This documentation is written using Jekyll (with most of the site's content using Markdown), and is kept in the `docs`
+folder of the [project's repository]({{ site.github.repository_url }}). Submit github pull requests with your changes!

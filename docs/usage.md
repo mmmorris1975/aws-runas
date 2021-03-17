@@ -112,7 +112,7 @@ Role information is not available when using profiles configured for Web Identit
 ### Listing MFA Devices
 
 For profiles associated with IAM users, the `list mfa` subcommand can be used to display the ARN of the MFA device
-associated with the user.  The value display is suitable for use in the `mfa_serial` configuration attribute in the
+associated with the user.  The value displayed is suitable for use in the `mfa_serial` configuration attribute in the
 .aws/config file.  The `-m` command-line flag can be used as a shortcut, instead of the full subcommand.
 
 Retrieving MFA device details for profiles configured for SAML or Web Identity integration is not supported.
@@ -127,11 +127,11 @@ associated with the identity provider used for SAML or OIDC integration are not 
 
 Use the `--whoami` command line flag to have aws-runas output the identity associated with the credentials retrieved
 for the profile. This output is useful for verifying that the expected role in the correct AWS account is being used. 
-For example, if I have a profile called `my_profile`, which is granted access to `MyRole` in AWS account `0123456789`,
+For example, if I have a profile called `my-profile`, which is granted access to `MyRole` in AWS account `0123456789`,
 you would see output similar to this:
 
 ```shell
-$ aws-runas --whoami epen-nonprod
+$ aws-runas --whoami my-profile
 {UserId:AROAxxx:my_iam_user Arn:arn:aws:sts::0123456789:assumed-role/MyRole/my_iam_user Account:0123456789}
 ...
 ```

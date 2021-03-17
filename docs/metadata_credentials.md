@@ -6,7 +6,7 @@ Two http endpoints are provided by aws-runas to mimic services exposed by AWS to
 the walls of AWS infrastructure.  The EC2 metadata service is a stripped down version of the EC2 instance metadata
 service available on EC2 hosts.  It exposes the interfaces necessary to retrieve credentials, but not the other endpoints
 exposing other EC2 instance information.  A service which is similar to the ECS credential service is also available
-in aws-runas to expose a service to vend AWS credentials to processes on the local system.  For either service, instead
+in aws-runas to expose a service which vends AWS credentials to processes on the local system.  For either service, instead
 of credentials for an EC2 instance profile (in the case of the EC2 metadata service), or ECS task roles (in the case of
 the ECS credential service), aws-runas will serve the assume role credentials of the provided profile.
 
@@ -22,7 +22,7 @@ run, as that type of configuration requires privileged access.  A 2nd mode is av
 level access to run, and should be compatible with most AWS SDK libraries available since 2019.
 
 The EC2 metadata service supports access via the IMDS v1 and v2 APIs.  The v2 API implementation does not implement the
-full security measures as the actual AWS interface, merely enough to satisfy the requests so credentials can be returned.
+full security measures like the actual AWS interface, merely enough to satisfy the requests so credentials can be returned.
 
 More information on the AWS EC2 instance metadata service can be found in their
 [documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials)
@@ -53,7 +53,7 @@ AWS_SHARED_CREDENTIALS_FILE=/dev/null aws s3 ls
 
 When using the un-privileged mode (via the `-p` option), an additional environment variable called
 `AWS_EC2_METADATA_SERVICE_ENDPOINT` must be set to the local endpoint URL of the service, which is shown in the output
-when the service is started.  Using the example to run on port 8000 above:
+when the service is started.  Using the example above to run the service on port 8000:
 
 ```shell
 AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_EC2_METADATA_SERVICE_ENDPOINT='http://127.0.0.1:8000/' aws s3 ls
@@ -61,7 +61,7 @@ AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_EC2_METADATA_SERVICE_ENDPOINT='http://
 
 #### Important Note
 When using a non-IAM (SAML/Web Identity) profile with the EC2 metadata service, you may encounter timeout issues when
-using the awscli.  This is due to the default timeout for the awscli EC2 metadata interaction of 1 second, and in some
+using the awscli.  This is due to the default timeout for the awscli EC2 metadata interaction of 1 second. In some
 cases, the need to communicate with the identity provider before fetching the AWS role credentials will cause this awscli
 timeout to be exceeded.  To work around this issue, you can set either (or both) of these parameters in your `.aws/config`
 file: `metadata_service_timeout` or `metadata_service_num_attempts`.    
@@ -94,8 +94,8 @@ AWS_CONTAINER_CREDENTIALS_FULL_URI='http://127.0.0.1:12319/credentials' \
 ```
 
 The ECS credential service of aws-runas also supports appending an alternate profile name to the endpoint URI to retrieve
-credentials for other profiles without having to run an addition service, or stop and restart the running service.  In the
-following example, credentials will be retrieved for a profile named `other-profile` instead of the profile the service
+credentials for other profiles without having to run an additional service, or stop and restart the running service.  In
+the following example, credentials will be retrieved for a profile named `other-profile` instead of the profile the service
 was started with.
 
 ```shell
@@ -141,11 +141,11 @@ The EC2 and ECS service endpoints expose common HTTP endpoints which allow confi
 outside the browser.
 
 ###### GET /list-profiles 
-Lists profile found in the .aws/config file.  Returns a JSON array of profiles in the .aws/config file which do not have
+List profiles found in the .aws/config file.  Returns a JSON array of profiles in the .aws/config file which do not have
 the role_arn attribute, indicating it is a potential candidate for use as a `source_profile`
 
 ###### GET /list-roles
-Lists roles found in the .aws/config file.  Returns a JSON array of profiles in the .aws/config file which contain the
+List roles found in the .aws/config file.  Returns a JSON array of profiles in the .aws/config file which contain the
 role_arn attribute.
 
 ###### GET /profile
@@ -169,7 +169,7 @@ the role.
 
 ###### POST /mfa  
 Supplies the multi-factor authentication code in order to obtain the credentials for a profile.  The incoming data is
-expected to be an HTTP POST have a content type of `application/x-www-form-urlencoded` with the form fields `mfa`
+expected to be an HTTP POST have a content type of `application/x-www-form-urlencoded` with the form field `mfa`
 containing the necessary code needed to get credentials for the role.
 
 ###### GET /latest/meta-data/iam/security-credentials/

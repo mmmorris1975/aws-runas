@@ -8,13 +8,19 @@ and running quickly
 ### Installation
 
 <a href="{{ site.github.repository_url }}/releases/latest" target="_blank">Download the latest release</a>, using the
-zip file appropriate for the system you are running the tool on.
+zip file appropriate for the system you are running the tool on.  Supported platforms are:
 
-  * MacOS [Intel]() or [M1/Arm]()
-  * [Windows]()
-  * Linux [Intel](), [ARMv7]() or [Arm64]()
+  * MacOS
+    * 64-bit Intel (aws-runas-\<version\>-darwin-amd64.zip)
+    * M1/Arm (aws-runas-\<version\>-darwin-arm64.zip)
+  * Windows
+    * 64-bit Intel (aws-runas-\<version\>-windows-amd64.zip)
+  * Linux
+    * 64-bit Intel (aws-runas-\<version\>-linux-amd64.zip)
+    * ARMv7 (aws-runas-\<version\>-linux-arm.zip)
+    * Arm64 (aws-runas-\<version\>-linux-arm64.zip)
 
-For linux, DEB and RPM packages are also available for each release.
+For Linux, DEB and RPM packages are also available for each supported architecture.
 
 If you do not see a download for your system, create a new issue <a href="{{ site.github.issues_url }}" target="_blank">here</a>,
 and we'll work on getting the appropriate build created for you.
@@ -23,10 +29,10 @@ and we'll work on getting the appropriate build created for you.
 
 If you are using the DEB or RPM package for Linux, no additional work is required other than installing the package.
 
-If using the ZIP file, unzip it and move the extracted `aws-runas` file to a location in your PATH, so you can simply
-execute  the command without having to provide the full path to the file. Many people will simply create a bin directory
-inside their home directory (`mkdir ~/bin`), and add that to their shell's PATH, so they have a locally-controlled
-directory to contain their individual tooling.
+If using the ZIP file, unzip it and move the extracted `aws-runas` file to a location in your PATH, so you can execute
+the command without having to provide the full path to the file. Many people will simply create a bin directory inside
+their home directory (`mkdir ~/bin`), and add that to their shell's PATH, so they have a locally-controlled directory
+containing their individual tooling.
 
 ##### Shell completion
 Tab completion for bash and zsh is supported in aws-runas. Using the DEB and RPM packages automatically installs the
@@ -34,7 +40,8 @@ completion logic in a system-wide location.  When using the zip file to install 
 configure the command completion.
 
 ###### Bash auto-complete
-To configure auto-completion at a system-wide level, install the file from the [git repository]({{ site.github.repository_url }}/extras/aws-runas-bash-completion)
+To configure auto-completion at a system-wide level, install the file from the
+[git repository]({{ site.github.repository_url }}/tree/master/extras/aws-runas-bash-completion)
 as a file named `/etc/bash_completion.d/aws-runas` on the local system.  If you only want to install the auto-completion
 for some users, download that same file, and in the user's .bashrc add the following lines:
 
@@ -44,7 +51,8 @@ source path/to/aws-runas-bash-completion
 ```
 
 ###### Zsh auto-complete
-To configure auto-completion when using zsh, download the file from the [git repository]({{ site.github.repository_url }}/extras/aws-runas-zsh-completion),
+To configure auto-completion when using zsh, download the file from the
+[git repository]({{ site.github.repository_url }}/tree/master/extras/aws-runas-zsh-completion),
 and in the user's .zshrc add the following lines:
 
 ```shell
@@ -129,7 +137,7 @@ operation based on the authorizations granted by your identity provider.  To con
 need to define the profile parameters in the `config` file in the .aws folder in your home directory.  You can optionally
 set your identity provider password in the `credentials` file as well.
 
-Every SAML identity provider has their own process for handling authentication of a user, and integrating with multi-factor
+Each SAML identity provider has their own process for handling authentication of a user and integrating with multi-factor
 authentication.  This means that aws-runas can't magically support every SAML provider.  If you find a case where your
 identity provider is not yet supported by the tool, open a Github issue, and we'll look at adding support for it.
 
@@ -148,7 +156,7 @@ The `saml_auth_url` parameter is the URL of the authentication endpoint for yor 
 parameter is the AWS ARN of the IAM role you will assume after the SAML authentication is complete.  You should be able to
 get the necessary values for both of these parameters from the person or team responsible for managing your AWS accounts.
 The `saml_username` parameter is optional, but is a handy shortcut to supply your username to the SAML provider, instead
-of getting prompted for it when you need to re-authenticate to your SAML identity provider.
+of getting prompted for it each time you need to authenticate to your SAML identity provider.
 
 If you do not configure a password for your identity provider, you will be prompted to enter it when aws-runas is required
 to authenticate with the identity provider.  To skip this prompting, you can configure aws-runas to store your password
@@ -165,7 +173,7 @@ operation based on the authorizations granted by your identity provider.  To con
 you will only need to define the profile parameters in the `config` file in the .aws folder in your home directory.  You
 can optionally set your identity provider password in the `credentials` file as well.
 
-Every OIDC identity provider has their own process for handling authentication of a user, and integrating with multi-factor
+Each OIDC identity provider has their own process for handling authentication of a user and integrating with multi-factor
 authentication.  This means that aws-runas can't magically support every provider.  If you find a case where your identity
 provider is not yet supported by the tool, open a Github issue, and we'll look at adding support for it.
 
@@ -184,10 +192,10 @@ role_arn                  = arn:aws:iam::1234567890:role/MyRole
 You'll need to modify all the values to the right of the `=` with the values specific to your organization.
 The `web_identity_auth_url` parameter is the URL of the authentication endpoint for yor specific identity provider. The
 `web_identity_client_id` and `web_identity_redirect_uri` parameters are OIDC-specific configuration for your identity
-provider.  The `role_arn`parameter is the AWS ARN of the IAM role you will assume after the SAML authentication is complete.
+provider.  The `role_arn` parameter is the AWS ARN of the IAM role you will assume after the OIDC authentication is complete.
 You should be able to get the necessary values for both of these parameters from the person or team responsible for managing
 your AWS accounts.  The `web_identity_username` parameter is optional, but is a handy shortcut to supply your username
-to the SAML provider, instead of getting prompted for it when you need to re-authenticate to your SAML identity provider.
+to the OIDC provider, instead of getting prompted for it each time you need to authenticate to your OIDC identity provider.
 
 If you do not configure a password for your identity provider, you will be prompted to enter it when aws-runas is required
 to authenticate with the identity provider.  To skip this prompting, you can configure aws-runas to store your password

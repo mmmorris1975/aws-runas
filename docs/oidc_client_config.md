@@ -53,6 +53,21 @@ web_identity_callback_uri = app:/callback
 web_identity_provider = azuread
 ```
 
+The Azure AD client is also configured to allow "guest" account access (which federates the authentication of an Azure
+AD principal with an external identity provider).  If the AAD username of the guest user matches the username configured
+in the federated identity provider, no additional configuration is required.  If the username is different between AAD and
+the external identity provider, you can set the `federated_username` attribute in the profile to the value of the username
+in the external identity provider.  The following example shows how this might be configured:
+
+```text
+web_identity_auth_url = https://login.microsoftonline.com/__tenant-id__/oauth2/v2.0
+web_identity_client_id = myClientId
+web_identity_callback_uri = app:/callback
+web_identity_provider = azuread
+web_identity_username = azure-username
+federated_username = external-idp-username
+```
+
 ### Okta
 Okta is a commercial identity management service which provides the necessary infrastructure and services to integrate
 with numerous 3rd party applications.  The endpoint URL is built by simply adding /oauth2 to the end of your Okta tenant

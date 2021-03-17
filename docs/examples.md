@@ -38,7 +38,7 @@ credential lookup chain. This facility provides a way to vend AWS credentials to
 credentials at this endpoint.  When configured to use a custom port (via the `-p` command-line option), no additional
 privileges are required; otherwise you will need to execute aws-runas using adminstrator/root privileges. For more
 information about this service see the
-<a href="{{ 'metadata_credentials.html' | relative_url }}">Metadata Credentials documentation</a>
+<a href="{{ 'metadata_credentials.html#ec2-metadata-service' | relative_url }}">Metadata Credentials documentation</a>
 
 #### Example
 
@@ -61,7 +61,7 @@ aws s3 ls
 aws-runas provides a feature which emulates the ECS credential endpoint which is used as part of the default credential
 lookup chain. This facility provides a way to vend AWS credentials to programs which are configured to find credentials
 at this endpoint.  No additional privileges are required to use this endpoint.  For more information about this service
-see the <a href="{{ 'metadata_credentials.html' | relative_url }}">Metadata Credentials documentation</a>
+see the <a href="{{ 'metadata_credentials.html#ecs-metadata-service' | relative_url }}">Metadata Credentials documentation</a>
 
 #### Example
 
@@ -100,12 +100,12 @@ aws-runas -E my-profile docker run -e AWS_REGION -e AWS_ACCESS_KEY_ID \
 #### Using EC2 Metadata
 
 Running the built-in EC2 Metadata Service of aws-runas is another way to expose AWS credentials to a docker container.
-When using this method, it is possible for the credentials to get automatically refreshed when they expire, for as long
+When using this method, it is possible for the credentials to be automatically refreshed when they expire, for as long
 as the underlying session is still valid.  The one drawback of this approach is that you must run the service so that
 it listens on the 169.254.169.254 address, which requires administrator/root privilege on the system.
 
-Using this method, it is advisable to have separate command-line sessions running, so you can monitor the execution of
-aws-runas and the docker container together.
+When using this method, it is advisable to have separate command-line sessions running, so you can monitor the execution
+of aws-runas and the docker container together.
 
 In the first window, run aws-runas as adminstrator/root:
 

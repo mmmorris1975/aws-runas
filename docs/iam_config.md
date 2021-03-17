@@ -12,7 +12,7 @@ use a non-default credentials file location, you can set the `AWS_SHARED_CREDENT
 location of the file on the system.
 
 This file needs to contain at least 1 section, identified by the `[default]` section heading. This will contain the
-access and secret key values used to with requests to AWS.  These credentials will be used for any profile in the
+access and secret key values used with requests to AWS.  These credentials will be used for any profile in the
 configuration file which sets `source_profile = default`, or any other case where there are not other credentials available.
 
 ```text
@@ -74,7 +74,7 @@ source_profile = default
 role_arn = arn:aws:iam::012345678901:role/my-role
 ```
 
-This configures profile called 'my-profile' to assume a role called 'my-role' in the fictitious AWS account
+This configures a profile named 'my-profile' to assume a role called 'my-role' in the fictitious AWS account
 012345678901, using the credentials found in the default section of the credentials file.  One thing to make note of is
 the word 'profile' before the actual profile name in the section heading (the stuff between the [] brackets), this is an
 oddity of the logic AWS uses to process the config file, and is necessary for any non-default profile you'll configure.
@@ -91,8 +91,8 @@ profile referenced in the 'source_profile' attribute. For example, if the defaul
 default value when using that profile.
 
 If you have multiple profiles configured, all using the same source_profile and mfa_serial configuration, it can become
-tedious, and redundant, to copy the mfa_serial attribute between all the profiles. The aws-runas tool supports setting
-a non-standard configuration for the mfa_serial attribute and specify the setting in the profile referenced in the
+tedious, and redundant, to copy the mfa_serial attribute between all the profiles. The aws-runas tool supports a
+non-standard configuration for the mfa_serial attribute by specifying the setting in the profile referenced in the
 source_profile attribute, or in the default section. This configuration is non-standard in that other tools (like the
 awscli) which read the .aws/config file will not recognize the mfa_serial attribute configured outside a role profile,
 and will not prompt you for the MFA code. One example of this would be using the awscli tools with the --profile option,
@@ -128,7 +128,7 @@ The program supports custom configuration attributes in the profiles defined in 
 session token and assume role credential lifetimes. These attributes are specific to aws-runas and will be ignored by
 other tools leveraging the AWS SDK. Values for these attributes are specified as golang time.Duration strings.
 (See [https://golang.org/pkg/time/#ParseDuration](https://golang.org/pkg/time/#ParseDuration) for more info)  The scope
-of these setting is determined by where they are set in the profiles.  The most specific setting is used, meaning a value
+of these settings are determined by where they are set in the profiles.  The most specific setting is used, meaning a value
 specified in a role profile will be used instead of a value defined in the default section.
 
 * `session_token_duration` This attribute specifies the lifetime of the session token credentials (which carry the MFA
@@ -139,16 +139,16 @@ specified in a role profile will be used instead of a value defined in the defau
   Except for a narrow set of cases, it's usually safe to leave this setting at the default value of 1h. Valid
   values are between 15m and 12h, however setting this value above the default 1h requires the IAM role in AWS to be
   configured to allow the extended duration. Attempts to set a duration longer than the IAM role can support will cause
-  aws-runas to fail with an error. One side effect of increasing this lifetime beyond 1h is that we have to request
-  assume role credentials directly from AWS, using the IAM user credentials, instead of session token credentials. For
-  roles requiring MFA, this means that the MFA code will need to be entered each time the assume role credentials expire,
-  which is usually a shorter interval than using session token credentials to perform the assume role operation.
+  aws-runas to fail with an error. One side effect of increasing this lifetime beyond 1h is that assume role
+  credentials must be directly requested from AWS, using the IAM user credentials instead of session token credentials.
+  For roles requiring MFA, this means that the MFA code will need to be entered each time the assume role credentials expire,
+  which is typically a shorter interval than using session token credentials to perform the assume role operation.
 
 
 ### Environment Variables
 Standard AWS SDK environment variables are supported by this program. (See
 [https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/config#EnvConfig](https://pkg.go.dev/github.com/aws/aws-sdk-go-v2/config#EnvConfig))
-Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable which will be explicitly
+Most will be passed through to the calling program except for the `AWS_PROFILE` environment variable, which will be explicitly
 unset before aws-runas executes the program supplied as an argument to aws-runas. (It only affects the environment
 variable for the execution of aws-runas, the setting in the original environment is unaffected)  If your code relies on
 the value of that `AWS_PROFILE` environment variable, it will be reflected to the program under a new environment
