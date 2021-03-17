@@ -41,7 +41,7 @@ profile which sets `source_profile = personal` in the configuration file.
 
 ### Configuration File
 The configuration file is an ini-formatted file used to store AWS profile configuration. By default, the AWS SDK looks
-for a file name 'config' in a directory called .aws instance of a user's home directory. If you need to use a non-default
+for a file name 'config' in a directory called .aws inside a user's home directory. If you need to use a non-default
 configuration file location, you can set the `AWS_CONFIG_FILE` environment variable to the location of the file on the
 system.
 
@@ -87,7 +87,7 @@ what a profile configured to use MFA would look like.
 
 A profile's configuration also allows you to override settings set in the default profile, or the configuration in the
 profile referenced in the 'source_profile' attribute. For example, if the default section configures the region as
-'us-east-1' (like above),  you can set the region attribute inside the profile configuration, which will override the
+'us-east-1' (like above), you can set the region attribute inside the profile configuration, which will override the
 default value when using that profile.
 
 If you have multiple profiles configured, all using the same source_profile and mfa_serial configuration, it can become
