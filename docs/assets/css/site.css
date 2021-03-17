@@ -1,12 +1,32 @@
-html, body, h1, h2, h3, h4, h5, h6 {font-family: "Roboto", sans-serif;}
-body {font-size: 16px;}
+html, body, h1, h2, h3, h4, h5, h6 {
+    font-family: "Roboto", sans-serif;
+}
 
-.w3-top, .w3-bottom {z-index: 10;}
+body {
+    font-size: 16px;
+}
+
+img {
+    max-width: 98%;
+}
+
+code {
+    font-size: 0.825em;
+}
+
+.w3-top, .w3-bottom {
+    z-index: 10;
+}
+
 .w3-main {
     margin-left: 250px;
     margin-right: 250px;
 }
-.w3-tag {background-color: inherit;}
+
+.w3-tag {
+    background-color: inherit;
+}
+
 .w3-sidebar {
     z-index: 3;
     width: 250px;
@@ -17,13 +37,25 @@ body {font-size: 16px;}
 }
 
 /* Set for W3.css dark grey theme, adjust as needed*/
-.w3-hover-theme-dark:hover {color:#fff !important; background-color:#303e45 !important}
-
-#right-sidebar {
-    padding-top:3em;
-    padding-left:0.5em;
-    right:0;
+.w3-hover-theme-dark:hover {
+    color: #fff !important;
+    background-color: #303e45 !important
 }
 
-@media (min-width: 993px) { #menu_label {visibility: hidden;} }
-@media (max-width: 992px) { #menu_label {visibility: visible;} }
+#right-sidebar {
+    padding-top: 3em;
+    padding-left: 0.5em;
+    right: 0;
+}
+
+@media (min-width: 993px) {
+    #menu_label {
+        visibility: hidden;
+    }
+}
+
+@media (max-width: 992px) {
+    #menu_label {
+        visibility: visible;
+    }
+}

@@ -28,6 +28,31 @@ execute  the command without having to provide the full path to the file. Many p
 inside their home directory (`mkdir ~/bin`), and add that to their shell's PATH, so they have a locally-controlled
 directory to contain their individual tooling.
 
+##### Shell completion
+Tab completion for bash and zsh is supported in aws-runas. Using the DEB and RPM packages automatically installs the
+completion logic in a system-wide location.  When using the zip file to install aws-runas, you will need to manually
+configure the command completion.
+
+###### Bash auto-complete
+To configure auto-completion at a system-wide level, install the file from the [git repository]({{ site.github.repository_url }}/extras/aws-runas-bash-completion)
+as a file named `/etc/bash_completion.d/aws-runas` on the local system.  If you only want to install the auto-completion
+for some users, download that same file, and in the user's .bashrc add the following lines:
+
+```shell
+PROG=aws-runas
+source path/to/aws-runas-bash-completion
+```
+
+###### Zsh auto-complete
+To configure auto-completion when using zsh, download the file from the [git repository]({{ site.github.repository_url }}/extras/aws-runas-zsh-completion),
+and in the user's .zshrc add the following lines:
+
+```shell
+PROG=aws-runas
+_CLI_ZSH_AUTOCOMPLETE_HACK=1
+source path/to/aws-runas-zsh-completion
+```
+
 #### Windows
 
 After downloading the ZIP file, unzip it and move the extracted `aws-runas.exe` file to a location where it is

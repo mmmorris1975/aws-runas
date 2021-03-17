@@ -116,7 +116,7 @@ The interface can be accessed at the following URLs:
 There is only a single screen available in the interface, shown below:
 ![Metadata Service Browser Interface](/assets/images/mcs_home.png)
 
-The 'Roles' drop down will contain a list of roles available in the .aws/config file to select from. Choosing a role from
+The 'Role' drop down will contain a list of roles available in the .aws/config file to select from. Choosing a role from
 the list will automatically switch the active role in the service, there is no requirement to submit or refresh after
 selecting a role from the drop down list.
 

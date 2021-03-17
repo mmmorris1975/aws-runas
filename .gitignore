@@ -34,3 +34,4 @@ vendor/
 .ca/
 build/
 pkg/
+testdata/*credentials

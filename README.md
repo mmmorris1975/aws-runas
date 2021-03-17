@@ -3,7 +3,7 @@
 [![CircleCI](https://circleci.com/gh/mmmorris1975/aws-runas.svg?style=shield&circle-token=3b49323c5e6109720c3cf1d581b26cd36eb598ca)](https://circleci.com/gh/mmmorris1975/aws-runas)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mmmorris1975/aws-runas)](https://goreportcard.com/report/github.com/mmmorris1975/aws-runas)
 
-A friendly way to do AWS STS AssumeRole operations so you can perform AWS API actions using a particular set of permissions.
+A friendly way to do AWS STS AssumeRole operations, so you can perform AWS API actions using a particular set of permissions.
 Includes support for IAM user credentials and SAML SSO, including MFA for both!  Works off of profile names configured
 in the AWS SDK configuration file.
 
