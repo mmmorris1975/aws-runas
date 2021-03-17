@@ -31,7 +31,6 @@ to make interacting with AWS role credentials easier
   * Enable configuration to specify the type of MFA to use with external identity providers, overriding the auto detection logic
 
 Version 3.0 TODO list (in no particular order)
-  * Documentation
   * Enhancements and fixes from collected feedback
   * Possibly add support for other SAML and OIDC identity provider
   * Consider adding an ECR credential retrieval shortcut
