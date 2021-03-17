@@ -6,7 +6,7 @@ benefit of the SAML capability is that there is no requirement to store a set of
 with the drawback of needing to be an engaged participant in the SAML authentication process (supplying username, password
 and any necessary multi-factor actions).  This page, in particular, is meant as a generic configuration reference for
 using aws-runas with SAML authentication.  For information about the configuration for a specific SAML provider (Okta,
-Keycloak, etc) see the [SAML Client Configuration Page]({{ "saml-client-config.html" | relative_url }})
+Keycloak, etc) see the [SAML Client Configuration Guide]({{ "saml_client_config.html" | relative_url }})
 
 
 ### Configuration File

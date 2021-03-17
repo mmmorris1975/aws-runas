@@ -6,7 +6,7 @@ benefit of the OIDC capability is that there is no requirement to store a set of
 with the drawback of needing to be an engaged participant in the OIDC authentication process (supplying username, password
 and any necessary multi-factor actions).  This page, in particular, is meant as a generic configuration reference for
 using aws-runas with OIDC authentication.  For information about the configuration for a specific OIDC provider (Okta,
-Keycloak, etc) see the [OIDC Client Configuration Page]({{ "oidc-client-config.html" | relative_url }})
+Keycloak, etc) see the [OIDC Client Configuration Guide]({{ "oidc_client_config.html" | relative_url }})
 
 AWS uses the term Web Identity when referring to assuming roles using an OIDC identity.  You will see both terms in the
 aws-runas documentation, and the terms can be considered equivalent (except for cases where the Assume Role With Web Identity
