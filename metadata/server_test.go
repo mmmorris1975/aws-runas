@@ -27,7 +27,7 @@ func TestNewMetadataCredentialService(t *testing.T) {
 	t.Run("empty addr", func(t *testing.T) {
 		mcs, err := NewMetadataCredentialService("", new(Options))
 		if err != nil {
-			t.Error("did not receive expected error")
+			t.Error(err)
 			return
 		}
 
@@ -768,7 +768,10 @@ func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
 
 func Test_cleanup(t *testing.T) {
 	// just here for some test coverage numbers
-	cleanup(new(http.Server), new(net.TCPListener))
+	l, _ := net.Listen("tcp", "127.0.0.1:0")
+	defer l.Close()
+
+	cleanup(new(http.Server), l)
 }
 
 func Test_handleAuthError(t *testing.T) {

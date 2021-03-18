@@ -14,6 +14,7 @@ require (
 	github.com/mmmorris1975/simple-logger v0.5.1
 	github.com/mmmorris1975/ssm-session-client v0.200.0
 	github.com/smartystreets/goconvey v1.6.4 // indirect
+	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.3.0
 	golang.org/x/crypto v0.0.0-20201221181555-eec23a3978ad
 	golang.org/x/net v0.0.0-20201216054612-986b41b23924

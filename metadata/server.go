@@ -12,6 +12,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/shared"
+	"github.com/syndtr/gocapability/capability"
 	"io"
 	"net"
 	"net/http"
@@ -19,6 +20,7 @@ import (
 	"net/url"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"syscall"
@@ -86,6 +88,13 @@ func NewMetadataCredentialService(addr string, opts *Options) (*metadataCredenti
 	mcs.clientOptions.AwsLogLevel = opts.AwsLogLevel
 
 	var err error
+	if strings.HasPrefix(addr, DefaultEc2ImdsAddr) && os.Getuid() != 0 && runtime.GOOS == "linux" {
+		logger.Debugf("enabling Linux capabilities")
+		if err = linuxSetCap(); err != nil {
+			return nil, err
+		}
+	}
+
 	mcs.listener, err = configureListener(addr)
 	if err != nil {
 		return nil, err
@@ -666,6 +675,22 @@ func (s *metadataCredentialService) handleAuthError(err error, w http.ResponseWr
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
+// Set capabilities to allow us to run without sudo or setuid on Linux. After installing the tool, you must run
+// sudo /sbin/setcap "cap_net_admin,cap_net_bind_service,cap_setgid,cap_setuid=p" aws-runas
+// to enable the use of these capability settings.  (If using the DEB or RPM packages, this is done as part of the
+// package install/update.)
+// You can still execute aws-runas wrapped in sudo, if you prefer to not use the capabilities feature.
+func linuxSetCap() error {
+	caps := capability.CAPS | capability.AMBIENT
+	c, err := capability.NewPid2(0)
+	if err != nil {
+		return err
+	}
+
+	c.Set(caps, capability.CAP_SETGID, capability.CAP_SETUID, capability.CAP_NET_BIND_SERVICE, capability.CAP_NET_ADMIN)
+	return c.Apply(caps)
+}
+
 func configureListener(addr string) (net.Listener, error) {
 	if strings.HasPrefix(addr, DefaultEc2ImdsAddr) {
 		// DefaultEc2ImdsAddr requires that we setup the address on an interface. (eww, root/admin is required!)
@@ -697,8 +722,15 @@ func configureListener(addr string) (net.Listener, error) {
 func cleanup(srv *http.Server, lsnr net.Listener) {
 	_ = srv.Shutdown(context.Background())
 
-	if os.Getuid() == 0 && strings.HasPrefix(lsnr.Addr().String(), DefaultEc2ImdsAddr) {
-		_ = removeAddress()
+	if strings.HasPrefix(lsnr.Addr().String(), DefaultEc2ImdsAddr) {
+		if os.Getuid() == 0 {
+			_ = removeAddress()
+		} else if runtime.GOOS == "linux" {
+			if err := linuxSetCap(); err != nil {
+				return
+			}
+			_ = removeAddress()
+		}
 	}
 }
 
