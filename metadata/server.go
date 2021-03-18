@@ -737,6 +737,10 @@ func cleanup(srv *http.Server, lsnr net.Listener) {
 
 	if strings.HasPrefix(lsnr.Addr().String(), DefaultEc2ImdsAddr) {
 		if os.Getuid() == 0 {
+			// if dropPrivileges() was successful when the listener was configured,
+			// we'll likely never get here, since we no longer have root permissions
+			// Know for sure this happens on MacOS, however it doesn't seem to mind that
+			// the 169.254.169.254 address lingers on the interface after we exit.
 			_ = removeAddress()
 		} else if runtime.GOOS == "linux" {
 			if err := linuxSetCap(); err != nil {
