@@ -75,7 +75,7 @@ describe 'tests using a profile without a role' do
 
     describe command ('aws-runas -vsrd 1d') do
       its(:exit_status) { should_not eq 0 }
-      its(:stderr) { should match /\s+unknown unit d in duration 1d/ }
+      its(:stderr) { should match /\s+unknown unit "d" in duration "1d"/ }
     end
 
     describe command ('aws-runas -O json') do
@@ -136,7 +136,7 @@ describe 'tests using a profile without a role' do
 
       describe command ('aws-runas -vsr') do
         its(:exit_status) { should_not eq 0 }
-        its(:stderr) { should match /\s+unknown unit d in duration 1d/ }
+        its(:stderr) { should match /\s+unknown unit "d" in duration "1d"/ }
       end
     end
 

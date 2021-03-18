@@ -6,10 +6,12 @@ require (
 	github.com/dustin/go-humanize v1.0.0
 	github.com/mmmorris1975/aws-config v0.3.2
 	github.com/mmmorris1975/simple-logger v0.4.0
+	github.com/smartystreets/goconvey v1.6.4 // indirect
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2
 	golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2
 	golang.org/x/net v0.0.0-20200202094626-16171245cfb2
 	golang.org/x/sys v0.0.0-20190907184412-d223b2b6db03
+	gopkg.in/ini.v1 v1.62.0 // indirect
 )
 
 go 1.13
