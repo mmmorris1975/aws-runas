@@ -12,6 +12,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
+	"net"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -455,7 +456,7 @@ func TestMetadataCredentialService_listRolesHandler(t *testing.T) {
 //nolint:misspell  // it's a joke, son!
 // for teh coverage gainz!!
 func TestMetadataCredentialService_installSigHandler(t *testing.T) {
-	installSigHandler(httptest.NewServer(nil).Config)
+	installSigHandler(httptest.NewServer(nil).Config, new(net.TCPListener))
 }
 
 func TestMetadataCredentialService_logHandler(t *testing.T) {
@@ -767,7 +768,7 @@ func TestMetadataCredentialService_customProfileHandler(t *testing.T) {
 
 func Test_cleanup(t *testing.T) {
 	// just here for some test coverage numbers
-	cleanup(new(http.Server))
+	cleanup(new(http.Server), new(net.TCPListener))
 }
 
 func Test_handleAuthError(t *testing.T) {

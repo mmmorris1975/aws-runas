@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 	"text/template"
 )
@@ -27,6 +28,7 @@ import (
 const (
 	DefaultEcsCredPath = "/credentials"
 	DefaultEc2ImdsAddr = "169.254.169.254"
+	DefaultEc2ImdsCidr = DefaultEc2ImdsAddr + "/22"
 
 	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
 	ec2CredPath      = "/latest/meta-data/iam/security-credentials/"
@@ -44,6 +46,8 @@ var (
 
 	//go:embed templates
 	content embed.FS
+
+	mu sync.Mutex // mutex to synchronize resource cleanup
 
 	indexHtml, siteCss, favicon []byte
 )
@@ -130,11 +134,11 @@ func (s *metadataCredentialService) Run() error {
 		mux.HandleFunc(s.options.Path+`/`, logHandler(s.ecsCredHandler))
 
 		// print ECS credential endpoint message
-		logger.Infof("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
+		logger.Infof("ECS credential endpoint set to http://%s%s", s.Addr().String(), s.options.Path)
 		logger.Infof("Set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable with the above value to allow programs to use it")
 	} else if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
 		// print non-default EC2 IMDS endpoint message
-		logger.Infof("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
+		logger.Infof("EC2 metadata endpoint set to http://%s/", s.Addr().String())
 		logger.Infof("Set the AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable with the above value to allow programs to use it")
 	}
 
@@ -145,7 +149,7 @@ func (s *metadataCredentialService) Run() error {
 		s.profileHandler(httptest.NewRecorder(), r)
 		logger.Infof("Using initial profile '%s'", s.options.Profile)
 	} else {
-		logger.Infof("Access the web interface at http://%s and select a profile to begin", s.listener.Addr().String())
+		logger.Infof("Access the web interface at http://%s and select a profile to begin", s.Addr().String())
 	}
 
 	if !s.options.Headless {
@@ -162,9 +166,9 @@ func (s *metadataCredentialService) Run() error {
 
 	srv := new(http.Server)
 	srv.Handler = mux
-	defer cleanup(srv)
+	defer cleanup(srv, s.listener)
 
-	installSigHandler(srv)
+	installSigHandler(srv, s.listener)
 	return srv.Serve(s.listener)
 }
 
@@ -186,9 +190,9 @@ func (s *metadataCredentialService) RunNoApi(cl client.AwsClient, cfg *config.Aw
 		// configure ECS http handlers without request logging
 		mux.HandleFunc(s.options.Path, s.ecsCredHandler)
 		mux.HandleFunc(s.options.Path+`/`, s.ecsCredHandler)
-		logger.Debugf("ECS credential endpoint set to http://%s%s", s.listener.Addr().String(), s.options.Path)
+		logger.Debugf("ECS credential endpoint set to http://%s%s", s.Addr().String(), s.options.Path)
 	} else if !strings.HasPrefix(s.listener.Addr().String(), DefaultEc2ImdsAddr) {
-		logger.Debugf("EC2 metadata endpoint set to http://%s/", s.listener.Addr().String())
+		logger.Debugf("EC2 metadata endpoint set to http://%s/", s.Addr().String())
 	}
 
 	if len(s.options.Profile) > 0 {
@@ -201,7 +205,7 @@ func (s *metadataCredentialService) RunNoApi(cl client.AwsClient, cfg *config.Aw
 
 	srv := new(http.Server)
 	srv.Handler = mux
-	defer cleanup(srv)
+	defer cleanup(srv, s.listener)
 
 	if readyCh != nil {
 		readyCh <- true
@@ -672,7 +676,7 @@ func configureListener(addr string) (net.Listener, error) {
 			return nil, err
 		}
 
-		if err = addAddress(iface, DefaultEc2ImdsAddr+"/22"); err != nil {
+		if err = addAddress(iface, DefaultEc2ImdsCidr); err != nil {
 			return nil, err
 		}
 
@@ -690,15 +694,15 @@ func configureListener(addr string) (net.Listener, error) {
 	return net.Listen("tcp", addr)
 }
 
-func cleanup(srv *http.Server) {
+func cleanup(srv *http.Server, lsnr net.Listener) {
 	_ = srv.Shutdown(context.Background())
 
-	if os.Getuid() == 0 && strings.HasPrefix(srv.Addr, DefaultEc2ImdsAddr) {
-		_ = removeAddress(DefaultEc2ImdsAddr)
+	if os.Getuid() == 0 && strings.HasPrefix(lsnr.Addr().String(), DefaultEc2ImdsAddr) {
+		_ = removeAddress()
 	}
 }
 
-func installSigHandler(srv *http.Server) {
+func installSigHandler(srv *http.Server, lsnr net.Listener) {
 	sigCh := make(chan os.Signal, 5)
 	signal.Notify(sigCh, os.Interrupt, syscall.SIGQUIT, syscall.SIGTERM)
 
@@ -706,7 +710,7 @@ func installSigHandler(srv *http.Server) {
 		for {
 			sig := <-sigCh
 			logger.Debugf("Metadata service got signal: %s", sig.String())
-			cleanup(srv)
+			cleanup(srv, lsnr)
 		}
 	}()
 }

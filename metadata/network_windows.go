@@ -16,18 +16,14 @@ func addAddress(iface *net.Interface, cidrAddr string) error {
 	return doCommand(cmd)
 }
 
-func removeAddress(cidrAddr string) error {
-	ip, _, err := net.ParseCIDR(cidrAddr)
+func removeAddress() error {
+	mu.Lock()
+	defer mu.Unlock()
+	iface, err := findInterfaceByAddress(DefaultEc2ImdsAddr)
 	if err != nil {
 		return err
 	}
 
-	var iface *net.Interface
-	iface, err = findInterfaceByAddress(ip.String())
-	if err != nil {
-		return err
-	}
-
-	cmd := []string{"netsh", "interface", "ipv4", "delete", "address", iface.Name, ip.String()}
+	cmd := []string{"netsh", "interface", "ipv4", "delete", "address", iface.Name, DefaultEc2ImdsAddr}
 	return doCommand(cmd)
 }
