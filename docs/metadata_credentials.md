@@ -21,6 +21,15 @@ system at 169.254.169.254 and listens for HTTP requests on port 80.  This mode r
 run, as that type of configuration requires privileged access.  A 2nd mode is available which does not require administrative
 level access to run, and should be compatible with most AWS SDK libraries available since 2019.
 
+When running the EC2 metadata service on Linux using sudo, you may need to specify additional flags with the sudo command
+in order to carry certain environment variables into the sudo environment.  If you see log output saying that 'an AWS
+region is required, but was not found', and it is trying to load the AWS config file from root's home directory, add the
+`--preserve-env=HOME` or the `-E` flag to the sudo command.  For example:
+
+```shell
+sudo --preserve-env=HOME aws-runas serve ec2 my-profile
+```
+
 The EC2 metadata service supports access via the IMDS v1 and v2 APIs.  The v2 API implementation does not implement the
 full security measures like the actual AWS interface, merely enough to satisfy the requests so credentials can be returned.
 
