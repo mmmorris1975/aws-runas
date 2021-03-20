@@ -40,7 +40,6 @@ jobs:
 
     steps:
       - checkout
-      - go/load-cache
       - run: sudo apt-get update && sudo apt-get -y install upx
       - run:
           name: build darwin/amd64
@@ -101,7 +100,6 @@ jobs:
 
     steps:
       - checkout
-      - go/load-cache
       - run: sudo apt-get update && sudo apt-get -y install upx osslsigncode
       - run:
           name: install code signing files
