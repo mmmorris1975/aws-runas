@@ -54,10 +54,11 @@ web_identity_provider = azuread
 ```
 
 The Azure AD client is also configured to allow "guest" account access (which federates the authentication of an Azure
-AD principal with an external identity provider).  If the AAD username of the guest user matches the username configured
-in the federated identity provider, no additional configuration is required.  If the username is different between AAD and
-the external identity provider, you can set the `federated_username` attribute in the profile to the value of the username
-in the external identity provider.  The following example shows how this might be configured:
+AD principal with an external identity provider).  he big caveat being that the external identity provider must be
+supported by aws-runas.  If the AAD username of the guest user matches the username configured in the federated
+identity provider, no additional configuration is required.  If the username is different between AAD and the external
+identity provider, you can set the `federated_username` attribute in the profile to the value of the username in the
+external identity provider.  The following example shows how this might be configured:
 
 ```text
 web_identity_auth_url = https://login.microsoftonline.com/__tenant-id__/oauth2/v2.0

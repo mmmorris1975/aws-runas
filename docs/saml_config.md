@@ -64,23 +64,22 @@ the saml_auth_url attribute between all the profiles. The aws-runas tool support
 attributes in the profile referenced in the source_profile attribute, or in the default section.
 
 The following example demonstrates how to set up the .aws/config file using the common saml_auth_url attribute, which will
-be used for every profile.  If you interact with multiple identity providers when accessing AWS, or use a mix of SAML and
-IAM configured profiles, it is advisable to not configure the `saml_auth_url` in the default profile.  A better practice
-is to configure a common, non-default profile which has configuration specific to a group of profiles requiring that
-configuration.
+be used for every profile configured with `source_profile = saml`.
 
 ```text
 [default]
 region = us-east-1
+
+[profile saml]
 saml_auth_url = https://example.com/saml/auth
 
 [profile my-role]
-source_profile = default
+source_profile = saml
 role_arn = arn:aws:iam::012345678901:role/my-role
 
 [profile other-role]
 region = us-west-2
-source_profile = default
+source_profile = saml
 role_arn = arn:aws:iam::567890123456:role/other-role
 ```
 

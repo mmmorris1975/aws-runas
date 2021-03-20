@@ -70,6 +70,10 @@ Use the `ssm forward` subcommand to establish a port forwarding session with the
 This command accepts an optional `-p` argument which will explicitly set the local port for the forwarding session.
 If left at the default, a random port on the local machine will be used for the forwarding connection.
 
+**NOTE** Currently, the built-in SSM client does not support multiplexed connections over port forwarding (ex. forwarding
+traffic from a local web browser to a web server). Only a single connection can be made at a time.  The AWS-supplied
+SSM plugin is capable of supporting port forwarding for multiplexed connections.
+
 #### Example
 
 To forward local port 8888 to port 9000 on the EC2 instance i-deadbeef:

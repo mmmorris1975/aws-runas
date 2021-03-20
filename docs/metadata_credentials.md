@@ -4,14 +4,14 @@ title: Metadata Credential Service
 
 Two http endpoints are provided by aws-runas to mimic services exposed by AWS to retrieve credentials when running within
 the walls of AWS infrastructure.  The EC2 metadata service is a stripped down version of the EC2 instance metadata
-service available on EC2 hosts.  It exposes the interfaces necessary to retrieve credentials, but not the other endpoints
+service available on EC2 hosts.  It exposes the interfaces necessary to retrieve credentials, but not the other paths
 exposing other EC2 instance information.  A service which is similar to the ECS credential service is also available
 in aws-runas to expose a service which vends AWS credentials to processes on the local system.  For either service, instead
 of credentials for an EC2 instance profile (in the case of the EC2 metadata service), or ECS task roles (in the case of
 the ECS credential service), aws-runas will serve the assume role credentials of the provided profile.
 
 This will enable use cases where  it is cumbersome to setup the execution environment to use aws-runas in the traditional
-“wrapper” mode.  A common scenario like this is developing and executing code in an IDE which needs to obtain credentials
+“wrapper” mode.  A common scenario for this is developing and executing code in an IDE which needs to obtain credentials
 to interact with AWS services.
 
 ### EC2 Metadata Service
@@ -22,7 +22,7 @@ run, as that type of configuration requires privileged access.  A 2nd mode is av
 level access to run, and should be compatible with most AWS SDK libraries available since 2019.
 
 When running the EC2 metadata service on Linux using sudo, you may need to specify additional flags with the sudo command
-in order to carry certain environment variables into the sudo environment.  If you see log output saying that 'an AWS
+in order to carry certain environment variables into the sudo environment.  If you see log output saying 'an AWS
 region is required, but was not found', and it is trying to load the AWS config file from root's home directory, add the
 `--preserve-env=HOME` or the `-E` flag to the sudo command.  For example:
 
@@ -31,7 +31,7 @@ sudo --preserve-env=HOME aws-runas serve ec2 my-profile
 ```
 
 The EC2 metadata service supports access via the IMDS v1 and v2 APIs.  The v2 API implementation does not implement the
-full security measures like the actual AWS interface, merely enough to satisfy the requests so credentials can be returned.
+full security measures of the actual AWS interface, merely enough to satisfy the requests so credentials can be returned.
 
 More information on the AWS EC2 instance metadata service can be found in their
 [documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html#instance-metadata-security-credentials)
@@ -94,7 +94,7 @@ aws-runas serve ecs -p 8888 my-profile
 
 To allow the program to communicate with the service 2 environment variables must be configured.  The first configures
 the endpoint URL for the service, and is called `AWS_CONTAINER_CREDENTIALS_FULL_URI`.  The other environment variable is
-`AWS_SHARED_CREDENTIALS_FILE`, for programs based on the Java SDK the environment variable is called
+`AWS_SHARED_CREDENTIALS_FILE`; for programs based on the Java SDK the environment variable is called
 `AWS_CREDENTIAL_PROFILES_FILE`.  For example:
 
 ```shell
@@ -172,13 +172,13 @@ required. (AUTH for username/password authentication or MFA for multi-factor aut
 
 ###### POST /auth
 Supplies additional username/password authentication information in order to obtain credentials for a profile.  The
-incoming data is expected to be an HTTP POST have a content type of `application/x-www-form-urlencoded` with the form
+incoming data is expected to be an HTTP POST with a content type of `application/x-www-form-urlencoded` having the form
 fields `username` and `password` containing the necessary credentials to authenticate to the identity provided used with
 the role.
 
 ###### POST /mfa  
 Supplies the multi-factor authentication code in order to obtain the credentials for a profile.  The incoming data is
-expected to be an HTTP POST have a content type of `application/x-www-form-urlencoded` with the form field `mfa`
+expected to be an HTTP POST with a content type of `application/x-www-form-urlencoded` having the form field `mfa`
 containing the necessary code needed to get credentials for the role.
 
 ###### GET /latest/meta-data/iam/security-credentials/

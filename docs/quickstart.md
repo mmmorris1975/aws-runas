@@ -47,7 +47,7 @@ for some users, download that same file, and in the user's .bashrc add the follo
 
 ```shell
 PROG=aws-runas
-source path/to/aws-runas-bash-completion
+source /path/to/aws-runas-bash-completion
 ```
 
 ###### Zsh auto-complete
@@ -58,7 +58,7 @@ and in the user's .zshrc add the following lines:
 ```shell
 PROG=aws-runas
 _CLI_ZSH_AUTOCOMPLETE_HACK=1
-source path/to/aws-runas-zsh-completion
+source /path/to/aws-runas-zsh-completion
 ```
 
 #### Windows
@@ -193,7 +193,7 @@ You'll need to modify all the values to the right of the `=` with the values spe
 The `web_identity_auth_url` parameter is the URL of the authentication endpoint for yor specific identity provider. The
 `web_identity_client_id` and `web_identity_redirect_uri` parameters are OIDC-specific configuration for your identity
 provider.  The `role_arn` parameter is the AWS ARN of the IAM role you will assume after the OIDC authentication is complete.
-You should be able to get the necessary values for both of these parameters from the person or team responsible for managing
+You should be able to get the necessary values for all of these parameters from the person or team responsible for managing
 your AWS accounts.  The `web_identity_username` parameter is optional, but is a handy shortcut to supply your username
 to the OIDC provider, instead of getting prompted for it each time you need to authenticate to your OIDC identity provider.
 
@@ -224,7 +224,7 @@ export AWS_SECRET_ACCESS_KEY='RoleSecretKey'
 export AWS_SESSION_TOKEN='RoleSessionToken'
 ```
 The AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_SESSION_TOKEN values will be some nonsensical string, particular
-to the set of credentials AWS generated for you.  On Windows the leading "export" will say "set" instead to allow the
+to the set of credentials AWS generated for you.  On Windows, the leading "export" will say "set" instead to allow the
 returned values to be set as environment variables in your command line session.  This is a simple test to validate that
 the configuration is correct.
 

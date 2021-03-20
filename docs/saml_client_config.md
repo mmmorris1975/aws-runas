@@ -47,10 +47,11 @@ saml_provider = azuread
 ```
 
 The Azure AD client is also configured to allow "guest" account access (which federates the authentication of an Azure
-AD principal with an external identity provider).  If the AAD username of the guest user matches the username configured
-in the federated identity provider, no additional configuration is required.  If the username is different between AAD and
-the external identity provider, you can set the `federated_username` attribute in the profile to the value of the username
-in the external identity provider.  The following example shows how this might be configured:
+AD principal with an external identity provider).  The big caveat being that the external identity provider must be
+supported by aws-runas.  If the AAD username of the guest user matches the username configured in the federated
+identity provider, no additional configuration is required.  If the username is different between AAD and the external
+identity provider, you can set the `federated_username` attribute in the profile to the value of the username in the
+external identity provider.  The following example shows how this might be configured:
 
 ```text
 saml_auth_url = https://myapps.microsoft.com/signin/__app-name__/__app-id__?tenantId=__tenant-id__
@@ -76,7 +77,7 @@ with numerous 3rd party applications. The aws-runas SAML client auto-discovery l
 hostname portion of the URL.
 
 The OneLogin platform requires the use of application-level authentication for interacting with any portion of their API
-(even for authenticating public/untrusted apps). This necessitates your OneLogin admins create a set of API credentials
+(even for authenticating public/untrusted apps). This requires your OneLogin admins to create a set of API credentials
 which can be shared as they see fit to allow aws-runas the ability to communicate with the OneLogin API.  The OneLogin API
 credentials will be a Client ID and Client Secret, which are added as the query string parameter `token` to the OneLogin
 URL in the .aws/config file.  This is an aws-runas specific configuration, and not supported as part of interacting with

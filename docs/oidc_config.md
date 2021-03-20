@@ -70,25 +70,24 @@ to copy those attribute between all the profiles. The aws-runas tool supports se
 attributes in the profile referenced in the source_profile attribute, or in the default section.
 
 The following example demonstrates how to set up the .aws/config file for OIDC authentication using common attributes,
-which will be used for every profile.  If you interact with multiple identity providers when accessing AWS, or use a mix
-of OIDC and IAM configured profiles, it is advisable to not configure the `web_identity_*` attributes in the default profile. 
-A better practice is to configure a common, non-default profile which has configuration specific to a group of profiles
-requiring that configuration.
+which will be used for every profile configured with `source_profile = oidc`.
 
 ```text
 [default]
 region = us-east-1
+
+[profile oidc]
 web_identity_auth_url = https://example.org/oauth2
 web_identity_client_id = myClientID
 web_identity_redirect_uri = app:/callback
 
 [profile my-role]
-source_profile = default
+source_profile = oidc
 role_arn = arn:aws:iam::012345678901:role/my-role
 
 [profile other-role]
 region = us-west-2
-source_profile = default
+source_profile = oidc
 role_arn = arn:aws:iam::567890123456:role/other-role
 ```
 

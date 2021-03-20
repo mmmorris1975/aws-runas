@@ -96,7 +96,7 @@ non-standard configuration for the mfa_serial attribute by specifying the settin
 source_profile attribute, or in the default section. This configuration is non-standard in that other tools (like the
 awscli) which read the .aws/config file will not recognize the mfa_serial attribute configured outside a role profile,
 and will not prompt you for the MFA code. One example of this would be using the awscli tools with the --profile option,
-as that is expecting the mfa_serial attribute to be present in the role profile if it is required for the role. However,
+which expects the mfa_serial attribute to be present in the role profile if it is required for the role. However,
 if your workflow revolves around using aws-runas there should be no harm using this non-standard setup.
 
 The following example demonstrates how to set up the .aws/config file using the common mfa_serial attribute. With this

@@ -100,7 +100,7 @@ aws-runas -E my-profile docker run -e AWS_REGION -e AWS_ACCESS_KEY_ID \
 #### Using EC2 Metadata
 
 Running the built-in EC2 Metadata Service of aws-runas is another way to expose AWS credentials to a docker container.
-When using this method, it is possible for the credentials to be automatically refreshed when they expire, for as long
+When using this method, it is possible for the credentials refresh automatically when they expire, for as long
 as the underlying session is still valid.  The one drawback of this approach is that you must run the service so that
 it listens on the 169.254.169.254 address, which requires administrator/root privilege on the system.
 
