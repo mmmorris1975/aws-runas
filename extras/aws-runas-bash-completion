@@ -1,24 +1,44 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
 
-_awsrunas_completions()
-{
-  if [ "${#COMP_WORDS[@]}" != "2" ]; then
-    return
-  fi
+#
+# Copyright (c) 2021 Michael Morris. All Rights Reserved.
+#
+# Licensed under the MIT license (the "License"). You may not use this file except in compliance
+# with the License. A copy of the License is located at
+#
+# https://github.com/mmmorris1975/aws-runas/blob/master/LICENSE
+#
+# or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+# for the specific language governing permissions and limitations under the License.
+#
 
-  # keep the suggestions in a local variable
-  local profiles=`grep '\[profile .*\]' ~/.aws/config | sed -E 's/\[profile (.*)\]/\1/'`
-  local suggestions=($(compgen -W "$profiles" -- "${COMP_WORDS[1]}"))
+# NOTE: this file will be automatically installed to a system-wide location if aws-runas
+# was installed via .deb or .rpm packages
+#
+# Copy this file to /etc/bash_completion.d/aws-runas to enable automatic completion
+# for aws-runas.  Otherwise, you can install this file at some accessible location,
+# then in a user's .bash_profile, add the following lines:
+#
+#  PROG=aws-runas
+#  source path/to/aws-runas-bash-completion
 
-  if [ "${#suggestions[@]}" == "1" ]; then
-    # if there's only one match, we remove the command literal
-    # to proceed with the automatic completion of the number
-    COMPREPLY=("${suggestions[0]}")
-  else
-    # more than one suggestions resolved,
-    # respond with the suggestions intact
-    COMPREPLY=("${suggestions[@]}")
+: ${PROG:=$(basename ${BASH_SOURCE})}
+
+_cli_bash_autocomplete() {
+  if [[ "${COMP_WORDS[0]}" != "source" ]]; then
+    local cur opts base
+    COMPREPLY=()
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    if [[ "$cur" == "-"* ]]; then
+      opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} ${cur} --generate-bash-completion )
+    else
+      opts=$( ${COMP_WORDS[@]:0:$COMP_CWORD} --generate-bash-completion )
+    fi
+    COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
+    return 0
   fi
 }
 
-complete -F _awsrunas_completions aws-runas
+complete -o bashdefault -o default -o nospace -F _cli_bash_autocomplete $PROG
+unset PROG

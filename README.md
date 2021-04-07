@@ -3,14 +3,37 @@
 [![CircleCI](https://circleci.com/gh/mmmorris1975/aws-runas.svg?style=shield&circle-token=3b49323c5e6109720c3cf1d581b26cd36eb598ca)](https://circleci.com/gh/mmmorris1975/aws-runas)
 [![Go Report Card](https://goreportcard.com/badge/github.com/mmmorris1975/aws-runas)](https://goreportcard.com/report/github.com/mmmorris1975/aws-runas)
 
-A friendly way to do AWS STS AssumeRole operations so you can perform AWS API actions using a particular set of permissions.
+A friendly way to do AWS STS AssumeRole operations, so you can perform AWS API actions using a particular set of permissions.
 Includes support for IAM user credentials and SAML SSO, including MFA for both!  Works off of profile names configured
 in the AWS SDK configuration file.
 
 The tool will cache the credentials retrieved from AWS in order to minimize API calls to AWS, as well as minimize the entry
 of MFA codes (for roles requiring MFA).
 
-Full documentation for downloading, configuring and running aws-runas can be found [here](https://mmmorris1975.github.io/aws-runas/)
+Version 3.0 is a ground-up rewrite of the tool with a number of behind the scenes updates, and quite a few new features
+to make interacting with AWS role credentials easier
+  * Added support for Web Identity credentials in addition to SAML credentials
+  * The ECS metadata credential service is now feature-comparable to the EC2 metadata credential service
+  * The ECS metadata credential service allows dynamic profile credential fetching when a profile name gets appended
+    to the service endpoint URL path
+  * The EC2 metadata credential service supports using a custom port, which permits the service to run without
+    root/admin privileges. Running using the "traditional" 169.254.169.254 address is still supported, but will always
+    require elevated privileges for configuring the IP address on a network interface, and running on a privileged port.
+  * The EC2 metadata credential service now supports the IMDSv2 token path, and still handles IMDSv1
+  * Use a baked-in SSM session client to remove the requirement to install the AWS ssm session plugin, a CLI option
+    is provided if use of the plugin is necessary or desired.
+  * Add support for SSH over SSM sessions in the build-in client, and via the plugin
+  * More coherent and expansive use of subcommands in the CLI to make separation of the various functions in the tool
+    clearer. (See Usage section below)
+  * Integration/functional tests now include testing SAML and Web Identity functionality with external public IdPs
+    (currently Okta and Onelogin)
+  * Support Apple M1 based systems
+  * Enable configuration to specify the type of MFA to use with external identity providers, overriding the auto detection logic
+
+Version 3.0 TODO list (in no particular order)
+  * Enhancements and fixes from collected feedback
+  * Possibly add support for other SAML and OIDC identity provider
+  * Consider adding an ECR credential retrieval shortcut
 
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just download the
 compiled executable and "go".
@@ -20,64 +43,70 @@ compiled executable and "go".
 Pre-compiled binaries for various platforms can be downloaded [here](https://github.com/mmmorris1975/aws-runas/releases/latest)
 
 ## Usage
-    usage: aws-runas [<flags>] <command> [<args> ...]
+    NAME:
+    aws-runas - Create an environment for interacting with the AWS API using an assumed role
     
-    Create an environment for interacting with the AWS API using an assumed role
+    USAGE:
+    aws-runas [global options] [subcommand] profile [arguments...]
     
-    Flags:
-      -h, --help                     Show context-sensitive help (also try --help-long and --help-man).
-          --ec2                      Run a mock EC2 metadata service to provide role credentials
-          --ecs                      Run a mock ECS credential endpoint to provide role credentials
-      -v, --verbose                  Print verbose/debug messages
-      -E, --env                      Pass credentials to program as environment variables
-      -e, --expiration               Show credential expiration time
-      -O, --output=env               Credential output format, valid values: env (default) or json
-      -w, --whoami                   Print the AWS identity information for the provided profile
-      -u, --update                   Check for updates to aws-runas
-      -D, --diagnose                 Run diagnostics to gather info to troubleshoot issues
-      -l, --list-roles               List role ARNs you are able to assume
-      -m, --list-mfa                 List the ARN of the MFA device associated with your IAM account
-      -r, --refresh                  Force a refresh of the cached credentials
-      -s, --session                  Print eval()-able session token info, or run command using session token credentials
-      -d, --duration=DURATION        Duration of the retrieved session token
-      -a, --role-duration=ROLE-DURATION  
-                                     Duration of the assume role credentials
-      -o, --otp=OTP                  MFA token code
-      -M, --mfa-serial=MFA-SERIAL    Serial number (or AWS ARN) of MFA device needed to perform Assume Role operation
-      -X, --external-id=EXTERNAL-ID  External ID to use to Assume the Role
-      -J, --jump-role=JUMP-ROLE      ARN of the 'jump role' to use with SAML integration
-      -S, --saml-url=SAML-URL        URL of the SAML authentication endpoint
-      -U, --saml-user=SAML-USER      Username for SAML authentication
-      -P, --saml-password=SAML-PASSWORD  
-                                     Password for SAML authentication
-      -R, --saml-provider=SAML-PROVIDER  
-                                     The name of the saml provider to use, and bypass auto-detection
-      -V, --version                  Show application version.
+    VERSION:
+    3.0-beta
     
-    Commands:
-      help [<command>...]
-        Show help.
+    COMMANDS:
+    list, ls              Shows IAM roles or MFA device configuration
+    serve, srv            Serve credentials from a listening HTTP service
+    ssm                   Helpful shortcuts for working with SSM sessions
+    password, passwd, pw  Set or update the stored password for an external identity provider
+    diagnose, diag        run diagnostics to gather information to aid in troubleshooting
+    help, h               Shows a list of commands or help for one command
     
-      shell [<profile>] [<target>]
-        Start an SSM shell session to the given target
-    
-      forward [<flags>] [<profile>] [<target>]
-        Start an SSM port-forwarding session to the given target
-    
-      password [<profile>]
-        Set the SAML password for the specified profile
+    GLOBAL OPTIONS:
+    --duration value, -d value       duration of the retrieved session token (default: 12 hours) [$SESSION_TOKEN_DURATION]
+    --role-duration value, -a value  duration of the assume role credentials (default: 1 hours) [$CREDENTIALS_DURATION]
+    --otp value, -o value            MFA token code [$MFA_CODE]
+    --mfa-serial value, -M value     serial number (or AWS ARN) of MFA device needed to perform Assume Role operation [$MFA_SERIAL]
+    --mfa-type value, -t value       use specific MFA type instead of provider auto-detection logic [$MFA_TYPE]
+    --external-id value, -X value    external ID to use with Assume Role [$EXTERNAL_ID]
+    --jump-role value, -J value      ARN of the 'jump role' to use with SAML or Web Identity integration [$JUMP_ROLE_ARN]
+    --saml-url value, -S value       URL of the SAML authentication endpoint [$SAML_AUTH_URL]
+    --web-url value, -W value        URL of the Web Identity (OIDC) authentication endpoint [$WEB_AUTH_URL]
+    --web-redirect value, -T value   Web Identity (OIDC) redirect URI [$WEB_REDIRECT_URI]
+    --web-client value, -C value     Web Identity (OIDC) client ID [$WEB_CLIENT_ID]
+    --username value, -U value       username for SAML or Web Identity (OIDC) authentication [$RUNAS_USERNAME, $SAML_USERNAME, $WEB_USERNAME]
+    --password value, -P value       password for SAML or Web Identity (OIDC) authentication [$RUNAS_PASSWORD, $SAML_PASSWORD, $WEB_PASSWORD]
+    --provider value, -R value       name of the SAML or Web Identity (OIDC) provider to use [$RUNAS_PROVIDER, $SAML_PROVIDER, $WEB_PROVIDER]
+    --env, -E                        pass credentials to program as environment variables (default: false) [$RUNAS_ENV_CREDENTIALS]
+    --output value, -O value         credential output format, valid values: env or json (default: "env") [$RUNAS_OUTPUT_FORMAT]
+    --session, -s                    use session token credentials instead of role credentials (default: false) [$RUNAS_SESSION_CREDENTIALS]
+    --refresh, -r                    force a refresh of the cached credentials (default: false)
+    --expiration, -e                 show credential expiration time (default: false)
+    --whoami, -w                     print the AWS identity information for the provided profile credentials (default: false)
+    --list-mfa, -m                   list the ARN of the MFA device associated with your IAM account (default: false)
+    --list-roles, -l                 list role ARNs you are able to assume (default: false)
+    --update, -u                     check for updates to aws-runas (default: false)
+    --diagnose, -D                   run diagnostics to gather information to aid in troubleshooting (default: false)
+    --verbose value, -v value        output debug logging, use twice for AWS call tracing (default: standard logging)
+    --help, -h                       show help (default: false)
+    --version, -V                    print the version (default: false)
 
 ## Building
 
 ### Build Requirements
 
-Developed and tested using the go 1.13 tool chain and aws-sdk-go v1.28.12  
-*NOTE* This project uses [go modules](https://github.com/golang/go/wiki/Modules) for dependency management
+Developed and tested using the go 1.16 tool chain and aws-sdk-go-v2
 
 ### Build Steps
 
 A Makefile is included with the source code, and executing the default target via the `make` command should install all dependent
-libraries and make the executable for your platform (or platform of choice if the GOOS and GOARCH env vars are set)
+libraries and make the executable for your platform (or platform of choice if the GOOS and GOARCH env vars are set).
+
+Other common make targets which may be useful for local development:
+  - clean - to clean up build artifacts
+  - linux, darwin, windows - compile program specifically targeting these platforms. Compiled program will be placed
+    in the `build` subdirectory of the source tree. Specific architecture can be compiled by setting the GOOS environment variable.
+  - zip - create a zip file of the compiled program (compiling it, if necessary). By default, it will compile for the
+    platform the command is run on.  Zip file will be placed in the `pkg` subdirectory of the source tree.  Use the
+    GOOS and GOARCH environment variables to compile and package for other systems.
 
 ## Contributing
 

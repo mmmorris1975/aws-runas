@@ -1,0 +1,130 @@
+/*
+ * Copyright (c) 2021 Michael Morris. All Rights Reserved.
+ *
+ * Licensed under the MIT license (the "License"). You may not use this file except in compliance
+ * with the License. A copy of the License is located at
+ *
+ * https://github.com/mmmorris1975/aws-runas/blob/master/LICENSE
+ *
+ * or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+ * for the specific language governing permissions and limitations under the License.
+ */
+
+package credentials
+
+import (
+	"context"
+	"errors"
+	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/sts"
+)
+
+const (
+	// WebRoleProviderName is the name given to this AWS credential provider.
+	WebRoleProviderName = "WebIdentityRoleProvider"
+)
+
+// webRoleProvider contains the settings to perform the AssumeRoleWithWebIdentity operation in the AWS API.
+// An optional Cache provides the ability to cache the credentials in order to limit API calls.
+type webRoleProvider struct {
+	*AssumeRoleProvider
+	webIdentityToken *OidcIdentityToken
+}
+
+// NewWebRoleProvider configures a default webRoleProvider to allow Assume Role using Oauth2/OIDC.  The default provider
+// uses the specified client.ConfigProvider to create a new sts.STS client, the roleArn argument as the role to assume,
+// and token is the web identity token which was returned after performing the necessary operations against the
+// identity provider. The credential duration is set to AssumeRoleDefaultDuration, and the ExpiryWindow is set to 10% of
+// the duration value.
+func NewWebRoleProvider(cfg aws.Config, roleArn string) *webRoleProvider {
+	return &webRoleProvider{AssumeRoleProvider: NewAssumeRoleProvider(cfg, roleArn)}
+}
+
+// WebIdentityToken is the implementation of the WebRoleProvider interface for setting the Web (OIDC) Identity Token
+// used for the Assume Role with Web Identity operation.
+func (p *webRoleProvider) WebIdentityToken(token *OidcIdentityToken) {
+	p.webIdentityToken = token
+}
+
+// RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role with
+// Web Identity credentials, using the provided context argument.  If the provider is configured to use a cache, it will
+// be consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed, and stored
+// back in the cache.
+func (p *webRoleProvider) Retrieve(ctx context.Context) (aws.Credentials, error) {
+	var err error
+	creds := p.CheckCache()
+
+	if creds == nil || creds.Value().Expired() {
+		p.Logger.Debugf("Detected expired or unset web identity role credentials, refreshing")
+		creds, err = p.retrieve(ctx)
+		if err != nil {
+			return aws.Credentials{}, err
+		}
+
+		if p.Cache != nil {
+			if err = p.Cache.Store(creds); err != nil {
+				p.Logger.Debugf("error caching credentials: %v", err)
+			}
+		}
+	}
+
+	// afaik, this can never happen
+	// if creds == nil {
+	//	// something's wacky, expire existing provider creds, and retry
+	//	p.SetExpiration(time.Unix(0, 0), 0)
+	//	return p.Retrieve()
+	// }
+
+	v := creds.Value()
+	v.Source = WebRoleProviderName
+
+	p.Logger.Debugf("WEB IDENTITY ROLE CREDENTIALS: %+v", v)
+	return v, nil
+}
+
+func (p *webRoleProvider) retrieve(ctx context.Context) (*Credentials, error) {
+	in, err := p.getAssumeRoleWithWebIdentityInput()
+	if err != nil {
+		return nil, err
+	}
+
+	out, err := p.Client.AssumeRoleWithWebIdentity(ctx, in)
+	if err != nil {
+		return nil, err
+	}
+
+	if p.ExpiryWindow < 1 {
+		p.ExpiryWindow = p.Duration / 10
+	}
+
+	c := FromStsCredentials(out.Credentials)
+	return c, nil
+}
+
+func (p *webRoleProvider) getAssumeRoleWithWebIdentityInput() (*sts.AssumeRoleWithWebIdentityInput, error) {
+	if len(p.webIdentityToken.String()) < 4 {
+		// AWS says this must be at least 4 chars long to be valid
+		return nil, errors.New("invalid WebIdentity Token detected, check your local setup and identity provider configuration")
+	}
+
+	in := &sts.AssumeRoleWithWebIdentityInput{
+		DurationSeconds:  p.ConvertDuration(p.Duration, AssumeRoleDurationMin, AssumeRoleDurationMax, AssumeRoleDurationDefault),
+		RoleArn:          aws.String(p.RoleArn),
+		WebIdentityToken: aws.String(p.webIdentityToken.String()),
+	}
+
+	if len(p.RoleSessionName) > 0 {
+		in.RoleSessionName = aws.String(p.RoleSessionName)
+	}
+
+	return in, nil
+}
+
+func (p *webRoleProvider) ClearCache() error {
+	if p.Cache != nil {
+		p.Logger.Debugf("clearing cached web identity role credentials")
+		return p.Cache.Clear()
+	}
+	return nil
+}

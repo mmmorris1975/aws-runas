@@ -1,0 +1,101 @@
+<!--
+  ~ Copyright (c) 2021 Michael Morris. All Rights Reserved.
+  ~
+  ~ Licensed under the MIT license (the "License"). You may not use this file except in compliance
+  ~ with the License. A copy of the License is located at
+  ~
+  ~ https://github.com/mmmorris1975/aws-runas/blob/master/LICENSE
+  ~
+  ~ or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+  ~ for the specific language governing permissions and limitations under the License.
+  -->
+
+<!DOCTYPE html>
+<html lang="{{ site.lang | default: 'en-US' }}">
+<head>
+    <meta charset="UTF-8">
+    <meta content="width=device-width, initial-scale=1" name="viewport">
+    {% seo %}
+
+    <link href="https://www.w3schools.com/w3css/4/w3.css" rel="stylesheet">
+    <link href="https://www.w3schools.com/lib/w3-theme-blue-grey.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css?family=Roboto" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <link href="{{ '/assets/css/site.css?v=' | append: site.github.build_revision | relative_url }}" rel="stylesheet">
+    <link rel="icon" type="image/png" href="{{ '/assets/images/favicon.ico' | relative_url }}">
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="w3-top">
+    <div class="w3-bar w3-theme-dark w3-top w3-left-align w3-large">
+        <a class="w3-bar-item w3-button w3-left w3-hide-large w3-hover-white w3-hover-text-theme w3-large"
+           href="javascript:void(0)" onclick="w3_open()"><i class="fa fa-bars"></i></a>
+        <a class="w3-bar-item w3-button w3-text-theme w3-hover-white w3-hover-text-theme" href="{{ '/' | relative_url }}">
+            <img src="{{ '/assets/images/aws-runas-icon.png' | relative_url }}" height="25" width="25">
+            <b>{{ site.title | default: site.github.repository_name }}</b>
+        </a>
+        <span class="w3-button w3-hide-medium w3-hide-small w3-hover-theme-dark">
+            {{ site.description | default: site.github.project_tagline }}
+        </span>
+        <a class="w3-bar-item w3-button w3-hover-white w3-hover-text-theme w3-right"
+           href="{{ site.github.repository_url }}" target="_blank">
+            View on Github
+            <img src="{{ '/assets/images/octocat-logo.svg' | relative_url }}" alt="View on Github" height="24" width="24">
+        </a>
+    </div>
+</div>
+
+<!-- Left Sidebar -->
+<nav class="w3-sidebar w3-bar-block w3-collapse w3-large w3-theme-light" id="left-sidebar">
+    <a class="w3-right w3-xlarge w3-padding w3-tag w3-text-theme w3-hover-theme w3-hide-large" href="javascript:void(0)" onclick="w3_close()" title="Close Menu">
+        <i class="fa fa-remove"></i>
+    </a>
+    <h4 id="menu_label" class="w3-bar-item w3-text-theme" onclick="w3_close()"><b>Menu</b></h4>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/usage.html' | relative_url }}" onclick="w3_close()">Usage</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/quickstart.html' | relative_url }}" onclick="w3_close()">Quick Start</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/examples.html' | relative_url }}" onclick="w3_close()">Examples</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/iam_config.html' | relative_url }}" onclick="w3_close()">IAM Configuration</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/saml_config.html' | relative_url }}" onclick="w3_close()">SAML Configuration</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/oidc_config.html' | relative_url }}" onclick="w3_close()">OIDC Configuration</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/metadata_credentials.html' | relative_url }}" onclick="w3_close()">Metadata Credentials</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/ssm.html' | relative_url }}" onclick="w3_close()">SSM</a>
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ '/permissions.html' | relative_url }}" onclick="w3_close()">IAM Permissions</a>
+    {% if site.show_downloads %}
+    <hr class="w3-border-theme">
+    <a class="w3-bar-item w3-button w3-hover-theme" href="{{ site.github.repository_url }}/releases/latest"
+       onclick="w3_close()" target="_blank">Download aws-runas</a>
+    {% endif %}
+</nav>
+
+<!-- Overlay effect when opening sidebar on small screens -->
+<div class="w3-overlay w3-hide-large" id="myOverlay" onclick="w3_close()" style="cursor:pointer" title="close side menu"></div>
+
+<!-- !PAGE CONTENT! -->
+<div class="w3-main">
+    <header class="w3-container">
+        <h2 class="w3-text-theme w3-padding-top-48"><b>{{ page.title }}</b></h2>
+    </header>
+
+    <main id="content" class="w3-container" style="padding-bottom: 96px;">
+        {{ content }}
+    </main>
+</div>
+
+<!-- Right Sidebar -->
+<nav class="w3-sidebar w3-bar-block w3-collapse w3-theme-light w3-animate-right" id="right-sidebar">
+</nav>
+
+<footer class="w3-bottom">
+    <div class="w3-container w3-theme-dark w3-small w3-padding-large w3-right-align">
+        <span>
+            Powered by <a class="w3-text-theme" href="https://jekyllrb.com/" target="_blank">Jekyll</a> and
+            <a class="w3-text-theme" href="https://www.w3schools.com/w3css/default.asp" target="_blank">w3.css</a>
+        </span>
+    </div>
+</footer>
+
+<script src="{{ '/assets/js/site.js' | relative_url }}"></script>
+</body>
+</html>

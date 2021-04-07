@@ -1,0 +1,78 @@
+run:
+  concurrency: 4
+  timeout: 5m
+
+issues:
+  exclude-rules:
+    # Exclude some linters from running on tests files.
+    - path: _test\.go
+      linters:
+        - funlen
+        - gocognit
+        - gocyclo
+
+linters-settings:
+  funlen:
+    lines: 75
+    statements: 50
+  gocognit:
+    min-complexity: 15
+  gocyclo:
+    min-complexity: 15
+  golint:
+    min-confidence: 0.9
+  govet:
+    check-shadowing: true
+  lll:
+    line-length: 132
+  maligned:
+    suggest-new: true
+
+linters:
+  disable-all: true
+  enable:
+    # These are the default linters
+    - deadcode
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - structcheck
+    - typecheck
+    - unused
+    - varcheck
+
+    # These are some of the not enabled by default linters, which we may or may not enable
+    - bodyclose
+    #- depguard
+    #- dogsled
+    #- dupl
+    #- exhaustive
+    - funlen
+    #- gochecknoinits
+    #- goconst
+    - gocritic
+    - gocognit
+    - gocyclo
+    - godot
+    - gofmt
+    #- goimports
+    - golint
+    #- gomnd
+    #- goprintffuncname
+    - gosec
+    #- interfacer
+    #- lll
+    #- maligned
+    #- misspell
+    #- nakedret
+    - noctx
+    #- nolintlint
+    #- prealloc
+    #- rowserrcheck
+    #- scopelint
+    #- stylecheck
+    - unconvert
+    - unparam
+    #- whitespace

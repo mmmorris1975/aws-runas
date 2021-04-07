@@ -4,35 +4,153 @@
 version: 2.1
 
 orbs:
+  go: circleci/go@1.5.0
   aws-cli: circleci/aws-cli@1.3.2
+  ruby: circleci/ruby@1.1.2
+  windows: circleci/windows@2.4.0
 
 jobs:
-  build:
+  lint:
     docker:
-      # specify the version
-      - image: "circleci/golang:1.13"
+      - image: "golangci/golangci-lint:v1.37"
 
-    working_directory: /go/src/github.com/mmmorris1975/aws-runas
+    steps:
+      - checkout
+      - run: golangci-lint run -v
 
-    environment:
-      GO111MODULE: "on"
+  preflight:
+    executor:
+      name: go/default
+      tag: '1.16'
 
     steps:
       - checkout
 
-      # specify any bash command here prefixed with `run: `
+      - go/load-cache
+      - go/mod-download
+      - go/save-cache
+
       - run: go vet -tests=false ./...
-      - run: go test -v ./...
-      - run: mkdir -p build
-      - run: go build -v -ldflags '-X main.Version=0.0.1-0-circle' -o build/aws-runas
+      - go/test
+
+  build-darwin:
+    executor:
+      name: go/default
+      tag: '1.16'
+
+    steps:
+      - checkout
+      - run: sudo apt-get update && sudo apt-get -y install upx
+      - run:
+          name: build darwin/amd64
+          command: make darwin
+          environment:
+            GOOS: darwin
+            GOARCH: amd64
+      - run:
+          name: build darwin/arm64
+          command: make darwin
+          environment:
+            GOOS: darwin
+            GOARCH: arm64
 
       - persist_to_workspace:
           root: build
-          paths: aws-runas
+          paths:
+            - darwin
 
-  test:
-    docker:
-      - image: "circleci/ruby:2.6-stretch"
+  build-linux:
+    executor:
+      name: go/default
+      tag: '1.16'
+
+    steps:
+      - checkout
+      - go/load-cache
+      - run: sudo apt-get update && sudo apt-get -y install upx
+      - run:
+          name: build linux/amd64
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: amd64
+      - run:
+          name: build linux/arm64
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: arm64
+      - run:
+          name: build linux/armv7
+          command: make linux
+          environment:
+            GOOS: linux
+            GOARCH: arm
+            GOARM: 7
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - linux
+
+  build-windows:
+    executor:
+      name: go/default
+      tag: '1.16'
+
+    steps:
+      - checkout
+      - run: sudo apt-get update && sudo apt-get -y install upx osslsigncode
+      - run:
+          name: install code signing files
+          command: |
+            mkdir .ca
+            echo $CODESIGN_KEY | base64 --decode > .ca/codesign.key
+            echo $CODESIGN_CRT | base64 --decode > .ca/codesign.crt
+      - run:
+          name: build windows/amd64
+          command: make windows
+          environment:
+            GOOS: windows
+            GOARCH: amd64
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - windows
+
+  configure-aws:
+    executor: aws-cli/default
+
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+
+    steps:
+      - run: mkdir -p build
+
+      # This is only really useful for configuring base IAM credentials, as the advanced config file setup
+      # required to test aws-runas can't be managed with the orb. Use non-standard env var names to avoid
+      # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
+      # a similar configuration can be used locally and with CI
+      - aws-cli/setup:
+          skip-install-check: false
+          configure-default-region: false
+          profile-name: circleci
+          aws-access-key-id: AWS_ACCESSKEY
+          aws-secret-access-key: AWS_SECRETKEY
+
+      - persist_to_workspace:
+          root: build
+          paths:
+            - aws_credentials
+
+  test-linux:
+    executor:
+      name: ruby/default
+      tag: '2.7'
+
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
 
     steps:
       - checkout
@@ -40,34 +158,212 @@ jobs:
       - attach_workspace:
           at: build
 
-      - aws-cli/install
-      - aws-cli/setup:
-          profile-name: circleci
-          configure-default-region: false
-          aws-access-key-id: AWS_ACCESSKEY
-          aws-secret-access-key: AWS_SECRETKEY
-      - aws-cli/setup:
-          profile-name: default
-          configure-default-region: false
-          aws-access-key-id: AWS_ACCESSKEY
-          aws-secret-access-key: AWS_SECRETKEY
+      - run: mv build/linux/amd64/aws-runas build/
+      - ruby/install-deps
+      - ruby/rspec-test
 
-      - run: bundle check --path=vendor/bundle || bundle install --path=vendor/bundle --jobs=4 --retry=3
-      - run: mkdir -p /var/tmp/rspec
+  test-windows:
+    executor:
+      name: windows/default
+
+    environment:
+      AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+      AWS_CONFIG_FILE: testdata/aws_config
+
+    steps:
+      - checkout
+
+      - attach_workspace:
+          at: build
+
+      # was hoping to run the serverspec tests, but things were weird on Windows, just
+      # run a few commands instead just to verify things happen without blowing up
+      - run: mv build/windows/amd64/aws-runas.exe build/
+      - run: build/aws-runas --help
+      - run: build/aws-runas -lv iam-role
+      - run: build/aws-runas -mv iam-role
+      - run: build/aws-runas -uv
+      - run: build/aws-runas -v --whoami circleci
+      - run: build/aws-runas -vse iam-role
+      - run: build/aws-runas -v --whoami iam-role
+      - run: build/aws-runas -ve iam-role
+
+  package-darwin:
+    executor:
+      name: go/default
+      tag: '1.16'
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
       - run:
-          command: bundle exec rspec
-          when: always
+          name: package darwin/amd64
+          command: make zip
           environment:
+            GOOS: darwin
+            GOARCH: amd64
+      - run:
+          name: package darwin/arm64
+          command: make zip
+          environment:
+            GOOS: darwin
+            GOARCH: arm64
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-darwin-*.zip
 
-      - store_test_results:
-          path: /var/tmp/rspec
+  package-windows:
+    executor:
+      name: go/default
+      tag: '1.16'
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          run: package windows/amd64
+          command: make zip
+          environment:
+            GOOS: windows
+            GOARCH: amd64
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-windows-*.zip
+
+  package-linux:
+    executor:
+      name: ruby/default
+      tag: '2.7'
+    steps:
+      - checkout
+      - attach_workspace:
+          at: build
+      - run:
+          name: package linux/amd64
+          command: make linux_pkg
+          environment:
+            GOOS: linux
+            GOARCH: amd64
+      - run:
+          name: package linux/arm64
+          command: make linux_pkg
+          environment:
+            GOOS: linux
+            GOARCH: arm64
+      - run:
+          name: package linux/armv7
+          command: make linux_pkg
+          environment:
+            GOOS: linux
+            GOARCH: arm
+            GOARM: 7
+      - persist_to_workspace:
+          root: pkg
+          paths:
+            - aws-runas-*-linux-*.zip
+            - aws-runas*.rpm
+            - aws-runas*.deb
+
+  release:
+    docker:
+      - image: alpine:3
+
+    steps:
+      - checkout
+      - run: apk add --no-cache bash git
+      - attach_workspace:
+          at: /var/tmp/release
+      - run: scripts/release.sh /var/tmp/release
 
 workflows:
   version: 2
 
+  # So far we don't have a 'requires' in build for lint, maybe something to change? I mean, who doesn't like clean code?
   build_and_test:
     jobs:
-      - build
-      - test:
+      - lint:
+          filters: &ci-filter
+            tags:
+              ignore: /.*/
+      - preflight:
+          filters:
+            <<: *ci-filter
+      - build-darwin:
+          filters:
+            <<: *ci-filter
           requires:
-            - build
+            - preflight
+      - build-linux:
+          filters:
+            <<: *ci-filter
+          requires:
+            - preflight
+      - build-windows:
+          filters:
+            <<: *ci-filter
+          requires:
+            - preflight
+      - configure-aws:
+          filters:
+            <<: *ci-filter
+          requires:
+            - build-linux
+            - build-windows
+      - test-linux:
+          filters:
+            <<: *ci-filter
+          requires:
+            - configure-aws
+      - test-windows:
+          filters:
+            <<: *ci-filter
+          requires:
+            - configure-aws
+
+  release:
+    jobs:
+      - preflight:
+          filters: &release-filter
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^\d+\.\d+(?:\.\d+|-\w+)/
+      - build-darwin:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
+      - build-linux:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
+      - build-windows:
+          filters:
+            <<: *release-filter
+          requires:
+            - preflight
+      - package-darwin:
+          filters:
+            <<: *release-filter
+          requires:
+            - build-darwin
+      - package-linux:
+          filters:
+            <<: *release-filter
+          requires:
+            - build-linux
+      - package-windows:
+          filters:
+            <<: *release-filter
+          requires:
+            - build-windows
+      - release:
+          filters:
+            <<: *release-filter
+          requires:
+            - package-darwin
+            - package-linux
+            - package-windows
