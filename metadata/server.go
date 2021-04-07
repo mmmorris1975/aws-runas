@@ -41,11 +41,11 @@ import (
 )
 
 const (
-	// DefaultEcsCredPath is the default URL path used with the ECS credential service
+	// DefaultEcsCredPath is the default URL path used with the ECS credential service.
 	DefaultEcsCredPath = "/credentials"
-	// DefaultEc2ImdsAddr is the default IP address used with the EC2 (IMDS) credential service
+	// DefaultEc2ImdsAddr is the default IP address used with the EC2 (IMDS) credential service.
 	DefaultEc2ImdsAddr = "169.254.169.254"
-	// DefaultEc2ImdsCidr is the CIDR notation of the DefaultEc2ImdsAddr
+	// DefaultEc2ImdsCidr is the CIDR notation of the DefaultEc2ImdsAddr.
 	DefaultEc2ImdsCidr = DefaultEc2ImdsAddr + "/22"
 
 	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
