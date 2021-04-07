@@ -41,8 +41,11 @@ import (
 )
 
 const (
+	// DefaultEcsCredPath is the default URL path used with the ECS credential service
 	DefaultEcsCredPath = "/credentials"
+	// DefaultEc2ImdsAddr is the default IP address used with the EC2 (IMDS) credential service
 	DefaultEc2ImdsAddr = "169.254.169.254"
+	// DefaultEc2ImdsCidr is the CIDR notation of the DefaultEc2ImdsAddr
 	DefaultEc2ImdsCidr = DefaultEc2ImdsAddr + "/22"
 
 	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
@@ -67,6 +70,7 @@ var (
 	indexHtml, siteCss, favicon []byte
 )
 
+// Options is the mechanism used to pass configuration options to the metadata credential service.
 type Options struct {
 	Path        string
 	Profile     string
@@ -85,6 +89,8 @@ type metadataCredentialService struct {
 	listener       net.Listener
 }
 
+// NewMetadataCredentialService creates a new metadataCredentialService using the supplied 'opts' Options.
+// After calling this constructor, the service can be started via the Run() method.
 func NewMetadataCredentialService(addr string, opts *Options) (*metadataCredentialService, error) {
 	mcs := new(metadataCredentialService)
 	mcs.options = opts
@@ -131,10 +137,14 @@ func NewMetadataCredentialService(addr string, opts *Options) (*metadataCredenti
 	return mcs, nil
 }
 
+// Addr returns the net.Addr for the metadataCredentialService listener.
 func (s *metadataCredentialService) Addr() net.Addr {
 	return s.listener.Addr()
 }
 
+// Run starts the metadataCredentialService as either an EC2 or ECS service, depending on the
+// options provided in the constructor.  This is a blocking method, so it is advised to run this
+// via a goroutine.
 func (s *metadataCredentialService) Run() error {
 	s.clientFactory = client.NewClientFactory(s.configResolver, s.clientOptions)
 
@@ -194,6 +204,8 @@ func (s *metadataCredentialService) Run() error {
 	return srv.Serve(s.listener)
 }
 
+// RunNoApi starts the metadataCredentialService with the bare minimum endpoints required to serve
+// the EC2 or ECS services, management and SAML/OIDC authentication API endpoints are not provided.
 func (s *metadataCredentialService) RunNoApi(cl client.AwsClient, cfg *config.AwsConfig, readyCh chan<- bool) error {
 	s.clientOptions.MfaInputProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
 	s.clientOptions.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput

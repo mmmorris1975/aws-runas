@@ -41,12 +41,14 @@ type IdentityTokenCacher interface {
 	Clear() error
 }
 
+// SamlRoleProvider defines the methods used for interacting with the AssumeRoleWithSAML call.
 type SamlRoleProvider interface {
 	aws.CredentialsProvider
 	SamlAssertion(saml *SamlAssertion)
 	ClearCache() error
 }
 
+// WebRoleProvider defines the methods used for interacting with the AssumeRoleWithWebIdentity call.
 type WebRoleProvider interface {
 	aws.CredentialsProvider
 	WebIdentityToken(token *OidcIdentityToken)

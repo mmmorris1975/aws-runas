@@ -37,6 +37,7 @@ type Provider interface {
 	Roles(user ...string) (*Roles, error)
 }
 
+// StsApi is a stub interface used for mocking the GetCallerIdentity AWS API call.
 type StsApi interface {
 	GetCallerIdentity(ctx context.Context, params *sts.GetCallerIdentityInput, optFns ...func(*sts.Options)) (*sts.GetCallerIdentityOutput, error)
 }

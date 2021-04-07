@@ -13,16 +13,23 @@
 
 package metadata
 
+// WebAuthenticationError is a type of error signaling some sort of authentication issue with the
+// metadata credential service.
 type WebAuthenticationError string
 
+// Error implements the error interface.
 func (e WebAuthenticationError) Error() string {
 	return string(e)
 }
 
+// NewWebMfaRequiredError returns a WebAuthenticationError indicating the need to supply MFA
+// authentication.
 func NewWebMfaRequiredError() WebAuthenticationError {
 	return "MFA"
 }
 
+// NewWebAuthenticationError returns a WebAuthenticationError indicating the need to supply
+// username/password authentication.
 func NewWebAuthenticationError() WebAuthenticationError {
 	return "AUTH"
 }

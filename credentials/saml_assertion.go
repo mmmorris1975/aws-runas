@@ -52,6 +52,7 @@ func (s *SamlAssertion) RoleDetails() (*roleDetails, error) {
 	return rd, nil
 }
 
+// RoleSessionName retrieves the RoleSessionName element from the SAML assertion document.
 func (s *SamlAssertion) RoleSessionName() (string, error) {
 	saml, err := s.Decode()
 	if err != nil {

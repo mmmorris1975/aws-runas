@@ -33,6 +33,7 @@ import (
 // singleton cookie jar implementation.
 var cookieJar = cache.CookieJar(filepath.Join(cachePath(), ".aws_runas.cookies"))
 
+// Factory holds the configuration and options necessary of obtaining an AwsClient used to retrieve credentials.
 type Factory struct {
 	resolver config.Resolver
 	options  *Options

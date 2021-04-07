@@ -21,12 +21,16 @@ import (
 	"time"
 )
 
+// OidcIdentityToken provides a type for inspecting and managing an OIDC identity token used with
+// the AssumeRoleWithWebIdentity AWS API call.
 type OidcIdentityToken string
 
+// IsExpired returns true if the identity token is expired, and needs to be refreshed from the provider.
 func (t *OidcIdentityToken) IsExpired() bool {
 	return !t.ExpiresAt().After(time.Now())
 }
 
+// ExpiresAt retrieves the 'exp' field from the identity token payload and returns it as a time.Time value.
 func (t *OidcIdentityToken) ExpiresAt() time.Time {
 	payload, err := t.decodePayload()
 	if err != nil {

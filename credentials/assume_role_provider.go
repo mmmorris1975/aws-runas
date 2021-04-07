@@ -54,7 +54,7 @@ func NewAssumeRoleProvider(cfg aws.Config, roleArn string) *AssumeRoleProvider {
 	return p
 }
 
-// RetrieveWithContext implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role
+// Retrieve implements the AWS credentials.ProviderWithContext interface to return a set of Assume Role
 // credentials, using the provided context argument.  If the provider is configured to use a cache, it will be
 // consulted to load the credentials.  If the credentials are expired, the credentials will be refreshed (prompting for
 // MFA, if necessary), and stored back in the cache.

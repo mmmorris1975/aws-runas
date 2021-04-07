@@ -52,8 +52,8 @@ type aadClient struct {
 	appId    string
 }
 
-// url is the 'User Access URL' found in the Properties screen of the Azure Enterprise Application
-// which grants access to the AWS role(s).  Should look something like:
+// NewAadClient creates a new AzureAD client. The url parameter is the 'User Access URL' found in the Properties
+// screen of the Azure Enterprise Application which grants access to the AWS role(s).  Should look something like:
 // https://myapps.microsoft.com/signin/<app name>/<app id>?tenantId=<tenant id>
 // MFA is only supported for users at the organizational level; per-app conditional access policies
 // requiring MFA are not supported.

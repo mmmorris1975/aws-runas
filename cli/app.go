@@ -40,6 +40,7 @@ var (
 	configResolver config.Resolver = config.DefaultResolver.WithLogger(log)
 )
 
+// App is the struct used to manage the configuration and behavior for the cli handling library.
 var App = &cli.App{
 	Usage:     "Create an environment for interacting with the AWS API using an assumed role",
 	UsageText: fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
