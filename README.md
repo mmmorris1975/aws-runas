@@ -30,11 +30,6 @@ to make interacting with AWS role credentials easier
   * Support Apple M1 based systems
   * Enable configuration to specify the type of MFA to use with external identity providers, overriding the auto detection logic
 
-Version 3.0 TODO list (in no particular order)
-  * Enhancements and fixes from collected feedback
-  * Possibly add support for other SAML and OIDC identity provider
-  * Consider adding an ECR credential retrieval shortcut
-
 Since it's written in Go, there is no runtime dependency on external libraries, or language runtimes, just download the
 compiled executable and "go".
 
@@ -45,13 +40,13 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 ## Usage
     NAME:
     aws-runas - Create an environment for interacting with the AWS API using an assumed role
-    
+
     USAGE:
     aws-runas [global options] [subcommand] profile [arguments...]
-    
+
     VERSION:
-    3.0-beta
-    
+    3.0.0
+
     COMMANDS:
     list, ls              Shows IAM roles or MFA device configuration
     serve, srv            Serve credentials from a listening HTTP service
@@ -64,7 +59,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --duration value, -d value       duration of the retrieved session token (default: 12 hours) [$SESSION_TOKEN_DURATION]
     --role-duration value, -a value  duration of the assume role credentials (default: 1 hours) [$CREDENTIALS_DURATION]
     --otp value, -o value            MFA token code [$MFA_CODE]
-    --mfa-serial value, -M value     serial number (or AWS ARN) of MFA device needed to perform Assume Role operation [$MFA_SERIAL]
+    --mfa-serial value, -M value     serial number (or AWS ARN) of MFA device needed to assume role [$MFA_SERIAL]
     --mfa-type value, -t value       use specific MFA type instead of provider auto-detection logic [$MFA_TYPE]
     --external-id value, -X value    external ID to use with Assume Role [$EXTERNAL_ID]
     --jump-role value, -J value      ARN of the 'jump role' to use with SAML or Web Identity integration [$JUMP_ROLE_ARN]

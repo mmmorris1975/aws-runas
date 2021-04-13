@@ -13,7 +13,7 @@ USAGE:
    aws-runas [global options] [subcommand] profile [arguments...]
 
 VERSION:
-   3.0-beta
+   3.0.0
 
 COMMANDS:
    list, ls              Shows IAM roles or MFA device configuration
@@ -51,7 +51,6 @@ GLOBAL OPTIONS:
    --verbose value, -v value        output debug logging, use twice for AWS call tracing
    --help, -h                       show help
    --version, -V                    print the version
-
 ```
 
 ### Environment Variables

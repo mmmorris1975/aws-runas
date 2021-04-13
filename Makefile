@@ -15,7 +15,7 @@ $(EXE): go.mod *.go **/*.go
 
 all: darwin linux windows
 
-# Apple M1 support coming in go 1.16, current arm64 support is only iOS
+# Apple M1 support available in go 1.16, previously darwin/arm64 build target was for ios
 # See https://stackoverflow.com/questions/65706980/golang-1-16-cgo-clang-build-failed-on-darwin-arm64
 # for explanation about compiler error for darwin/arm64 builds
 darwin: GOOS = darwin
