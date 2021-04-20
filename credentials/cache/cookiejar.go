@@ -182,13 +182,15 @@ func writeCache(path string, data map[string][]*http.Cookie) error {
 		return err
 	}
 	defer func() {
-		_ = tmp.Close()
 		_ = os.Remove(tmp.Name())
 	}()
 
 	// this should never return an error, all code paths to get here will have valid/serializable 'data'
 	// anything causing an error here is probably a panic-level issue
 	_ = json.NewEncoder(tmp).Encode(data)
+
+	// close file before rename to keep Windows file handling happy
+	_ = tmp.Close()
 
 	err = os.Rename(tmp.Name(), path)
 	if err == nil {
