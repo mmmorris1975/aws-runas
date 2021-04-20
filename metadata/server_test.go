@@ -207,7 +207,7 @@ func TestMetadataCredentialService_imdsV2TokenHandler(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
 		rec := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPut, imdsTokenPath, http.NoBody)
-		req.Header.Set("X-Aws-Ec2-Metadata-Token-Ttl-Seconds", "1800")
+		req.Header.Set(imdsv2TtlHdr, "1800")
 
 		mcs.imdsV2TokenHandler(rec, req)
 
@@ -217,6 +217,11 @@ func TestMetadataCredentialService_imdsV2TokenHandler(t *testing.T) {
 
 		if rec.Body.Len() < 15 {
 			t.Errorf("invalid token length: %d", rec.Body.Len())
+		}
+
+		// AWS golang SDK requires this header in the response, but boto3 doesn't.  Thanks AWS!
+		if len(rec.Header().Get(imdsv2TtlHdr)) < 1 {
+			t.Errorf("missing response ttl header")
 		}
 	})
 }

@@ -48,6 +48,8 @@ const (
 	// DefaultEc2ImdsCidr is the CIDR notation of the DefaultEc2ImdsAddr.
 	DefaultEc2ImdsCidr = DefaultEc2ImdsAddr + "/22"
 
+	imdsv2TtlHdr = "X-Aws-Ec2-Metadata-Token-Ttl-Seconds"
+
 	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
 	ec2CredPath      = "/latest/meta-data/iam/security-credentials/"
 	authPath         = "/auth"
@@ -347,8 +349,9 @@ func marshalProfile(cfg *config.AwsConfig) []byte {
 func (s *metadataCredentialService) imdsV2TokenHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
-	if r.Method == http.MethodPut && len(r.Header.Get(`X-Aws-Ec2-Metadata-Token-Ttl-Seconds`)) > 0 {
+	if r.Method == http.MethodPut && len(r.Header.Get(imdsv2TtlHdr)) > 0 {
 		w.Header().Set("Content-Type", "text/plain")
+		w.Header().Set(imdsv2TtlHdr, r.Header.Get(imdsv2TtlHdr))
 		_, _ = w.Write([]byte("IamNOTaRealBoy!"))
 		return
 	}
