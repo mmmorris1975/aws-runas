@@ -231,14 +231,6 @@ func (s *metadataCredentialService) RunNoApi(cl client.AwsClient, cfg *config.Aw
 		logger.Debugf("EC2 metadata endpoint set to http://%s/", s.Addr().String())
 	}
 
-	if len(s.options.Profile) > 0 {
-		// since we don't have a valid http server yet, we need to bang on profileHandler() directly
-		r, _ := http.NewRequestWithContext(context.Background(), http.MethodPost, profilePath,
-			strings.NewReader(s.options.Profile))
-		s.profileHandler(httptest.NewRecorder(), r)
-		logger.Debugf("Using initial profile '%s'", s.options.Profile)
-	}
-
 	srv := new(http.Server)
 	srv.Handler = mux
 	defer cleanup(srv, s.listener)
@@ -664,6 +656,10 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 	cfg, err = s.configResolver.Config(profile)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if s.awsConfig != nil {
+		cfg.MergeIn(s.awsConfig)
 	}
 
 	// ewww, testing-specific code in actual code

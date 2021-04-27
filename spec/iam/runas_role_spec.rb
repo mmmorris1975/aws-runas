@@ -81,7 +81,25 @@ end
 shared_examples_for 'iam role credentials with invalid duration' do |profile, duration|
     describe command ("aws-runas -vr #{duration} #{profile}") do
       its(:exit_status) { should_not eq 0 }
-      its(:stderr) { should match /\s+(invalid value|could not parse) "7d"/}
+      its(:stderr) { should match /\s+(invalid value|could not parse) "7d"/ }
+    end
+end
+
+shared_examples_for 'iam role credentials with extended duration' do |profile, duration|
+    describe command ("aws-runas -vr #{duration} #{profile}") do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should_not match /\s+DEBUG SESSION TOKEN CREDENTIALS:\s+/ }
+      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS:\s+/ }
+    end
+end
+
+shared_examples_for 'iam role credentials with extended duration and command' do |profile, duration, cmd|
+    describe command ("aws-runas -vr #{duration} #{profile} #{cmd}") do
+      its(:exit_status) { should eq 0 }
+      its(:stderr) { should_not match /\s+DEBUG SESSION TOKEN CREDENTIALS:\s+/ }
+      its(:stderr) { should match /\s+DEBUG ASSUME ROLE CREDENTIALS:\s+/ }
+      its(:stderr) { should match /\s+DEBUG ECS endpoint ready\s*$/ }
+      its(:stderr) { should match /\s+DEBUG WRAPPED CMD:\s+/ }
     end
 end
 
@@ -143,6 +161,8 @@ describe 'tests using IAM user role credentials' do
             it_should_behave_like 'iam role credentials with short duration', 'iam-role', '-a 10m'
             it_should_behave_like 'iam role credentials with long duration', 'iam-role', '-a 360h'
             it_should_behave_like 'iam role credentials with invalid duration', 'iam-role', '-a 7d'
+            it_should_behave_like 'iam role credentials with extended duration', 'iam-role', '-a 1h1m'
+            it_should_behave_like 'iam role credentials with extended duration and command', 'iam-role', '-a 1h1m', 'pwd'
         end
 
         describe 'using environment variables' do
