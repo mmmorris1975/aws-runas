@@ -97,7 +97,7 @@ func TestBaseClient_Roles(t *testing.T) {
 		c.ClientId = "client"
 		c.RedirectUri = "redir"
 
-		if _, err := c.Roles(); err == nil {
+		if _, err := c.roles(); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
@@ -110,7 +110,7 @@ func TestBaseClient_Roles(t *testing.T) {
 		}
 		c.saml = new(credentials.SamlAssertion)
 
-		if _, err := c.Roles(); err == nil {
+		if _, err := c.roles(); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
@@ -122,7 +122,7 @@ func TestBaseClient_Roles(t *testing.T) {
 			return
 		}
 
-		if _, err := c.Roles(); err == nil {
+		if _, err := c.roles(); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
@@ -140,7 +140,7 @@ func TestBaseClient_Roles(t *testing.T) {
 		}
 		c.saml = &a
 
-		roles, err := c.Roles()
+		roles, err := c.roles()
 		if err != nil {
 			t.Error(err)
 			return

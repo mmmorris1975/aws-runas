@@ -65,7 +65,7 @@ func newBaseClient(u string) (*baseClient, error) {
 	return c, nil
 }
 
-// SetCookieJar updates this clients HTTP cookie storage to use the provides http.CookieJar.
+// SetCookieJar updates this clients HTTP cookie storage to use the provided http.CookieJar.
 func (c *baseClient) SetCookieJar(jar http.CookieJar) {
 	if c.httpClient == nil {
 		c.httpClient = http.DefaultClient
@@ -75,7 +75,7 @@ func (c *baseClient) SetCookieJar(jar http.CookieJar) {
 
 // Roles retrieves the available roles for SamlClients.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *baseClient) Roles(...string) (*identity.Roles, error) {
+func (c *baseClient) roles(...string) (*identity.Roles, error) {
 	if len(c.ClientId) > 0 && len(c.RedirectUri) > 0 {
 		return nil, errors.New("OIDC clients are not role aware")
 	}

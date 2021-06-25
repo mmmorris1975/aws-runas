@@ -141,6 +141,20 @@ func (c *aadClient) Identity() (*identity.Identity, error) {
 	return c.identity(aadIdentityProvider), nil
 }
 
+// Roles retrieves the available roles for the user.  Attempting to call this method
+// against an Oauth/OIDC client will return an error.
+func (c *aadClient) Roles(...string) (*identity.Roles, error) {
+	if c.saml == nil || len(*c.saml) < 1 {
+		var err error
+		c.saml, err = c.SamlAssertion()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return c.roles()
+}
+
 func (c *aadClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 	return c.IdentityTokenWithContext(context.Background())
 }

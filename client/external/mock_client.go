@@ -50,6 +50,20 @@ func (m *mockClient) AuthenticateWithContext(context.Context) error {
 	return nil
 }
 
+// Roles retrieves the available roles for the user.  Attempting to call this method
+// against an Oauth/OIDC client will return an error.
+func (m *mockClient) Roles(...string) (*identity.Roles, error) {
+	if m.saml == nil || len(*m.saml) < 1 {
+		var err error
+		m.saml, err = m.SamlAssertion()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return m.roles()
+}
+
 // IdentityToken calls IdentityTokenWithContext using a background context.
 func (m *mockClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 	return m.IdentityTokenWithContext(context.Background())
