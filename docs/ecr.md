@@ -19,7 +19,7 @@ aws-runas my_profile aws ecr get-login-password | docker login --username AWS --
 ```
 
 With the ECR authentication feature, everything is handled internally to aws-runas, from getting the ECR credentials to
-executing `docker login` for authenticate with the endpoint.  The command is now simplified to:
+executing `docker login` for authentication with the endpoint.  The command is now simplified to:
 ```shell
 aws-runas ecr login my_profile [ECR endpoint ...]
 ```
