@@ -44,7 +44,7 @@ var (
 var App = &cli.App{
 	Usage:     "Create an environment for interacting with the AWS API using an assumed role",
 	UsageText: fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
-	Commands:  []*cli.Command{listCmd, serveCmd, ssmCmd, passwordCmd, diagCmd, updateCmd, ecrCmd},
+	Commands:  []*cli.Command{listCmd, serveCmd, ssmCmd, ecrCmd, passwordCmd, diagCmd, updateCmd},
 	Flags:     append(configFlags, append(otherFlags, shortcutFlags...)...),
 
 	UseShortOptionHandling: true,

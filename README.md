@@ -43,14 +43,15 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
     USAGE:
     aws-runas [global options] [subcommand] profile [arguments...]
-
+    
     VERSION:
-    3.0.0
-
+    3.1.0
+    
     COMMANDS:
     list, ls              Shows IAM roles or MFA device configuration
     serve, srv            Serve credentials from a listening HTTP service
     ssm                   Helpful shortcuts for working with SSM sessions
+    ecr                   Shortcuts for working with ECR
     password, passwd, pw  Set or update the stored password for an external identity provider
     diagnose, diag        run diagnostics to gather information to aid in troubleshooting
     help, h               Shows a list of commands or help for one command
