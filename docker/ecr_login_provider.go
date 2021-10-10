@@ -50,12 +50,12 @@ func (p *ecrLoginProvider) WithLogger(l shared.Logger) *ecrLoginProvider {
 	return p
 }
 
-// Login authenticates to the given ECR endpoints
+// Login authenticates to the given ECR endpoints.
 func (p *ecrLoginProvider) Login(endpoints ...string) error {
 	return p.LoginWithContext(context.Background(), endpoints...)
 }
 
-// LoginWithContext authenticates to the given ECR endpoints using the provided context
+// LoginWithContext authenticates to the given ECR endpoints using the provided context.
 func (p *ecrLoginProvider) LoginWithContext(ctx context.Context, endpoints ...string) error {
 	out, err := p.ecrClient.GetAuthorizationToken(ctx, new(ecr.GetAuthorizationTokenInput))
 	if err != nil {
@@ -73,7 +73,9 @@ func (p *ecrLoginProvider) LoginWithContext(ctx context.Context, endpoints ...st
 	parts := strings.Split(string(token), `:`)
 
 	for _, ep := range endpoints {
-		cmd := exec.Command("docker", "login", "--username", parts[0], "--password-stdin", ep)
+		// since we're not relying on a command shell and just exec()'ing directly, shell escape issues are minimized
+		// for the 'ep' variable (parts[0] is trusted input from the call to AWS)
+		cmd := exec.Command("docker", "login", "--username", parts[0], "--password-stdin", ep) //nolint:gosec
 		cmd.Stdin = bytes.NewReader([]byte(parts[1]))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
