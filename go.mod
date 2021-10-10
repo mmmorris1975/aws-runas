@@ -4,12 +4,13 @@ go 1.16
 
 require (
 	github.com/PuerkitoBio/goquery v1.6.1
-	github.com/aws/aws-sdk-go-v2 v1.6.1-0.20210611221234-39470b26cb74
+	github.com/aws/aws-sdk-go-v2 v1.9.1
 	github.com/aws/aws-sdk-go-v2/config v1.3.0
-	github.com/aws/aws-sdk-go-v2/service/iam v1.5.1
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.6.2
-	github.com/aws/aws-sdk-go-v2/service/sts v1.4.1
-	github.com/aws/smithy-go v1.4.0
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.7.0
+	github.com/aws/aws-sdk-go-v2/service/iam v1.9.1
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.10.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.7.1
+	github.com/aws/smithy-go v1.8.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/mmmorris1975/simple-logger v0.5.1
 	github.com/mmmorris1975/ssm-session-client v0.200.0
