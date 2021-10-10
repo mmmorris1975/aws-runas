@@ -23,12 +23,12 @@ import (
 )
 
 const ssmFwdDesc = `Create an SSM port forwarding session with the specified 'target_spec' using configuration
-   from the given 'profile_name'.  The 'target_spec' is a colon-separated value of the target
-   and remote port number (ex. i-01234567:8080).  The target string can be an EC2 instance ID,
-   a tag key:value string which uniquely identifies an EC2 instance, the instance's private
-   IPv4 address, or a DNS TXT record whose value is EC2 instance ID.  If the '-p' option is
-   given, the port forwarding session will listen on the specified port on the local system,
-   otherwise a random port is used.`
+from the given 'profile_name'.  The 'target_spec' is a colon-separated value of the target
+and remote port number (ex. i-01234567:8080).  The target string can be an EC2 instance ID,
+a tag key:value string which uniquely identifies an EC2 instance, the instance's private
+IPv4 address, or a DNS TXT record whose value is EC2 instance ID.  If the '-p' option is
+given, the port forwarding session will listen on the specified port on the local system,
+otherwise a random port is used.`
 
 var ssmForwardCmd = &cli.Command{
 	Name:         "forward",

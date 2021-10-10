@@ -30,7 +30,7 @@ import (
 )
 
 const diagDesc = `Check the configuration of the given 'profile_name' argument to see if there are
-   any inconsistencies which may prevent the program from functioning properly.`
+any inconsistencies which may prevent the program from functioning properly.`
 
 var diagCmd = &cli.Command{
 	Name:        "diagnose",

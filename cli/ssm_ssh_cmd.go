@@ -23,20 +23,20 @@ import (
 )
 
 const ssmSshDesc = `Create an SSH over SSM session with the specified 'target_spec' using configuration from
-   the given 'profile_name'.  The 'target_spec' is a colon-separated value of the target and an
-   optional remote port number (ex. i-01234567:2222).  If no port is provided, the well-known
-   SSH port is used.  The target string can be an EC2 instance ID, a tag key:value string which
-   uniquely identifies an EC2 instance, the instance's private IPv4 address, or a DNS TXT record
-   whose value is EC2 instance ID.
+the given 'profile_name'.  The 'target_spec' is a colon-separated value of the target and an
+optional remote port number (ex. i-01234567:2222).  If no port is provided, the well-known
+SSH port is used.  The target string can be an EC2 instance ID, a tag key:value string which
+uniquely identifies an EC2 instance, the instance's private IPv4 address, or a DNS TXT record
+whose value is EC2 instance ID.
 
-   This feature is meant to be used in SSH configuration files according to the AWS documentation
-   at https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html
-   except that the ProxyCommand syntax changes to:
-     ProxyCommand sh -c "aws-runas ssm ssh profile_name %h:%p"
-   Where profile_name is the AWS configuration profile to use (you should also be able to use the
-   AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %h:%p
-   are standard SSH configuration substitutions for the host and port number to connect with, and
-   can be left as-is`
+This feature is meant to be used in SSH configuration files according to the AWS documentation
+at https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html
+except that the ProxyCommand syntax changes to:
+  ProxyCommand sh -c "aws-runas ssm ssh profile_name %h:%p"
+Where profile_name is the AWS configuration profile to use (you should also be able to use the
+AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %h:%p
+are standard SSH configuration substitutions for the host and port number to connect with, and
+can be left as-is`
 
 var ssmSshCmd = &cli.Command{
 	Name:         "ssh",

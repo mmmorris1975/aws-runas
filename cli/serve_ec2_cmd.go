@@ -22,15 +22,15 @@ import (
 )
 
 var ec2CmdDesc = `Start a local web server which mimics the credential retrieval abilities of the EC2 instance
-   metadata service (IMDS). The main difference being that instead of serving EC2 instance profile
-   credentials, this local server will return role credentials for profiles. This feature may be
-   useful for fetching credentials from AWS when it is not practical using the traditional 'wrapper'
-   mode of aws-runas.  Omitting the port parameter will cause the service to listen on the default
-   IMDS address and port.  Using a port number of 0 will have the service listen on a random port.
+metadata service (IMDS). The main difference being that instead of serving EC2 instance profile
+credentials, this local server will return role credentials for profiles. This feature may be
+useful for fetching credentials from AWS when it is not practical using the traditional 'wrapper'
+mode of aws-runas.  Omitting the port parameter will cause the service to listen on the default
+IMDS address and port.  Using a port number of 0 will have the service listen on a random port.
 
-   If you are not using the default IMDS address and port, you will want to set the
-   AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable to this service's address and port so
-   calling programs know the location of the endpoint.`
+If you are not using the default IMDS address and port, you will want to set the
+AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable to this service's address and port so
+calling programs know the location of the endpoint.`
 
 var ec2Cmd = &cli.Command{
 	Name:         "ec2",

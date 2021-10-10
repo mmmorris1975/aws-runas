@@ -23,13 +23,13 @@ import (
 )
 
 var ecsCmdDesc = `Start a local web server which mimics the credential retrieval abilities of the ECS container
-   metadata service.  The main difference being that instead of serving ECS task credentials, this
-   local server will return role credentials for profiles. This feature may be useful for fetching
-   credentials from AWS when it is not practical using the traditional 'wrapper' mode of aws-runas.
-   Omitting the port parameter will cause the service to listen on a random port.
+metadata service.  The main difference being that instead of serving ECS task credentials, this
+local server will return role credentials for profiles. This feature may be useful for fetching
+credentials from AWS when it is not practical using the traditional 'wrapper' mode of aws-runas.
+Omitting the port parameter will cause the service to listen on a random port.
 
-   You will need to set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable to this
-   service's address and port so calling programs know the location of the endpoint.`
+You will need to set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable to this
+service's address and port so calling programs know the location of the endpoint.`
 
 var ecsCmd = &cli.Command{
 	Name:         "ecs",

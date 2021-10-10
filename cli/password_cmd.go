@@ -22,9 +22,9 @@ import (
 )
 
 const passwordDesc = `Manage the password for the external identity provider (SAML or OIDC) in the .aws/credentials
-   file.  The entry is keyed off of the URL configured for the specified 'profile_name' so it
-   can be shared across multiple profiles.  The password is obfuscated (not encrypted!) to avoid
-   storing the plaintext value in the file.`
+file.  The entry is keyed off of the URL configured for the specified 'profile_name' so it
+can be shared across multiple profiles.  The password is obfuscated (not encrypted!) to avoid
+storing the plaintext value in the file.`
 
 var passwordCmd = &cli.Command{
 	Name:         "password",

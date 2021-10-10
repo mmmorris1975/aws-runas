@@ -22,9 +22,9 @@ import (
 )
 
 const ssmShellDesc = `Create an SSM shell session with the specified 'target_spec' using configuration from the
-   given 'profile_name'.  The target string can be an EC2 instance ID, a tag key:value string
-   which uniquely identifies an EC2 instance, the instance's private IPv4 address, or a DNS
-   TXT record whose value is EC2 instance ID.`
+given 'profile_name'.  The target string can be an EC2 instance ID, a tag key:value string
+which uniquely identifies an EC2 instance, the instance's private IPv4 address, or a DNS
+TXT record whose value is EC2 instance ID.`
 
 var ssmShellCmd = &cli.Command{
 	Name:         "shell",
