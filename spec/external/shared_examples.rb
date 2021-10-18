@@ -18,9 +18,10 @@ shared_examples_for 'saml role credentials' do |profile, params|
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-      #its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWSRUNAS_PROFILE='.+'$/}
       its(:stderr) { should match /\s+SAML ROLE CREDENTIALS:/ }
       its(:stderr) { should match /^Credentials will expire on/ }
     end
@@ -43,9 +44,10 @@ shared_examples_for 'web identity role credentials' do |profile, params|
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-      #its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWSRUNAS_PROFILE='.+'$/}
       its(:stderr) { should match /\s+WEB IDENTITY ROLE CREDENTIALS:/ }
       its(:stderr) { should match /^Credentials will expire on/ }
     end

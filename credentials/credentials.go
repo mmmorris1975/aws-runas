@@ -72,6 +72,7 @@ func (c *Credentials) Env() map[string]string {
 
 	if len(c.Token) > 0 {
 		m["AWS_SESSION_TOKEN"] = c.Token
+		m["AWS_SECURITY_TOKEN"] = c.Token
 	}
 
 	return m

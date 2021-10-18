@@ -70,6 +70,10 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 		}
 	}
 
+	if len(profile) > 0 && !arn.IsARN(profile) {
+		_ = os.Setenv("AWSRUNAS_PROFILE", profile)
+	}
+
 	cfg.MergeIn(cmdlineCfg) // I think this is a good idea??
 	return profile, cfg, nil
 }
@@ -109,9 +113,6 @@ func checkProfileEnv() string {
 	_ = os.Unsetenv("AWS_PROFILE")
 	_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
 
-	if len(profile) > 0 && !arn.IsARN(profile) {
-		_ = os.Setenv("AWSRUNAS_PROFILE", profile)
-	}
 	return profile
 }
 

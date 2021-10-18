@@ -238,7 +238,7 @@ func execCmd(ctx *cli.Context) error {
 
 func buildEnv(region string, creds *credentials.Credentials) map[string]string {
 	// AWS_PROFILE and AWS_DEFAULT_PROFILE are explicitly unset in resolveConfig() if a profile
-	// was found in the environment. The env var AWSRUNAS_PROFILE is set to the the profile name
+	// was found in the environment. The env var AWSRUNAS_PROFILE is set to the profile name
 	// and pass through that value to downstream programs. No need to manage it here
 	env := creds.Env()
 

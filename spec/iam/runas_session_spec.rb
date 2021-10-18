@@ -13,16 +13,15 @@
 
 require 'spec_helper'
 
-# let's leave AWS_SECURITY_TOKEN (legacy env var) out of the credentials and see if anyone complains
-
 shared_examples_for 'iam session credentials' do |profile|
     describe command ("aws-runas -vs #{profile}") do
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-      #its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWSRUNAS_PROFILE='.+'$/}
       its(:stderr) { should_not match /\s+ASSUME ROLE OUTPUT:/ }
     end
 
@@ -49,9 +48,10 @@ shared_examples_for 'iam session credentials with short duration' do |profile, d
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-      #its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWSRUNAS_PROFILE='.+'$/}
       its(:stderr) { should match /\s+Detected expired or unset session token credentials, refreshing/ }
       its(:stderr) { should match /\s+provided duration too short, setting to minimum value/ }
     end
@@ -62,9 +62,10 @@ shared_examples_for 'iam session credentials with long duration' do |profile, du
       its(:exit_status) { should eq 0 }
       its(:stdout) { should match /^export AWS_REGION='.+'$/ }
       its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
-      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.*'$/ }
-      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.*'$/ }
-      #its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.*'$/ }
+      its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
+      its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
+      its(:stdout) { should match /^export AWSRUNAS_PROFILE='.+'$/}
       its(:stderr) { should match /\s+Detected expired or unset session token credentials, refreshing/ }
       its(:stderr) { should match /\s+provided duration too long, setting to maximum value/ }
     end

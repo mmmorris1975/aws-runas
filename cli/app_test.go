@@ -37,7 +37,8 @@ func TestApp_buildEnv(t *testing.T) {
 		}
 
 		env := buildEnv("", cred)
-		if len(env["AWS_ACCESS_KEY_ID"]) < 1 || len(env["AWS_SECRET_ACCESS_KEY"]) < 1 || len(env["AWS_SESSION_TOKEN"]) < 1 {
+		if len(env["AWS_ACCESS_KEY_ID"]) < 1 || len(env["AWS_SECRET_ACCESS_KEY"]) < 1 ||
+			len(env["AWS_SESSION_TOKEN"]) < 1 || len(env["AWS_SECURITY_TOKEN"]) < 1 {
 			t.Error("invalid credentials in env")
 		}
 	})

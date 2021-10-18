@@ -183,7 +183,7 @@ func TestCredentials_Env(t *testing.T) {
 
 		m := c.Env()
 		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey ||
-			m["AWS_SESSION_TOKEN"] != c.Token {
+			m["AWS_SESSION_TOKEN"] != c.Token || m["AWS_SECURITY_TOKEN"] != c.Token {
 			t.Error("invalid credentials")
 		}
 	})
@@ -191,7 +191,7 @@ func TestCredentials_Env(t *testing.T) {
 	t.Run("no token", func(t *testing.T) {
 		m := c.Env()
 		if m["AWS_ACCESS_KEY_ID"] != c.AccessKeyId || m["AWS_SECRET_ACCESS_KEY"] != c.SecretAccessKey ||
-			m["AWS_SESSION_TOKEN"] != "" {
+			m["AWS_SESSION_TOKEN"] != "" || m["AWS_SECURITY_TOKEN"] != "" {
 			t.Error("invalid credentials")
 		}
 
