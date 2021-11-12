@@ -262,12 +262,18 @@ func (c *oktaClient) handleDuoMfa(ctx context.Context, stateToken string, factor
 		return nil, err
 	}
 
-	err = c.submitDuoMfa(ctx, r)
+	if err = c.submitDuoMfa(ctx, r); err != nil {
+		return nil, err
+	}
+
+	// Duo MFA done, complete Okta MFA login workflow
+	body, _ = json.Marshal(oktaMfaResponse{Token: r.StateToken})
+	res, err = c.sendApiRequst(ctx, r.Links["next"].Href, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 
-	return r, nil
+	return c.handleAuthResponse(res)
 }
 
 func (c *oktaClient) submitDuoMfa(ctx context.Context, r *oktaAuthnResponse) error {
@@ -287,6 +293,7 @@ func (c *oktaClient) submitDuoMfa(ctx context.Context, r *oktaAuthnResponse) err
 		return err
 	}
 
+	// this is what triggers the push MFA prompting
 	var txn *oktaDuoTxn
 	txn, err = c.fetchDuoTxn(ctx, duoAttrs.Host, duoSid)
 	if err != nil {
@@ -295,12 +302,33 @@ func (c *oktaClient) submitDuoMfa(ctx context.Context, r *oktaAuthnResponse) err
 		return errors.New("error authorizing mfa device")
 	}
 
-	_, err = c.fetchDuoCookie(ctx, duoAttrs.Host, duoSid, txn.Response.Txid)
+	var cookie string
+	cookie, err = c.fetchDuoCookie(ctx, duoAttrs.Host, duoSid, txn.Response.Txid)
 	if err != nil {
 		return err
 	}
 
-	return err
+	form := url.Values{}
+	form.Add("id", r.EmbeddedData.MfaFactor.Id)
+	form.Add("stateToken", r.StateToken)
+
+	sigParts := strings.Split(duoAttrs.Signature, `:`)
+	form.Add("sig_response", fmt.Sprintf("%s:%s", cookie, sigParts[1]))
+
+	var req *httpRequest
+	req, err = newHttpRequest(ctx, "POST", duoAttrs.Links.Complete.Href)
+	if err != nil {
+		return err
+	}
+	req.withContentType("application/x-www-form-urlencoded").withValues(form)
+
+	// successful response is a http 200 with no response body
+	_, err = checkResponseError(c.httpClient.Do(req.Request))
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *oktaClient) fetchDuoSid(ctx context.Context, attrs *oktaDuoAttrs) (string, error) {
@@ -418,9 +446,9 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 		return "", err
 	}
 
-	var result *oktaDuoResponse
+	result := new(oktaDuoResponse)
 	if err = json.Unmarshal(body, result); err != nil {
-		return "", nil
+		return "", err
 	}
 
 OUTER:
@@ -436,7 +464,39 @@ OUTER:
 		}
 	}
 
-	return "", nil
+	if len(result.Response.Sid) > 0 {
+		sid = result.Response.Sid
+	}
+
+	duoForm = url.Values{}
+	duoForm.Add("sid", sid)
+
+	req, err = newHttpRequest(ctx, "POST", fmt.Sprintf("https://%s%s", host, result.Response.ResultUrl))
+	if err != nil {
+		return "", err
+	}
+	req.withContentType("application/x-www-form-urlencoded").withValues(duoForm)
+
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
+	if err != nil {
+		return "", err
+	}
+
+	body, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "", err
+	}
+
+	result = new(oktaDuoResponse)
+	if err = json.Unmarshal(body, result); err != nil {
+		return "", err
+	}
+
+	if result.Stat != "OK" {
+		return "", errors.New(fmt.Sprintf("mfa result: %s, message: %s", result.Stat, result.Message))
+	}
+
+	return result.Response.Cookie, nil
 }
 
 func (c *oktaClient) handleMfa(ctx context.Context, stateToken string, factor *oktaMfaFactor) (*oktaAuthnResponse, error) {
@@ -472,10 +532,11 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 	fmt.Print("Waiting for Push MFA ")
 
 	for strings.EqualFold(res.Status, "MFA_CHALLENGE") && strings.EqualFold(res.FactorResult, "WAITING") {
-		var nextUrl string
-		if v, ok := res.Links["next"].(map[string]interface{}); ok {
-			nextUrl, _ = v["href"].(string)
-		}
+		// fixme
+		//var nextUrl string
+		//if v, ok := res.Links["next"].(map[string]interface{}); ok {
+		//	nextUrl, _ = v["href"].(string)
+		//}
 
 		body, _ := json.Marshal(oktaMfaResponse{Token: res.StateToken})
 
@@ -483,7 +544,7 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 		fmt.Print(".")
 
 		var r *http.Response
-		r, err = c.sendApiRequst(ctx, nextUrl, bytes.NewReader(body))
+		r, err = c.sendApiRequst(ctx, res.Links["next"].Href, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
@@ -562,11 +623,13 @@ func (c *oktaClient) handleAuthResponse(res *http.Response) (*oktaAuthnResponse,
 }
 
 type oktaAuthnResponse struct {
-	Status       string                 `json:"status"`
-	SessionToken string                 `json:"sessionToken,omitempty"`
-	StateToken   string                 `json:"stateToken,omitempty"`
-	FactorResult string                 `json:"factorResult"`
-	Links        map[string]interface{} `json:"_links"`
+	Status       string `json:"status"`
+	SessionToken string `json:"sessionToken,omitempty"`
+	StateToken   string `json:"stateToken,omitempty"`
+	FactorResult string `json:"factorResult"`
+	Links        map[string]struct {
+		Href string `json:"href"`
+	} `json:"_links"`
 	EmbeddedData struct {
 		MfaFactors []*oktaMfaFactor `json:"factors"`
 		MfaFactor  *oktaMfaFactor   `json:"factor"`
@@ -621,7 +684,9 @@ type oktaDuoTxn struct {
 
 type oktaDuoResponse struct {
 	Stat     string `json:"stat"`
+	Message  string `json:"message"`
 	Response struct {
+		Cookie     string `json:"cookie"`
 		Result     string `json:"result"`
 		ResultUrl  string `json:"result_url"`
 		Sid        string `json:"sid"`
