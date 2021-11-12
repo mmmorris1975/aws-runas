@@ -267,8 +267,13 @@ func (c *oktaClient) handleDuoMfa(ctx context.Context, stateToken string, factor
 	}
 
 	// Duo MFA done, complete Okta MFA login workflow
+	var nextUrl string
+	if v, ok := r.Links["next"].(map[string]interface{}); ok {
+		nextUrl, _ = v["href"].(string)
+	}
+
 	body, _ = json.Marshal(oktaMfaResponse{Token: r.StateToken})
-	res, err = c.sendApiRequst(ctx, r.Links["next"].Href, bytes.NewReader(body))
+	res, err = c.sendApiRequst(ctx, nextUrl, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
@@ -532,11 +537,10 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 	fmt.Print("Waiting for Push MFA ")
 
 	for strings.EqualFold(res.Status, "MFA_CHALLENGE") && strings.EqualFold(res.FactorResult, "WAITING") {
-		// fixme
-		//var nextUrl string
-		//if v, ok := res.Links["next"].(map[string]interface{}); ok {
-		//	nextUrl, _ = v["href"].(string)
-		//}
+		var nextUrl string
+		if v, ok := res.Links["next"].(map[string]interface{}); ok {
+			nextUrl, _ = v["href"].(string)
+		}
 
 		body, _ := json.Marshal(oktaMfaResponse{Token: res.StateToken})
 
@@ -544,7 +548,7 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 		fmt.Print(".")
 
 		var r *http.Response
-		r, err = c.sendApiRequst(ctx, res.Links["next"].Href, bytes.NewReader(body))
+		r, err = c.sendApiRequst(ctx, nextUrl, bytes.NewReader(body))
 		if err != nil {
 			return nil, err
 		}
@@ -623,13 +627,11 @@ func (c *oktaClient) handleAuthResponse(res *http.Response) (*oktaAuthnResponse,
 }
 
 type oktaAuthnResponse struct {
-	Status       string `json:"status"`
-	SessionToken string `json:"sessionToken,omitempty"`
-	StateToken   string `json:"stateToken,omitempty"`
-	FactorResult string `json:"factorResult"`
-	Links        map[string]struct {
-		Href string `json:"href"`
-	} `json:"_links"`
+	Status       string                 `json:"status"`
+	SessionToken string                 `json:"sessionToken,omitempty"`
+	StateToken   string                 `json:"stateToken,omitempty"`
+	FactorResult string                 `json:"factorResult"`
+	Links        map[string]interface{} `json:"_links"`
 	EmbeddedData struct {
 		MfaFactors []*oktaMfaFactor `json:"factors"`
 		MfaFactor  *oktaMfaFactor   `json:"factor"`
