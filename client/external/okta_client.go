@@ -328,10 +328,12 @@ func (c *oktaClient) submitDuoMfa(ctx context.Context, r *oktaAuthnResponse) err
 	req.withContentType("application/x-www-form-urlencoded").withValues(form)
 
 	// successful response is a http 200 with no response body
-	_, err = checkResponseError(c.httpClient.Do(req.Request))
+	var res *http.Response
+	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return err
 	}
+	defer res.Body.Close()
 
 	return nil
 }
@@ -362,8 +364,9 @@ func (c *oktaClient) fetchDuoSid(ctx context.Context, attrs *oktaDuoAttrs) (stri
 	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
 
-	//try to extract sid
+	// try to extract sid
 	var doc *goquery.Document
 	doc, err = goquery.NewDocumentFromReader(res.Body)
 	if err != nil {
@@ -413,6 +416,7 @@ func (c *oktaClient) fetchDuoTxn(ctx context.Context, host, sid string) (*oktaDu
 	if err != nil {
 		return nil, err
 	}
+	defer res.Body.Close()
 
 	var body []byte
 	body, err = ioutil.ReadAll(res.Body)
@@ -444,6 +448,7 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
 
 	var body []byte
 	body, err = ioutil.ReadAll(res.Body)
@@ -486,6 +491,7 @@ OUTER:
 	if err != nil {
 		return "", err
 	}
+	defer res.Body.Close()
 
 	body, err = ioutil.ReadAll(res.Body)
 	if err != nil {
@@ -498,7 +504,7 @@ OUTER:
 	}
 
 	if result.Stat != "OK" {
-		return "", errors.New(fmt.Sprintf("mfa result: %s, message: %s", result.Stat, result.Message))
+		return "", fmt.Errorf("mfa result: %s, message: %s", result.Stat, result.Message)
 	}
 
 	return result.Response.Cookie, nil
