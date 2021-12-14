@@ -55,7 +55,7 @@ func (r *httpRequest) withBody(body io.Reader) *httpRequest {
 		r.ContentLength = int64(t.Len())
 		rc = io.NopCloser(t)
 	case io.ReadCloser:
-		rc = t.(io.ReadCloser)
+		rc = t
 	default:
 		rc = io.NopCloser(t)
 	}

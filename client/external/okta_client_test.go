@@ -375,16 +375,18 @@ func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
 				StateToken: "mock state token",
 				EmbeddedData: struct {
 					MfaFactors []*oktaMfaFactor `json:"factors"`
+					MfaFactor  *oktaMfaFactor   `json:"factor"`
 				}{[]*oktaMfaFactor{
 					{
-						Id:         "12345",
-						FactorType: "token:software:totp",
-						Provider:   "Google Authenticator",
+						Id:           "12345",
+						FactorType:   "token:software:totp",
+						Provider:     "Google Authenticator",
+						EmbeddedData: nil,
 						Links: map[string]struct {
 							Href string `json:"href"`
 						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
 					},
-				}},
+				}, nil},
 			}
 
 			body, _ := json.Marshal(reply)
@@ -397,24 +399,27 @@ func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
 				StateToken: "mock state token",
 				EmbeddedData: struct {
 					MfaFactors []*oktaMfaFactor `json:"factors"`
+					MfaFactor  *oktaMfaFactor   `json:"factor"`
 				}{[]*oktaMfaFactor{
 					{
-						Id:         "12345",
-						FactorType: "token:software:totp",
-						Provider:   "Google Authenticator",
+						Id:           "12345",
+						FactorType:   "token:software:totp",
+						Provider:     "Google Authenticator",
+						EmbeddedData: nil,
 						Links: map[string]struct {
 							Href string `json:"href"`
 						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
 					},
 					{
-						Id:         "54321",
-						FactorType: "push",
-						Provider:   "Okta Verify",
+						Id:           "54321",
+						FactorType:   "push",
+						Provider:     "Okta Verify",
+						EmbeddedData: nil,
 						Links: map[string]struct {
 							Href string `json:"href"`
 						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
 					},
-				}},
+				}, nil},
 			}
 
 			body, _ := json.Marshal(reply)
@@ -427,16 +432,18 @@ func oktaUserAuthHandler(w http.ResponseWriter, r *http.Request) {
 				StateToken: "mock state token",
 				EmbeddedData: struct {
 					MfaFactors []*oktaMfaFactor `json:"factors"`
+					MfaFactor  *oktaMfaFactor   `json:"factor"`
 				}{[]*oktaMfaFactor{
 					{
-						Id:         "12345",
-						FactorType: "Yubikey",
-						Provider:   "yubikey",
+						Id:           "12345",
+						FactorType:   "Yubikey",
+						Provider:     "yubikey",
+						EmbeddedData: nil,
 						Links: map[string]struct {
 							Href string `json:"href"`
 						}{"verify": {Href: fmt.Sprintf("http://%s/verify_mfa_local", r.Host)}},
 					},
-				}},
+				}, nil},
 			}
 
 			body, _ := json.Marshal(reply)

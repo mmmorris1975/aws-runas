@@ -100,7 +100,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(nil)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength > -1 {
+		if r.ContentLength > -1 {
 			t.Error("invalid body")
 		}
 	})
@@ -111,7 +111,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength != int64(b.Len()) {
+		if r.ContentLength != int64(b.Len()) {
 			t.Error("invalid body")
 		}
 	})
@@ -122,7 +122,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength != int64(b.Len()) {
+		if r.ContentLength != int64(b.Len()) {
 			t.Error("invalid body")
 		}
 	})
@@ -133,7 +133,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength != int64(b.Len()) {
+		if r.ContentLength != int64(b.Len()) {
 			t.Error("invalid body")
 		}
 	})
@@ -144,7 +144,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength > -1 {
+		if r.ContentLength > -1 {
 			t.Error("invalid body")
 		}
 	})
@@ -155,7 +155,7 @@ func Test_withBody(t *testing.T) {
 		r, _ := newHttpRequest(context.Background(), http.MethodPost, "http://localhost")
 		r.withBody(b)
 
-		if _, ok := r.Body.(io.ReadCloser); !ok || r.ContentLength > -1 {
+		if r.ContentLength > -1 {
 			t.Error("invalid body")
 		}
 	})

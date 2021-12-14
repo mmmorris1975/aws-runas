@@ -298,6 +298,7 @@ func (p *awsIdentityProvider) findPolicyRoles(doc *string, ch chan<- string) {
 	}
 }
 
+//nolint:gocognit // Thanks AWS for letting the Action be either a string or an []interface{}
 func (p *awsIdentityProvider) findRoles(data interface{}) []string {
 	roles := make([]string, 0)
 

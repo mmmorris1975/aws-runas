@@ -82,6 +82,12 @@ web_identity_callback_uri = app:/callback
 web_identity_provider = okta
 ```
 
+Additionally, as of the 3.1.3 release, the Okta provider supports integration with Duo MFA using push or code based verification.
+No special configuration of aws-runas is required, and you select the MFA method used with Duo using the same `mfa_type`
+attribute set in the profile section of the config file as you would with other identity providers.  The only caveat is
+that aws-runas assumes Duo MFA is the only MFA factor configured for the user, so if an Okta user enrolls a Duo MFA factor
+it will be used regardless of any other MFA factors configured.
+
 ### OneLogin
 OneLogin is a commercial identity management service which provides the necessary infrastructure and services to integrate
 with numerous 3rd party applications. The endpoint URL is built by simply adding /oidc/2 to the end of your OneLogin tenant
