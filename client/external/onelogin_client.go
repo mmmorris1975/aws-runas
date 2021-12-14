@@ -155,7 +155,7 @@ func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credent
 // helps make this testable, real OL urls do the real thing, otherwise use the host provided in the authUrl.
 // A "secret" region query string param allows callers to set the regional API endpoint, default is "us".
 func (c *oneloginClient) setApiBaseUrl() {
-	defer c.authUrl.Query().Del("region")
+	defer c.authUrl.Query().Del("region") //nolint:staticcheck
 
 	if strings.Contains(strings.ToLower(c.authUrl.Host), `.onelogin.com`) {
 		region := `us`
@@ -203,7 +203,7 @@ func (c *oneloginClient) apiAccessToken() error {
 }
 
 func (c *oneloginClient) apiClientCredentials() (string, string, error) {
-	defer c.authUrl.Query().Del("token")
+	defer c.authUrl.Query().Del("token") //nolint:staticcheck
 
 	t := c.authUrl.Query().Get("token")
 	if len(t) < 1 {

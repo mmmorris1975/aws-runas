@@ -50,8 +50,8 @@ const (
 
 	imdsv2TtlHdr = "X-Aws-Ec2-Metadata-Token-Ttl-Seconds"
 
-	imdsTokenPath    = "/latest/api/token" //nolint:gosec // remove false positive because Token is in the const name
-	ec2CredPath      = "/latest/meta-data/iam/security-credentials/"
+	imdsTokenPath    = "/latest/api/token"                           //nolint:gosec // remove false positive
+	ec2CredPath      = "/latest/meta-data/iam/security-credentials/" //nolint:gosec // remove false positive
 	authPath         = "/auth"
 	mfaPath          = "/mfa"
 	profilePath      = "/profile"
