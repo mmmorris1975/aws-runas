@@ -403,6 +403,8 @@ func (c *oktaClient) fetchDuoTxn(ctx context.Context, host, sid string) (*oktaDu
 
 		duoForm.Set("factor", "Passcode")
 		duoForm.Add("passcode", c.MfaTokenCode)
+	} else {
+		fmt.Print("Waiting for Push MFA ")
 	}
 
 	req, err := newHttpRequest(ctx, "POST", fmt.Sprintf("https://%s/frame/prompt", host))
