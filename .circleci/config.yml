@@ -124,6 +124,7 @@ jobs:
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
+      AWS_DEFAULT_REGION: us-east-1
 
     steps:
       - run: mkdir -p build
