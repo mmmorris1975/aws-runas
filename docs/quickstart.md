@@ -63,8 +63,7 @@ source /path/to/aws-runas-zsh-completion
 
 #### Windows
 
-After downloading the ZIP file, unzip it and move the extracted `aws-runas.exe` file to a location where it is
-easily accessible, like on the desktop, or in your home directory.
+After downloading the ZIP file, unzip it and move the extracted `aws-runas.exe` file to the home directory `%USERPROFILE%\.aws`
 
 ### Configuration
 
