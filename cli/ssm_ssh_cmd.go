@@ -14,10 +14,16 @@
 package cli
 
 import (
+	"errors"
 	"github.com/aws/aws-sdk-go-v2/aws"
+	"github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
+	"github.com/kevinburke/ssh_config"
 	"github.com/mmmorris1975/ssm-session-client/ssmclient"
 	"github.com/urfave/cli/v2"
+	"golang.org/x/crypto/ssh"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -32,11 +38,17 @@ whose value is EC2 instance ID.
 This feature is meant to be used in SSH configuration files according to the AWS documentation
 at https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html
 except that the ProxyCommand syntax changes to:
-  ProxyCommand sh -c "aws-runas ssm ssh profile_name %h:%p"
+  ProxyCommand aws-runas ssm ssh [--ec2ic] profile_name %r@%h:%p
 Where profile_name is the AWS configuration profile to use (you should also be able to use the
-AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %h:%p
-are standard SSH configuration substitutions for the host and port number to connect with, and
-can be left as-is`
+AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %r@%h:%p
+are standard SSH configuration substitutions for the remote user name, host and port number to connect with,
+and can be left as-is.  If the optional --ec2ic argument is supplied, the public key is provisioned on the
+remote system using EC2 Instance Connect during the SSH session setup.`
+
+var ec2InstanceConnectFlag = &cli.BoolFlag{
+	Name:  "ec2ic",
+	Usage: "Send public key to instance using EC2 Instance Connect",
+}
 
 var ssmSshCmd = &cli.Command{
 	Name:         "ssh",
@@ -45,7 +57,7 @@ var ssmSshCmd = &cli.Command{
 	Description:  ssmSshDesc,
 	BashComplete: bashCompleteProfile,
 
-	Flags: []cli.Flag{ssmUsePluginFlag},
+	Flags: []cli.Flag{ec2InstanceConnectFlag, ssmUsePluginFlag},
 
 	Action: func(ctx *cli.Context) error {
 		target, c, err := doSsmSetup(ctx, 2)
@@ -53,30 +65,29 @@ var ssmSshCmd = &cli.Command{
 			return err
 		}
 
-		// default ssh port if we're passed a target which doesn't explicitly set one
-		port := "22"
+		user, host, port := parseTargetSpec(target)
 
-		// "preprocess" target so it's acceptable to checkTarget()
-		// Port number is expected to be the last element after splitting on ':' (except if using the
-		// plain tag_key:tag_value format without a port), all other parts will be passed to checkTarget()
-		parts := strings.Split(target, `:`)
-		if len(parts) == 2 {
-			// could be just tag_key:tag_value using default port, all other supported formats have
-			// port as the final element.  If Atoi can convert the string to a number, assume it's
-			// supposed to be a port, otherwise we'll use the default
-			if _, err = strconv.Atoi(parts[1]); err == nil {
-				target = parts[0]
-				port = parts[1]
-			}
-		} else if len(parts) > 2 {
-			// cases where port is expected to be the final element of the target specification
-			target = strings.Join(parts[:len(parts)-1], `:`)
-			port = parts[len(parts)-1]
-		}
-
-		ec2Id, err := ssmclient.ResolveTarget(target, c.ConfigProvider())
+		ec2Id, err := ssmclient.ResolveTarget(host, c.ConfigProvider())
 		if err != nil {
 			return err
+		}
+
+		if ctx.Bool(ec2InstanceConnectFlag.Name) {
+			var pubKey string
+			if pubKey, err = getPubKey(host); err != nil {
+				return err
+			}
+
+			ec2ic := ec2instanceconnect.NewFromConfig(c.ConfigProvider())
+			pubkeyIn := &ec2instanceconnect.SendSSHPublicKeyInput{
+				InstanceId:     &ec2Id,
+				InstanceOSUser: &user,
+				SSHPublicKey:   &pubKey,
+			}
+
+			if _, err = ec2ic.SendSSHPublicKey(ctx.Context, pubkeyIn); err != nil {
+				return err
+			}
 		}
 
 		if ctx.Bool(ssmUsePluginFlag.Name) {
@@ -87,7 +98,7 @@ var ssmSshCmd = &cli.Command{
 			in := &ssm.StartSessionInput{
 				DocumentName: aws.String("AWS-StartSSHSession"),
 				Parameters:   params,
-				Target:       aws.String(ec2Id),
+				Target:       &ec2Id,
 			}
 			return execSsmPlugin(c.ConfigProvider(), in)
 		}
@@ -99,4 +110,70 @@ var ssmSshCmd = &cli.Command{
 		}
 		return ssmclient.SSHSession(c.ConfigProvider(), in)
 	},
+}
+
+func parseTargetSpec(target string) (string, string, string) {
+	var user = "ec2-user"
+	var host = ""
+	var port = "22"
+
+	userHostPart := strings.Split(target, `@`)
+	if len(userHostPart) > 1 {
+		user = userHostPart[0]
+		userHostPart = userHostPart[1:]
+	}
+
+	// Format could be host:port or possibly tag_key:tag_value:port
+	hostPortPart := strings.Split(userHostPart[0], `:`)
+	if len(hostPortPart) == 1 {
+		// bare host, use default port
+		host = hostPortPart[0]
+	} else {
+		// Could be host:port, tag_key:tag_value with default port, or tag_key:tag_value:port
+		// Use Atoi to see if the last element is a numeric string and assume that's a port number
+		if i, err := strconv.Atoi(hostPortPart[len(hostPortPart)-1]); err == nil && i <= 65535 {
+			host = strings.Join(hostPortPart[:len(hostPortPart)-1], `:`)
+			port = hostPortPart[len(hostPortPart)-1]
+		} else {
+			host = strings.Join(hostPortPart, `:`)
+		}
+	}
+
+	return user, host, port
+}
+
+func getPubKey(host string) (string, error) {
+	var err error
+
+	for _, key := range ssh_config.GetAll(host, "IdentityFile") {
+		if strings.HasPrefix(key, "~/") {
+			dirname, _ := os.UserHomeDir()
+			key = filepath.Join(dirname, key[2:])
+		}
+
+		var bytes []byte
+		bytes, err = os.ReadFile(key)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return "", err
+		}
+
+		var signer ssh.Signer
+		signer, err = ssh.ParsePrivateKey(bytes)
+		if err != nil {
+			var protectedKeyErr *ssh.PassphraseMissingError
+			if errors.As(err, &protectedKeyErr) {
+				// FIXME handle a passphrase protected key ...
+				//   for now, just continue an hope there's an "unprotected" key in the list to try
+				continue
+			}
+			return "", err
+		}
+
+		return string(ssh.MarshalAuthorizedKey(signer.PublicKey())), nil
+	}
+
+	return "", errors.New("public key not available")
 }
