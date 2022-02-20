@@ -114,8 +114,8 @@ var ssmSshCmd = &cli.Command{
 
 func parseTargetSpec(target string) (string, string, string) {
 	var user = "ec2-user"
-	var host = ""
 	var port = "22"
+	var host string
 
 	userHostPart := strings.Split(target, `@`)
 	if len(userHostPart) > 1 {
