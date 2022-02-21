@@ -15,7 +15,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1-0.20210705192016-249ff6c91207
 	github.com/kevinburke/ssh_config v1.1.1-0.20211102215853-c7f8dec5c76b
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.202.0
+	github.com/mmmorris1975/ssm-session-client v0.202.1
 	github.com/stretchr/testify v1.7.0 // indirect
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.3.1-0.20211106113742-12b7dfd08cb0

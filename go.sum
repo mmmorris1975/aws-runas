@@ -71,8 +71,8 @@ github.com/kevinburke/ssh_config v1.1.1-0.20211102215853-c7f8dec5c76b h1:Ht6d42D
 github.com/kevinburke/ssh_config v1.1.1-0.20211102215853-c7f8dec5c76b/go.mod h1:CT57kijsi8u/K/BOFA39wgDQJ9CxiF4nAY/ojJ6r6mM=
 github.com/mmmorris1975/simple-logger v0.5.1 h1:Qmbs7HZmuDac3YUCAMXdgNzT502EZzs/AXwA+Yx5xEw=
 github.com/mmmorris1975/simple-logger v0.5.1/go.mod h1:6Ut7vszvSG4je1HHyzUzH4MWRbyWPHCJxLbnEoCo7kk=
-github.com/mmmorris1975/ssm-session-client v0.202.0 h1:4AMOsoeln2BoC7p2P4bfVFhtQKnxFe0NSk20HSdF5r4=
-github.com/mmmorris1975/ssm-session-client v0.202.0/go.mod h1:t9X2VhYvApEYAoX17rulX1/kmPH8Jh0ar6I/BtYbg7M=
+github.com/mmmorris1975/ssm-session-client v0.202.1 h1:1K+pswR6QhipRYDAGyzbbq+7KN7TLYiLCFeMJTTq500=
+github.com/mmmorris1975/ssm-session-client v0.202.1/go.mod h1:t9X2VhYvApEYAoX17rulX1/kmPH8Jh0ar6I/BtYbg7M=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/russross/blackfriday/v2 v2.0.1 h1:lPqVAte+HuHNfhJ/0LC98ESWRz8afy9tM/0RK8m9o+Q=
