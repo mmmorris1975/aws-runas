@@ -106,7 +106,7 @@ func execSsmPlugin(cfg aws.Config, in *ssm.StartSessionInput) error {
 	}
 
 	var ep aws.Endpoint
-	ep, err = cfg.EndpointResolverWithOptions.ResolveEndpoint(ssm.ServiceID, cfg.Region)
+	ep, err = ssm.NewDefaultEndpointResolver().ResolveEndpoint(cfg.Region, ssm.EndpointResolverOptions{})
 	if err != nil {
 		return err
 	}

@@ -115,12 +115,12 @@ for instructions on setting up the local and remote system to allow SSH connecti
 
 This is a sample ssh config file entry to enable SSH connectivity to an SSM connected instance.  The elements on the
 `Host` line can be modified to capture how you will be access the host, this example uses the EC2 instance ID.  For the
-`ProxyCommand`, the `my_profile` element can be omitted if you will supply the profile name another way (likely via the
+`ProxyCommand`, the `profile_name` element can be omitted if you will supply the profile name another way (likely via the
 AWS_PROFILE environment variable).
 
 ```text
 Host i-* mi-*
-    ProxyCommand sh -c "aws-runas ssm ssh my_profile %h:%p"
+    ProxyCommand aws-runas ssm ssh profile_name %r@%h:%p
 
 ```
 
@@ -143,13 +143,14 @@ DESCRIPTION:
    This feature is meant to be used in SSH configuration files according to the AWS documentation
    at https://docs.aws.amazon.com/systems-manager/latest/userguide/session-manager-getting-started-enable-ssh-connections.html
    except that the ProxyCommand syntax changes to:
-     ProxyCommand sh -c "aws-runas ssm ssh profile_name %h:%p"
+     ProxyCommand aws-runas ssm ssh [--ec2ic] profile_name %r@%h:%p
    Where profile_name is the AWS configuration profile to use (you should also be able to use the
-   AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %h:%p
-   are standard SSH configuration substitutions for the host and port number to connect with, and
-   can be left as-is
+   AWS_PROFILE environment variable, in which case the profile_name could be omitted), and %r@%h:%p
+   are standard SSH configuration substitutions for the remote user name, host and port number to connect with,
+   and can be left as-is.  If the optional --ec2ic argument is supplied, the public key is provisioned on the
+   remote system using EC2 Instance Connect during the SSH session setup.
 
 OPTIONS:
+   --ec2ic       Send public key to instance using EC2 Instance Connect (default: false)
    --plugin, -P  Use the SSM session plugin instead of built-in code (default: false)
-   --help, -h    show help (default: false)
 ```
