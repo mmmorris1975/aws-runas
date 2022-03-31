@@ -35,9 +35,11 @@ func (l *chainLoader) Config(profile string, sources ...interface{}) (*AwsConfig
 		cf, err := ldr.Config(profile, sources...)
 		if err != nil {
 			logger.Debugf("error loading configuration: %v", err)
-			continue
 		}
-		c.MergeIn(cf)
+
+		if cf != nil {
+			c.MergeIn(cf)
+		}
 	}
 
 	return c, nil
