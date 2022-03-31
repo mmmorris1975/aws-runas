@@ -23,6 +23,7 @@ vendor/
 
 #IDE
 .idea/
+.vscode/
 
 # OS X cruft
 .history
