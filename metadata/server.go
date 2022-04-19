@@ -33,13 +33,12 @@ import (
 	"text/template"
 
 	"github.com/aws/smithy-go/logging"
-	"github.com/syndtr/gocapability/capability"
-
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/shared"
+	"github.com/syndtr/gocapability/capability"
 )
 
 const (
@@ -662,7 +661,6 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 
 	if s.awsConfig != nil {
 		s.awsConfig.MergeIn(cfg)
-		//cfg.MergeIn(s.awsConfig)
 	}
 
 	// ewww, testing-specific code in actual code
