@@ -659,7 +659,7 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 	}
 
 	if s.awsConfig != nil {
-		cfg.MergeIn(s.awsConfig)
+		s.awsConfig.MergeIn(cfg)
 	}
 
 	// ewww, testing-specific code in actual code
