@@ -57,22 +57,24 @@ func (p *ecrLoginProvider) Login(endpoints ...string) error {
 
 // LoginWithContext authenticates to the given ECR endpoints using the provided context.
 func (p *ecrLoginProvider) LoginWithContext(ctx context.Context, endpoints ...string) error {
-	out, err := p.ecrClient.GetAuthorizationToken(ctx, new(ecr.GetAuthorizationTokenInput))
-	if err != nil {
-		p.logger.Errorf("error calling GeAuthorizationToken: %v", err)
-		return err
-	}
-
-	var token []byte
-	token, err = base64.StdEncoding.DecodeString(*out.AuthorizationData[0].AuthorizationToken)
-	if err != nil {
-		p.logger.Errorf("error decoding authorization token: %v", err)
-		return err
-	}
-
-	parts := strings.Split(string(token), `:`)
-
 	for _, ep := range endpoints {
+		epParts := strings.Split(ep, `.`)
+		out, err := p.ecrClient.GetAuthorizationToken(ctx, new(ecr.GetAuthorizationTokenInput), func(o *ecr.Options) {
+			o.Region = epParts[3]
+		})
+		if err != nil {
+			p.logger.Errorf("error calling GeAuthorizationToken: %v", err)
+			return err
+		}
+	
+		var token []byte
+		token, err = base64.StdEncoding.DecodeString(*out.AuthorizationData[0].AuthorizationToken)
+		if err != nil {
+			p.logger.Errorf("error decoding authorization token: %v", err)
+			return err
+		}
+		parts := strings.Split(string(token), `:`)
+
 		// since we're not relying on a command shell and just exec()'ing directly, shell escape issues are minimized
 		// for the 'ep' variable (parts[0] is trusted input from the call to AWS)
 		cmd := exec.Command("docker", "login", "--username", parts[0], "--password-stdin", ep) //nolint:gosec
