@@ -66,7 +66,7 @@ func (p *ecrLoginProvider) LoginWithContext(ctx context.Context, endpoints ...st
 			p.logger.Errorf("error calling GeAuthorizationToken: %v", err)
 			return err
 		}
-	
+
 		var token []byte
 		token, err = base64.StdEncoding.DecodeString(*out.AuthorizationData[0].AuthorizationToken)
 		if err != nil {
