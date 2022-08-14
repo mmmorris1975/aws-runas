@@ -57,17 +57,17 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
+	var creds *credentials.Credentials
+	creds, err = c.Credentials()
+	if err != nil {
+		return "", nil, err
+	}
+
 	if ctx.Bool(refreshFlag.Name) {
 		refreshCreds(c)
 	}
 
 	if ctx.Bool(expFlag.Name) || ctx.Bool(whoamiFlag.Name) {
-		var creds *credentials.Credentials
-		creds, err = c.Credentials()
-		if err != nil {
-			return "", nil, err
-		}
-
 		if ctx.Bool(expFlag.Name) {
 			printCredExpiration(creds)
 		}
