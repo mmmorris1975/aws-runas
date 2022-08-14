@@ -108,7 +108,7 @@ var ssmSshCmd = &cli.Command{
 			Target:     ec2Id,
 			RemotePort: rpi,
 		}
-		return ssmclient.SSHSession(c.ConfigProvider(), in)
+		return ssmclient.SSHPluginSession(c.ConfigProvider(), in)
 	},
 }
 

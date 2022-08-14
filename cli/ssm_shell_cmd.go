@@ -59,6 +59,6 @@ var ssmShellCmd = &cli.Command{
 			return execSsmPlugin(c.ConfigProvider(), in)
 		}
 
-		return ssmclient.ShellSession(c.ConfigProvider(), ec2Id)
+		return ssmclient.ShellPluginSession(c.ConfigProvider(), ec2Id)
 	},
 }
