@@ -79,7 +79,7 @@ var ssmForwardCmd = &cli.Command{
 			RemotePort: rpi,
 			LocalPort:  ctx.Int(ssmFwdPortFlag.Name),
 		}
-		return ssmclient.PortForwardingSession(c.ConfigProvider(), in)
+		return ssmclient.PortPluginSession(c.ConfigProvider(), in)
 	},
 }
 
