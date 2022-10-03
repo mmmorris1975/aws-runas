@@ -34,13 +34,12 @@ import (
 	"time"
 
 	"github.com/aws/smithy-go/logging"
-	"github.com/syndtr/gocapability/capability"
-
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
 	"github.com/mmmorris1975/aws-runas/shared"
+	"github.com/syndtr/gocapability/capability"
 )
 
 const (
