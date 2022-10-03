@@ -19,13 +19,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/aws/smithy-go/logging"
-	"github.com/mmmorris1975/aws-runas/client"
-	"github.com/mmmorris1975/aws-runas/config"
-	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"github.com/mmmorris1975/aws-runas/shared"
-	"github.com/syndtr/gocapability/capability"
 	"io"
 	"net"
 	"net/http"
@@ -38,6 +31,16 @@ import (
 	"sync"
 	"syscall"
 	"text/template"
+	"time"
+
+	"github.com/aws/smithy-go/logging"
+	"github.com/syndtr/gocapability/capability"
+
+	"github.com/mmmorris1975/aws-runas/client"
+	"github.com/mmmorris1975/aws-runas/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/credentials/helpers"
+	"github.com/mmmorris1975/aws-runas/shared"
 )
 
 const (
@@ -363,6 +366,15 @@ func (s *metadataCredentialService) ec2CredHandler(w http.ResponseWriter, r *htt
 			s.handleAuthError(err, w)
 			return
 		}
+		if creds.Expiration.Unix() < time.Now().Add(time.Minute*5).Unix() {
+			logger.Debugf("Expired Credentials Clearing Cache.")
+			s.awsClient.ClearCache()
+			creds, err = s.awsClient.Credentials()
+		}
+		if err != nil {
+			s.handleAuthError(err, w)
+			return
+		}
 		ec2Creds, _ := creds.EC2() // error would only ever be json marshal failure
 		logger.Debugf("EC2 CREDS: %s", ec2Creds)
 
@@ -416,6 +428,15 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 	}
 
 	creds, err = cl.Credentials()
+	if err != nil {
+		s.handleAuthError(err, w)
+		return
+	}
+	if creds.Expiration.Unix() < time.Now().Add(time.Minute*5).Unix() {
+		logger.Debugf("Expired Credentials Clearing Cache.")
+		s.awsClient.ClearCache()
+		creds, err = s.awsClient.Credentials()
+	}
 	if err != nil {
 		s.handleAuthError(err, w)
 		return
