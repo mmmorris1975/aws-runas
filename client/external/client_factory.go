@@ -16,10 +16,11 @@ package external
 import (
 	"context"
 	"errors"
-	"github.com/mmmorris1975/aws-runas/shared"
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/shared"
 )
 
 const (
@@ -30,6 +31,7 @@ const (
 	mockProvider      = "mock"
 	unknownProvider   = "unknown"
 	azureadProvider   = "azuread"
+	browserProvider   = "browser"
 )
 
 var errUnknownProvider = errors.New("unable to determine client provider type")
@@ -73,6 +75,7 @@ func MustGetWebIdentityClient(provider, authUrl string, cfg OidcClientConfig) We
 }
 
 // the switch statement will continue to grow as new providers are added, so keep the linter quiet
+//
 //nolint:gocyclo,funlen
 func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, error) {
 	if len(provider) < 1 {
@@ -131,6 +134,15 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		return c, nil
 	case azureadProvider:
 		c, err := NewAadClient(authUrl)
+		if err != nil {
+			return nil, err
+		}
+		c.OidcClientConfig = cfg
+		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
+		return c, nil
+	case browserProvider:
+		c, err := NewBrowserClient(authUrl)
 		if err != nil {
 			return nil, err
 		}

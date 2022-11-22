@@ -15,9 +15,10 @@ package config
 
 import (
 	"errors"
-	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	"net/url"
 	"time"
+
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
 )
 
 // AwsConfig contains many standard AWS SDK configuration variables, and some non-standard configuration variables used
@@ -47,6 +48,7 @@ type AwsConfig struct {
 	WebIdentityClientId    string        `ini:"web_identity_client_id,omitempty" env:"WEB_IDENTITY_CLIENT_ID"`
 	WebIdentityRedirectUri string        `ini:"web_identity_redirect_uri,omitempty" env:"WEB_IDENTITY_REDIRECT_URI"`
 	FederatedUsername      string        `ini:"federated_username,omitempty" env:"FEDERATED_USERNAME"`
+	AuthBrowser            string        `ini:"auth_browser,omitempty" env:"AUTH_BROWSER"`
 	ProfileName            string        `ini:"-"` // does not participate in Marshal/Unmarshal, explicitly set
 	sourceProfile          *AwsConfig
 }
@@ -94,6 +96,7 @@ func (c *AwsConfig) WebIdentityURL() (*url.URL, error) {
 
 // MergeIn takes the settings in the provided "config" argument and applies them to the existing AwsConfig object.
 // New values are applied only if they are not the field type's zero value, the last (non-zero) value take priority.
+//
 //nolint:funlen,gocognit,gocyclo // couldn't make this shorter if we tried
 func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 	for _, cfg := range config {
@@ -185,15 +188,18 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 		if len(cfg.FederatedUsername) > 0 {
 			c.FederatedUsername = cfg.FederatedUsername
 		}
+		if len(cfg.AuthBrowser) > 0 {
+			c.AuthBrowser = cfg.AuthBrowser
+		}
 	}
 }
 
 // Validate checks that the current configuration settings are sane.
 // It performs the following tests:
-//  * Check that sourceProfile != nil if SrcProfile is set
-//  * Check that only one of SamlUrl or WebIdentityUrl is set
-//  * Check that all required Web Identity fields (WebIdentityClientId, WebIdentityRedirectUri)
-//    are configured if WebIdentityUrl is set.
+//   - Check that sourceProfile != nil if SrcProfile is set
+//   - Check that only one of SamlUrl or WebIdentityUrl is set
+//   - Check that all required Web Identity fields (WebIdentityClientId, WebIdentityRedirectUri)
+//     are configured if WebIdentityUrl is set.
 func (c *AwsConfig) Validate() error {
 	if len(c.SrcProfile) > 0 && c.sourceProfile == nil {
 		return errors.New("found source profile name but no source profile data")
@@ -205,6 +211,11 @@ func (c *AwsConfig) Validate() error {
 
 	if len(c.WebIdentityUrl) > 0 && (len(c.WebIdentityClientId) < 1 || len(c.WebIdentityRedirectUri) < 1) {
 		return errors.New("incomplete Web Identity configuration, missing client ID or redirect URI")
+	}
+	if len(c.AuthBrowser) > 0 && (c.AuthBrowser != "msedge") {
+		if c.AuthBrowser != `chrome` {
+			return errors.New("auth_browser is not set to msedge or chrome")
+		}
 	}
 
 	return nil

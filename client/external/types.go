@@ -16,10 +16,11 @@ package external
 import (
 	"context"
 	"errors"
+	"net/http"
+
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
 	"github.com/mmmorris1975/aws-runas/shared"
-	"net/http"
 )
 
 const (
@@ -98,6 +99,7 @@ type AuthenticationClientConfig struct {
 	// FederatedUsername is the username used to authenticate to a federated authentication service, if
 	// different from Username
 	FederatedUsername string
+	AuthBrowser       string
 }
 
 // OidcClientConfig is an extension of AuthenticationClientConfig which defines the extra properties needed to

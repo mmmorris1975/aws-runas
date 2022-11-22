@@ -17,17 +17,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/smithy-go/logging"
+
 	"github.com/mmmorris1975/aws-runas/client/external"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/credentials/cache"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"os"
-	"path/filepath"
-	"strings"
 )
 
 // singleton cookie jar implementation.
@@ -136,6 +138,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 			IdentityProviderName:    cfg.SamlProvider,
 			FederatedUsername:       cfg.FederatedUsername,
 			Logger:                  logger,
+			AuthBrowser:             cfg.AuthBrowser,
 		},
 		Duration: cfg.RoleCredentialDuration(),
 		RoleArn:  cfg.RoleArn,
