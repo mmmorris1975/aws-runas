@@ -71,7 +71,7 @@ func TestBrowserClient_SamlAssertion(t *testing.T) {
 	if _, ok := os.LookupEnv("CIRCLECI"); ok {
 		t.Skip("can not test in CI")
 	}
-	
+
 	if _, err := new(browserClient).SamlAssertion(); err != nil {
 		t.Error(err)
 	}

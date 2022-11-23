@@ -39,7 +39,8 @@ type keycloakClient struct {
 // The 'url' parameter expects the following forms:
 // __base URL part__/realms/__realm__ for OAuth/OIDC requests
 // __base URL part__/realms/__realm__/protocol/saml/clients/aws for SAML requests
-//   (must enable IdP initiated login for client, replace 'aws' part with the local saml client name).
+//
+//	(must enable IdP initiated login for client, replace 'aws' part with the local saml client name).
 func NewKeycloakClient(url string) (*keycloakClient, error) {
 	bc, err := newBaseClient(url)
 	if err != nil {

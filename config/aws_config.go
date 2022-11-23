@@ -200,6 +200,7 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 //   - Check that only one of SamlUrl or WebIdentityUrl is set
 //   - Check that all required Web Identity fields (WebIdentityClientId, WebIdentityRedirectUri)
 //     are configured if WebIdentityUrl is set.
+//
 //nolint:gocognit
 func (c *AwsConfig) Validate() error {
 	if len(c.SrcProfile) > 0 && c.sourceProfile == nil {
