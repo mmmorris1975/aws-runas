@@ -1,4 +1,4 @@
-// +build darwin freebsd netbsd openbsd
+//go:build darwin || freebsd || netbsd || openbsd
 
 /*
  * Copyright (c) 2021 Michael Morris. All Rights Reserved.

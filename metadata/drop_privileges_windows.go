@@ -1,4 +1,4 @@
-// +build windows
+//go:build windows
 
 /*
  * Copyright (c) 2021 Michael Morris. All Rights Reserved.

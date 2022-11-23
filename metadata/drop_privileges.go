@@ -1,4 +1,4 @@
-// +build !windows,!js
+//go:build !windows && !js
 
 /*
  * Copyright (c) 2021 Michael Morris. All Rights Reserved.

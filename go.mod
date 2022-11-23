@@ -1,16 +1,16 @@
 module github.com/mmmorris1975/aws-runas
 
-go 1.16
+go 1.17
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
 	github.com/aws/aws-sdk-go-v2 v1.17.1
-	github.com/aws/aws-sdk-go-v2/config v1.17.10
+	github.com/aws/aws-sdk-go-v2/config v1.18.3
 	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.14.11
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.20
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.17.23
 	github.com/aws/aws-sdk-go-v2/service/iam v1.18.23
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.31.3
-	github.com/aws/aws-sdk-go-v2/service/sts v1.17.1
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.33.1
+	github.com/aws/aws-sdk-go-v2/service/sts v1.17.5
 	github.com/aws/smithy-go v1.13.4
 	github.com/chromedp/chromedp v0.8.6
 	github.com/dustin/go-humanize v1.0.1-0.20210705192016-249ff6c91207
@@ -19,10 +19,49 @@ require (
 	github.com/mmmorris1975/simple-logger v0.5.1
 	github.com/mmmorris1975/ssm-session-client v0.400.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
-	github.com/urfave/cli/v2 v2.3.1-0.20211106113742-12b7dfd08cb0
-	golang.org/x/crypto v0.1.0
-	golang.org/x/net v0.1.0
-	golang.org/x/sys v0.1.0
-	golang.org/x/term v0.1.0
-	gopkg.in/ini.v1 v1.66.2
+	github.com/urfave/cli/v2 v2.23.5
+	golang.org/x/crypto v0.3.0
+	golang.org/x/net v0.2.0
+	golang.org/x/sys v0.2.0
+	golang.org/x/term v0.2.0
+	gopkg.in/ini.v1 v1.67.0
+)
+
+require (
+	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/aws/aws-sdk-go v1.44.76 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.13.3 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.12.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.1.25 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.3.26 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.64.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.9.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.11.25 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.13.8 // indirect
+	github.com/aws/session-manager-plugin v0.0.0-20221012155945-c523002ee02c // indirect
+	github.com/chromedp/cdproto v0.0.0-20220924210414-0e3390be1777 // indirect
+	github.com/chromedp/sysutil v1.0.0 // indirect
+	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.2 // indirect
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.1.0 // indirect
+	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/josharian/intern v1.0.0 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
+	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/stretchr/objx v0.4.0 // indirect
+	github.com/stretchr/testify v1.8.0 // indirect
+	github.com/twinj/uuid v0.0.0-20151029044442-89173bcdda19 // indirect
+	github.com/xrash/smetrics v0.0.0-20201216005158-039620a65673 // indirect
+	github.com/xtaci/smux v1.5.16 // indirect
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

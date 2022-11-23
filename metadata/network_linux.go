@@ -1,4 +1,4 @@
-// +build linux
+//go:build linux
 
 /*
  * Copyright (c) 2021 Michael Morris. All Rights Reserved.

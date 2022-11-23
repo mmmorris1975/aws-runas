@@ -471,8 +471,9 @@ func TestMetadataCredentialService_listRolesHandler(t *testing.T) {
 	})
 }
 
-//nolint:misspell  // it's a joke, son!
 // for teh coverage gainz!!
+//
+//nolint:misspell  // it's a joke, son!
 func TestMetadataCredentialService_installSigHandler(t *testing.T) {
 	installSigHandler(httptest.NewServer(nil).Config, new(net.TCPListener))
 }
