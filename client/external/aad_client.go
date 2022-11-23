@@ -82,6 +82,7 @@ func (c *aadClient) Authenticate() error {
 // even speed-running through this without MFA, it takes around 6 seconds to process an aad-managed user,
 // and 10 seconds to handle a federated user.  With all of the behind the scenes redirects and our response
 // processing at multiple parts of the flow, I don't think this will get much faster.
+//
 //nolint:bodyclose // response bodies closed in parseResponse
 func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	req, _ := newHttpRequest(ctx, http.MethodGet, c.authUrl.String())

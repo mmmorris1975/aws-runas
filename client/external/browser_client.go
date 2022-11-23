@@ -54,7 +54,7 @@ func (c *browserClient) Authenticate() error {
 	return c.AuthenticateWithContext(context.Background())
 }
 
-// AuthenticateWithContext uses Chromedp to open a browser for the authentication process
+// AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
 func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	c.Logger.Debugf("Starting a browser to authenticate..")
 	dir, err := homedir.Dir()

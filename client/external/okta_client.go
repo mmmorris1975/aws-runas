@@ -24,7 +24,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/identity"
 	"html"
 	"io"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -422,7 +421,7 @@ func (c *oktaClient) fetchDuoTxn(ctx context.Context, host, sid string) (*oktaDu
 	defer res.Body.Close()
 
 	var body []byte
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return nil, err
 	}
@@ -454,7 +453,7 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 	defer res.Body.Close()
 
 	var body []byte
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}
@@ -496,7 +495,7 @@ OUTER:
 	}
 	defer res.Body.Close()
 
-	body, err = ioutil.ReadAll(res.Body)
+	body, err = io.ReadAll(res.Body)
 	if err != nil {
 		return "", err
 	}

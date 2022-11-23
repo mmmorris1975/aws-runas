@@ -200,6 +200,7 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 //   - Check that only one of SamlUrl or WebIdentityUrl is set
 //   - Check that all required Web Identity fields (WebIdentityClientId, WebIdentityRedirectUri)
 //     are configured if WebIdentityUrl is set.
+//nolint:gocognit
 func (c *AwsConfig) Validate() error {
 	if len(c.SrcProfile) > 0 && c.sourceProfile == nil {
 		return errors.New("found source profile name but no source profile data")
@@ -212,6 +213,7 @@ func (c *AwsConfig) Validate() error {
 	if len(c.WebIdentityUrl) > 0 && (len(c.WebIdentityClientId) < 1 || len(c.WebIdentityRedirectUri) < 1) {
 		return errors.New("incomplete Web Identity configuration, missing client ID or redirect URI")
 	}
+
 	if len(c.AuthBrowser) > 0 && (c.AuthBrowser != "msedge") {
 		if c.AuthBrowser != `chrome` {
 			return errors.New("auth_browser is not set to msedge or chrome")

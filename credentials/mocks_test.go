@@ -109,6 +109,7 @@ func (m *stsMock) AssumeRoleWithWebIdentity(_ context.Context, in *sts.AssumeRol
 }
 
 // if duration != nil (default), must be in acceptable range.
+//
 //nolint:unparam
 func validateDuration(d *int32, min, max, def time.Duration) (time.Duration, error) {
 	if d != nil {
