@@ -12,7 +12,7 @@ orbs:
 jobs:
   lint:
     docker:
-      - image: "golangci/golangci-lint:v1.41"
+      - image: "ghcr.io/mgechev/revive:1.2.4"
 
     steps:
       - checkout
