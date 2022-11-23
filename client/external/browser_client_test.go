@@ -13,7 +13,10 @@
 
 package external
 
-import "testing"
+import (
+	"os"
+	"testing"
+)
 
 func TestNewBrowserClient(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
@@ -35,24 +38,40 @@ func TestNewBrowserClient(t *testing.T) {
 }
 
 func TestBrowserClient_Authenticate(t *testing.T) {
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		t.Skip("can not test in CI")
+	}
+
 	if err := new(browserClient).Authenticate(); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestBrowserClient_Identity(t *testing.T) {
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		t.Skip("can not test in CI")
+	}
+
 	if _, err := new(browserClient).Identity(); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestBrowserClient_IdentityToken(t *testing.T) {
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		t.Skip("can not test in CI")
+	}
+
 	if _, err := new(browserClient).IdentityToken(); err != nil {
 		t.Error(err)
 	}
 }
 
 func TestBrowserClient_SamlAssertion(t *testing.T) {
+	if _, ok := os.LookupEnv("CIRCLECI"); ok {
+		t.Skip("can not test in CI")
+	}
+	
 	if _, err := new(browserClient).SamlAssertion(); err != nil {
 		t.Error(err)
 	}
