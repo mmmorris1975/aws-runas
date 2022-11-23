@@ -12,8 +12,10 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.31.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.17.1
 	github.com/aws/smithy-go v1.13.4
+	github.com/chromedp/chromedp v0.8.6 // indirect
 	github.com/dustin/go-humanize v1.0.1-0.20210705192016-249ff6c91207
 	github.com/kevinburke/ssh_config v1.2.0
+	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mmmorris1975/simple-logger v0.5.1
 	github.com/mmmorris1975/ssm-session-client v0.400.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
