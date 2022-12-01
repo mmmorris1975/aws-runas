@@ -61,11 +61,21 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	if err != nil {
 		log.Println(err)
 	}
-	dir += `/.aws/.browser`
+	switch runtime.GOOS {
+	case `windows`:
+		dir += `/AppData/Local/Google/Chrome/User Data/Default`
+	case `darwin`:
+		dir += `/Library/Application Support/Google/Chrome/Default`
+	case `linux`:
+		dir += `/.config/google-chrome/default`
+	default:
+		dir += `/.config/google-chrome/default`
+	}
 	// Remove the default option for headless
 	opts := chromedp.DefaultExecAllocatorOptions[0:1]
 	var browserExec string
 	var attrs []map[string]string
+	c.Logger.Debugf("Browser specified from config [ %s ] (Chrome is default)", c.AuthBrowser)
 
 	switch c.AuthBrowser {
 	case "msedge":
@@ -74,6 +84,10 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 		} else {
 			browserExec = MacOSEdge
 		}
+		opts = append(opts,
+			chromedp.ExecPath(browserExec),
+		)
+
 	case `chrome`:
 		// Chrome is the effective default
 	case ``:
@@ -84,13 +98,11 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	}
 
 	opts = append(opts,
-		chromedp.DisableGPU,
 		chromedp.UserDataDir(dir),
+		chromedp.Flag(`shared-files`, true),
+		chromedp.Flag(`profile-directory`, `Default`),
 		chromedp.WindowSize(400, 700),
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.ExecPath(browserExec),
-		chromedp.Flag(`credentials_enable_service`, `false`),
-		chromedp.Flag(`password-store`, `none`),
 	)
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
