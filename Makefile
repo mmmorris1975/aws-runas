@@ -5,8 +5,8 @@ LDFLAGS := -ldflags '-s -w -X main.Version=$(VER)'
 BUILDDIR := build
 PKGDIR := pkg
 PATH := $(BUILDDIR):${GOROOT}/bin:${PATH}
-GOOS ?= $(shell ${GOROOT}/bin/go env GOOS)
-GOARCH ?= $(shell ${GOROOT}/bin/go env GOARCH)
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
 
 .PHONY: all darwin linux windows zip linux_pkg release clean dist-clean test-setup gotest rspec test docs lint
 
@@ -47,10 +47,15 @@ $(PKGDIR)/$(EXE)-%.zip: $(PKGDIR)
 
 # Having $(GOARM) unset, with non-arm builds, doesn't seem to harm anything
 # osslsigncode package is available in cimg/ruby:2.7 and cimg/go:1.15 images
+# MacOS 13 (Ventura) does not like the output from upx (causes segfault on execution)
+# so we won't execute upx for darwin builds
 $(BUILDDIR)/%:
 	mkdir -p $(@D)
 	GOOS=$(GOOS) GOARCH=$(GOARCH) GOARM=$(GOARM) go build $(LDFLAGS) -o $(@D)/
-	upx -v $@
+
+	@if [ $(GOOS) != "darwin" ]; then \
+		upx -v $@; \
+	fi;
 
 	@if [ $(GOOS) == "windows" ]; then \
   		mkdir -p .ca; \
