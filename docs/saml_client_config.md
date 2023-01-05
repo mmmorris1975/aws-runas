@@ -105,3 +105,23 @@ saml_provider = onelogin
 ```
 The app-id value can be found on the user's application landing page, hovering over the OneLogin AWS Application, and
 getting the last element in the URL path.
+
+### Browser Provider
+
+The browser provider allows for aws-runas to spawn an external browser connected to aws-runas using the Chrome Developer Protocol CDP.  This allows the user to authenticate through a browser in situations where there isn't a well defined API or where the authentication flow is fluid. AzureAD using policies that leverage tools like inTune, the use of client certificates or other security measures that have these characteristics.
+
+To use the browser provider update the `$HOME/.aws/config` file to include the following configurations.
+
+```text
+saml_auth_url = https://myapps.microsoft.com/signin/__app-id__/?tenantId=__tenant-id__
+saml_provider=browser
+auth_browser=[chrome|msedge] (optional defaults to chrome)
+```
+
+This will cause the browser to create a new hidden directory in the `$HOME/.aws/.browser/` that will store the browsers configuration and profile.  Inside of this browser data-directory a profile directory `aws-runas` will be created to store the specific session information for the browser.
+
+Once the browser is started, the user is in control of the authentication session that through the browser.  aws-runas will examine the browser events looking for the return of a `SAMLResponse=xxxx`.   Once this is found aws-runas will capture the SAMLResponse, close the browser session and use it in the same way that other providers do. 
+
+There is no way to use the existing browser SSO information since a normal browser session isn't started with a CDP enabled browser so aws-runas will not be able to monitor events and retrieve the SAML response.
+
+This provider has only been tested with AzureAD but, should work for any other provider.

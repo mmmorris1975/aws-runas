@@ -15,10 +15,15 @@ package external
 
 import (
 	"context"
-	"fmt"
 	"log"
+	"net/url"
 	"runtime"
+	"strings"
+	"sync"
+	"time"
 
+	"github.com/chromedp/cdproto/fetch"
+	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/chromedp"
 	"github.com/mitchellh/go-homedir"
 
@@ -34,6 +39,8 @@ const (
 type browserClient struct {
 	*baseClient
 }
+
+var done sync.WaitGroup
 
 // NewbrowserClient provides a Saml and Web client suitable for testing code outside of this package.
 // It returns zero-value objects, and never errors.
@@ -56,7 +63,10 @@ func (c *browserClient) Authenticate() error {
 
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
 func (c *browserClient) AuthenticateWithContext(context.Context) error {
+	var browserExec string
 	c.Logger.Debugf("Starting a browser to authenticate..")
+	network.Enable()
+	fetch.Enable()
 	dir, err := homedir.Dir()
 	if err != nil {
 		log.Println(err)
@@ -64,8 +74,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	dir += `/.aws/.browser`
 	// Remove the default option for headless
 	opts := chromedp.DefaultExecAllocatorOptions[0:1]
-	var browserExec string
-	var attrs []map[string]string
+	c.Logger.Debugf("Browser specified from config [ %s ] (Chrome is default)", c.AuthBrowser)
 
 	switch c.AuthBrowser {
 	case "msedge":
@@ -74,6 +83,10 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 		} else {
 			browserExec = MacOSEdge
 		}
+		opts = append(opts,
+			chromedp.ExecPath(browserExec),
+		)
+
 	case `chrome`:
 		// Chrome is the effective default
 	case ``:
@@ -84,13 +97,10 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	}
 
 	opts = append(opts,
-		chromedp.DisableGPU,
 		chromedp.UserDataDir(dir),
+		chromedp.Flag(`profile-directory`, `aws-runas`),
 		chromedp.WindowSize(400, 700),
 		chromedp.NoDefaultBrowserCheck,
-		chromedp.ExecPath(browserExec),
-		chromedp.Flag(`credentials_enable_service`, `false`),
-		chromedp.Flag(`password-store`, `none`),
 	)
 
 	allocCtx, cancel := chromedp.NewExecAllocator(context.Background(), opts...)
@@ -99,31 +109,42 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	// also set up a custom error logger
 	taskCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	defer cancel()
-
-	// ensure that the browser process is started
+	// Waitgroup to wait on the browser SAMLResponse
+	done.Add(1)
+	// Setup a listener to be called for each browser event in a separate go routine
+	chromedp.ListenTarget(taskCtx, c.targetListener)
+	// ensure that the browser process is started and navigate to auth page
 	if err = chromedp.Run(taskCtx,
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
+		done.Done()
+		chromedp.Cancel(taskCtx)
 		return err
 	}
-
-	// chromedp.ListenTarget(taskCtx, networkEvents)
-	err = chromedp.Run(taskCtx,
-		chromedp.AttributesAll(`SAMLResponse`, &attrs),
-	)
-	if err != nil {
-		fmt.Println(err)
-	}
-	samlre := attrs[0][`value`]
-	saml := credentials.SamlAssertion(samlre)
-	c.saml = &saml
-
-	c.Logger.Debugf("SAMLResponse:\n%s", saml)
-	rd, _ := saml.RoleDetails()
-	c.Logger.Debugf("SAML Role Details:\n%s", rd)
-	_ = chromedp.Cancel(taskCtx)
+	// Wait for SAMLResponse from Browser
+	done.Wait()
+	chromedp.Cancel(taskCtx)
 	c.Logger.Debugf("Authentication Finished.")
 	return nil
+}
+
+// Listen to the browser events for the send to AWS with SAMLResponse
+// get it and stuff it into our Clients SAML assertion.
+func (c *browserClient) targetListener(ev interface{}) {
+	switch ev := ev.(type) {
+	case *network.EventRequestWillBeSent:
+		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
+			escsaml := strings.Replace(ev.Request.PostData, `SAMLResponse=`, ``, 1)
+			saml, err := url.QueryUnescape(escsaml)
+			if err != nil {
+				time.Sleep(time.Second * 1)
+				c.Logger.Debugf("%s", err)
+			}
+			samlassert := credentials.SamlAssertion(saml)
+			c.saml = &samlassert
+			done.Done()
+		}
+	}
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
