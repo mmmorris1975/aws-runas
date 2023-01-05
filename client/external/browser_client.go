@@ -118,12 +118,12 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
 		done.Done()
-		_ := chromedp.Cancel(taskCtx)
+		_ = chromedp.Cancel(taskCtx)
 		return err
 	}
 	// Wait for SAMLResponse from Browser
 	done.Wait()
-	_ := chromedp.Cancel(taskCtx)
+	_ = chromedp.Cancel(taskCtx)
 	c.Logger.Debugf("Authentication Finished.")
 	return nil
 }
