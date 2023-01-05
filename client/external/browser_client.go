@@ -131,7 +131,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 // Listen to the browser events for the send to AWS with SAMLResponse
 // get it and stuff it into our Clients SAML assertion.
 func (c *browserClient) targetListener(ev interface{}) {
-	switch ev := ev.(type) {  //nolint:gocritic
+	switch ev := ev.(type) { //nolint:gocritic
 	case *network.EventRequestWillBeSent:
 		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
 			escsaml := strings.Replace(ev.Request.PostData, `SAMLResponse=`, ``, 1)
