@@ -317,6 +317,7 @@ func runEcsSvc(client client.AwsClient, cfg *config.AwsConfig) (<-chan bool, err
 
 // If on a non-windows platform, with the SHELL environment variable set, and a call to exec.LookPath()
 // for 1st element of the command fails, run the command in a sub-shell so we can support shell aliases.
+//
 //nolint:gocognit
 func wrapCmd(cmd []string) []string {
 	var newCmd []string

@@ -118,12 +118,12 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
 		done.Done()
-		chromedp.Cancel(taskCtx)
+		_ := chromedp.Cancel(taskCtx)
 		return err
 	}
 	// Wait for SAMLResponse from Browser
 	done.Wait()
-	chromedp.Cancel(taskCtx)
+	_ := chromedp.Cancel(taskCtx)
 	c.Logger.Debugf("Authentication Finished.")
 	return nil
 }
@@ -131,7 +131,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 // Listen to the browser events for the send to AWS with SAMLResponse
 // get it and stuff it into our Clients SAML assertion.
 func (c *browserClient) targetListener(ev interface{}) {
-	switch ev := ev.(type) {
+	switch ev := ev.(type) {  //nolint:gocritic
 	case *network.EventRequestWillBeSent:
 		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
 			escsaml := strings.Replace(ev.Request.PostData, `SAMLResponse=`, ``, 1)
