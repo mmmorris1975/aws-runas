@@ -17,6 +17,7 @@ import (
 	"context"
 	"log"
 	"net/url"
+	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -134,7 +135,9 @@ func (c *browserClient) targetListener(ev interface{}) {
 	switch ev := ev.(type) { //nolint:gocritic
 	case *network.EventRequestWillBeSent:
 		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
-			escsaml := strings.Replace(ev.Request.PostData, `SAMLResponse=`, ``, 1)
+			// search for the SAMLResponse=xxxx using regex pattern; this ensures other key value pairs are not included in the captured string
+			r, _ := regexp.Compile("\\bSAMLResponse=([^&]+)\\b")
+			escsaml := strings.Replace(r.FindString(ev.Request.PostData), `SAMLResponse=`, ``, 1)
 			saml, err := url.QueryUnescape(escsaml)
 			if err != nil {
 				time.Sleep(time.Second * 1)
