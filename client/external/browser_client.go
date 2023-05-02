@@ -18,9 +18,7 @@ import (
 	"log"
 	"net/url"
 	"runtime"
-	"strings"
 	"sync"
-	"time"
 
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
@@ -134,12 +132,13 @@ func (c *browserClient) targetListener(ev interface{}) {
 	switch ev := ev.(type) { //nolint:gocritic
 	case *network.EventRequestWillBeSent:
 		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
-			escsaml := strings.Replace(ev.Request.PostData, `SAMLResponse=`, ``, 1)
-			saml, err := url.QueryUnescape(escsaml)
+			// parse and unescape the query string for the key value pair that contains SAMLResponse=xxxx
+			qs, err := url.ParseQuery(ev.Request.PostData)
 			if err != nil {
-				time.Sleep(time.Second * 1)
-				c.Logger.Debugf("%s", err)
+				c.Logger.Errorf("Error parsing SAMLResponse: %v", err)
+				return
 			}
+			saml := qs.Get("SAMLResponse")
 			samlassert := credentials.SamlAssertion(saml)
 			c.saml = &samlassert
 			done.Done()
