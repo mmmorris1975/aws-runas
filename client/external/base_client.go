@@ -20,12 +20,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"github.com/mmmorris1975/aws-runas/identity"
-	"github.com/mmmorris1975/aws-runas/shared"
-	"golang.org/x/net/publicsuffix"
 	"io"
 	"math/rand"
 	"net/http"
@@ -34,11 +28,20 @@ import (
 	"os"
 	"strings"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"golang.org/x/net/publicsuffix"
+
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/credentials/helpers"
+	"github.com/mmmorris1975/aws-runas/identity"
+	"github.com/mmmorris1975/aws-runas/shared"
 )
 
 type baseClient struct {
 	OidcClientConfig
 	authUrl    *url.URL
+	entityId   string
 	httpClient *http.Client
 	saml       *credentials.SamlAssertion
 }

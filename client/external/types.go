@@ -99,7 +99,12 @@ type AuthenticationClientConfig struct {
 	// FederatedUsername is the username used to authenticate to a federated authentication service, if
 	// different from Username
 	FederatedUsername string
-	AuthBrowser       string
+	// AuthBrowser is the browser to use for authentication flows
+	AuthBrowser string
+	// SamlProvider is the name of the SAML provider to use with the identity provider, if applicable
+	SamlProvider string
+	// SamlEntityId is the entity ID to use with the SAML provider, if applicable
+	SamlEntityId string
 }
 
 // OidcClientConfig is an extension of AuthenticationClientConfig which defines the extra properties needed to

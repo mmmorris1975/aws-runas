@@ -16,11 +16,12 @@ package config
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/config"
-	"gopkg.in/ini.v1"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/config"
+	"gopkg.in/ini.v1"
 )
 
 // DefaultIniLoader creates a default Loader type to gather configuration and credentials from ini-style data sources.
@@ -214,7 +215,8 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 }
 
 func loadFile(path string) (*ini.File, error) {
-	f, err := ini.Load(path)
+	f, err := ini.LoadSources(ini.LoadOptions{IgnoreInlineComment: true}, path)
+	//f, err := ini.Load(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -226,7 +228,7 @@ func loadFile(path string) (*ini.File, error) {
 			return nil, err
 		}
 
-		return ini.Load(newFile)
+		return ini.LoadSources(ini.LoadOptions{IgnoreInlineComment: true}, newFile)
 	}
 
 	return f, err
@@ -260,7 +262,7 @@ func writeFile(f *ini.File, dst string, mode os.FileMode) error {
 }
 
 func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
-	f := ini.Empty()
+	f := ini.Empty(ini.LoadOptions{IgnoreInlineComment: true})
 
 	if sources == nil || len(sources) < 1 {
 		src := config.DefaultSharedConfigFilename()

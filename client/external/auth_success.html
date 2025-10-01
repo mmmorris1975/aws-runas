@@ -1,0 +1,374 @@
+<!--
+  ~ Copyright (c) 2021 Michael Morris. All Rights Reserved.
+  ~
+  ~ Licensed under the MIT license (the "License"). You may not use this file except in compliance
+  ~ with the License. A copy of the License is located at
+  ~
+  ~ https://github.com/mmmorris1975/aws-runas/blob/master/LICENSE
+  ~
+  ~ or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+  ~ for the specific language governing permissions and limitations under the License.
+  -->
+
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,shrink-to-fit=no"
+    />
+    <title>aws-runas Authentication Complete</title>
+    <link rel="icon" type="image/png" href="favicon.ico" />
+    <style>
+      /* W3.CSS-inspired base styles */
+      .w3-container {
+        padding: 0.01em 16px;
+      }
+      .w3-margin-top {
+        margin-top: 16px !important;
+      }
+      .w3-margin-bottom {
+        margin-bottom: 16px !important;
+      }
+      .w3-white {
+        color: #000 !important;
+        background-color: #fff !important;
+      }
+      .w3-round-xlarge {
+        border-radius: 16px;
+      }
+      .w3-center {
+        text-align: center !important;
+      }
+      .w3-button {
+        border: none;
+        display: inline-block;
+        padding: 8px 16px;
+        vertical-align: middle;
+        overflow: hidden;
+        text-decoration: none;
+        color: inherit;
+        background-color: inherit;
+        text-align: center;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .w3-round-large {
+        border-radius: 8px;
+      }
+      .w3-blue {
+        color: #fff !important;
+        background-color: #2196f3 !important;
+      }
+      .w3-border {
+        border: 1px solid #ccc !important;
+      }
+      .w3-border-blue {
+        border-color: #2196f3 !important;
+      }
+      .w3-hover-white:hover {
+        color: #000 !important;
+        background-color: #fff !important;
+      }
+
+      /* Custom styles */
+      body {
+        font-family: Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        background-color: #000080;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        padding: 1em;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      main {
+        min-width: 25em;
+        max-width: 35em;
+        padding: 2em;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .success-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1.5em;
+      }
+
+      .logo-container {
+        display: flex;
+        align-items: center;
+        gap: 0.75em;
+        margin-bottom: 1em;
+      }
+
+      .logo-text {
+        font-size: 2em;
+        font-weight: bold;
+        color: #000080;
+        margin: 0;
+        letter-spacing: -0.02em;
+      }
+
+      .checkmark {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: block;
+        stroke-width: 3;
+        stroke: #4caf50;
+        stroke-miterlimit: 10;
+        margin: 0 auto 1em;
+        animation: scale 0.3s ease-in-out 0.9s both;
+      }
+
+      .checkmark-svg {
+        width: 80px;
+        height: 80px;
+      }
+
+      .checkmark-circle {
+        stroke-dasharray: 166;
+        stroke-dashoffset: 166;
+        stroke-width: 3;
+        stroke: #4caf50;
+        fill: none;
+        animation: stroke 0.6s cubic-bezier(0.65, 0, 0.45, 1) forwards;
+      }
+
+      .checkmark-check {
+        stroke-dasharray: 48;
+        stroke-dashoffset: 48;
+        stroke-width: 3;
+        stroke: #4caf50;
+        animation: stroke 0.3s cubic-bezier(0.65, 0, 0.45, 1) 0.8s forwards;
+      }
+
+      @keyframes stroke {
+        100% {
+          stroke-dashoffset: 0;
+        }
+      }
+
+      @keyframes scale {
+        0%,
+        100% {
+          transform: none;
+        }
+        50% {
+          transform: scale3d(1.1, 1.1, 1);
+        }
+      }
+
+      .success-title {
+        color: #2e7d32;
+        font-size: 1.5em;
+        font-weight: bold;
+        margin: 0 0 0.5em 0;
+      }
+
+      .success-description {
+        color: #424242;
+        font-size: 1em;
+        margin: 0;
+      }
+
+      .countdown-display {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5em;
+        margin: 1em 0;
+      }
+
+      #countdown {
+        font-size: 2.5em;
+        font-weight: bold;
+        color: #000080;
+        min-width: 1.2em;
+        text-align: center;
+      }
+
+      .countdown-label {
+        font-size: 1em;
+        color: #666;
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background-color: #e0e0e0;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-bottom: 1em;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background-color: #000080;
+        width: 0%;
+        transition: width 1s linear;
+        border-radius: 3px;
+      }
+
+      .w3-button {
+        padding: 0.75em 1.5em;
+        font-size: 1em;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .w3-button:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 128, 0.3);
+      }
+
+      @media (max-width: 600px) {
+        main {
+          width: 100%;
+          max-width: 90vw;
+          padding: 1.5em;
+        }
+        .logo-text {
+          font-size: 1.5em;
+        }
+        .checkmark,
+        .checkmark-svg {
+          width: 60px;
+          height: 60px;
+        }
+        #countdown {
+          font-size: 2em;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main
+      class="w3-container w3-margin-top w3-margin-bottom w3-white w3-round-xlarge w3-center"
+    >
+      <div class="success-container">
+        <div class="logo-container">
+          <h1 class="logo-text">🔐 aws-runas</h1>
+        </div>
+
+        <div class="success-message">
+          <div class="checkmark">
+            <svg viewBox="0 0 52 52" class="checkmark-svg">
+              <circle
+                class="checkmark-circle"
+                cx="26"
+                cy="26"
+                r="25"
+                fill="none"
+              />
+              <path
+                class="checkmark-check"
+                fill="none"
+                d="m14.1 27.2l7.1 7.2 16.7-16.8"
+              />
+            </svg>
+          </div>
+          <h2 class="success-title">Authentication Complete!</h2>
+          <p class="success-description">
+            Your AWS credentials have been successfully obtained.
+          </p>
+        </div>
+
+        <div class="timer-container">
+          <p style="color: #666; font-size: 0.9em; margin: 0 0 0.5em 0">
+            This window will close automatically in
+          </p>
+          <div class="countdown-display">
+            <span id="countdown">5</span>
+            <span class="countdown-label">seconds</span>
+          </div>
+          <div class="progress-bar">
+            <div id="progress" class="progress-fill"></div>
+          </div>
+        </div>
+
+        <div class="close-container">
+          <button
+            id="closeBtn"
+            class="w3-button w3-round-large w3-blue w3-border w3-border-blue w3-hover-white"
+          >
+            Close Now
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      let totTime = 10;
+      let timeLeft = totTime;
+      const countdownElement = document.getElementById("countdown");
+      const progressElement = document.getElementById("progress");
+      const closeBtn = document.getElementById("closeBtn");
+
+      function updateTimer() {
+        countdownElement.textContent = timeLeft;
+        const progressPercentage = ((totTime - timeLeft + 1) / totTime) * 100;
+        progressElement.style.width = progressPercentage + "%";
+
+        if (timeLeft <= 0) {
+          closeWindow();
+        } else {
+          timeLeft--;
+          setTimeout(updateTimer, 1000);
+        }
+      }
+
+      function closeWindow() {
+        // Get redirect URL from query parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const redirectUrl =
+          urlParams.get("redirect_uri") || urlParams.get("redirect");
+
+        if (redirectUrl) {
+          // Redirect to specified URL
+          window.location.href = redirectUrl;
+        } else if (window.opener) {
+          // Close popup window
+          window.close();
+        } else {
+          // Fallback: try to close or show a message
+          try {
+            window.close();
+          } catch (e) {
+            document.body.innerHTML =
+              '<div style="text-align: center; padding: 2em; font-family: sans-serif;"><h2>Authentication Complete</h2><p>You can now close this tab.</p></div>';
+          }
+        }
+      }
+
+      // Event listeners
+      closeBtn.addEventListener("click", closeWindow);
+      document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") closeWindow();
+      });
+
+      // Start countdown
+      window.addEventListener("load", function () {
+        setTimeout(updateTimer, 100);
+      });
+    </script>
+  </body>
+</html>

@@ -15,10 +15,12 @@ package cli
 
 import (
 	"fmt"
-	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/urfave/cli/v2"
 	"os"
 	"path/filepath"
+
+	"github.com/urfave/cli/v2"
+
+	"github.com/mmmorris1975/aws-runas/credentials"
 )
 
 var shortcutFlags = []cli.Flag{mfaFlag, rolesFlag, updateFlag, diagFlag, vFlag}
@@ -120,6 +122,14 @@ var samlUrlFlag = &cli.StringFlag{
 	Usage:       "URL of the SAML authentication endpoint",
 	EnvVars:     []string{"SAML_AUTH_URL"},
 	Destination: &cmdlineCfg.SamlUrl,
+}
+
+var samlEntityIdFlag = &cli.StringFlag{
+	Name:        "saml-entityid",
+	Aliases:     []string{"S"},
+	Usage:       "Entity ID of the SAML authentication endpoint",
+	EnvVars:     []string{"SAML_ENTITY_ID"},
+	Destination: &cmdlineCfg.SamlEntityId,
 }
 
 var oidcUrlFlag = &cli.StringFlag{
