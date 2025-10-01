@@ -139,6 +139,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 			FederatedUsername:       cfg.FederatedUsername,
 			Logger:                  logger,
 			AuthBrowser:             cfg.AuthBrowser,
+			SamlEntityId:            cfg.SamlEntityId,
 		},
 		Duration: cfg.RoleCredentialDuration(),
 		RoleArn:  cfg.RoleArn,

@@ -1,0 +1,586 @@
+<!--
+  ~ Copyright (c) 2021 Michael Morris. All Rights Reserved.
+  ~
+  ~ Licensed under the MIT license (the "License"). You may not use this file except in compliance
+  ~ with the License. A copy of the License is located at
+  ~
+  ~ https://github.com/mmmorris1975/aws-runas/blob/master/LICENSE
+  ~
+  ~ or in the "license" file accompanying this file. This file is distributed on an "AS IS" BASIS,
+  ~ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
+  ~ for the specific language governing permissions and limitations under the License.
+  -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,shrink-to-fit=no"/>
+    <title>aws-runas Authentication Failed</title>
+    <link rel="icon" type="image/png" href="favicon.ico">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000080;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            animation: fadeIn 0.6s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .container {
+            background-color: white;
+            padding: 2.5em;
+            border-radius: 16px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 450px;
+            width: 90%;
+            margin: 1em;
+        }
+
+        .logo-section {
+            margin-bottom: 2em;
+        }
+
+        .logo-text {
+            font-size: 2.2em;
+            font-weight: bold;
+            color: #000080;
+            margin: 0;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-emoji {
+            font-size: 1.2em;
+            margin-right: 0.3em;
+        }
+
+        .error-icon {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 1.5em;
+            position: relative;
+        }
+
+        .error-circle {
+            width: 80px;
+            height: 80px;
+            border: 4px solid #f44336;
+            border-radius: 50%;
+            position: relative;
+            animation: circleGrow 0.6s ease-out forwards;
+            transform: scale(0);
+        }
+
+        @keyframes circleGrow {
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .error-cross-left {
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            background-color: #f44336;
+            left: 38px;
+            top: 20px;
+            transform: rotate(45deg);
+            animation: crossGrow 0.3s ease-out 0.7s forwards;
+            transform-origin: center;
+            transform: rotate(45deg) scaleY(0);
+        }
+
+        .error-cross-right {
+            position: absolute;
+            width: 4px;
+            height: 40px;
+            background-color: #f44336;
+            left: 38px;
+            top: 20px;
+            transform: rotate(-45deg);
+            animation: crossGrow 0.3s ease-out 0.9s forwards;
+            transform-origin: center;
+            transform: rotate(-45deg) scaleY(0);
+        }
+
+        @keyframes crossGrow {
+            to {
+                transform: rotate(45deg) scaleY(1);
+            }
+        }
+
+        .error-title {
+            color: #d32f2f;
+            font-size: 1.6em;
+            font-weight: bold;
+            margin: 0 0 0.5em 0;
+            animation: textSlideIn 0.5s ease-out 1.2s both;
+        }
+
+        .error-description {
+            color: #555;
+            font-size: 1em;
+            margin: 0 0 1.5em 0;
+            line-height: 1.4;
+            animation: textSlideIn 0.5s ease-out 1.4s both;
+        }
+
+        @keyframes textSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-details {
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 1em;
+            margin: 1.5em 0;
+            animation: textSlideIn 0.5s ease-out 1.6s both;
+        }
+
+        .error-code {
+            font-family: monospace;
+            font-size: 0.9em;
+            color: #d32f2f;
+            font-weight: bold;
+            margin-bottom: 0.5em;
+        }
+
+        .error-message {
+            font-size: 0.9em;
+            color: #666;
+            text-align: left;
+        }
+
+        .actions-section {
+            margin: 2em 0 1em 0;
+            animation: textSlideIn 0.5s ease-out 1.8s both;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 0.75em;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            font-size: 0.95em;
+            font-weight: bold;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+            min-width: 100px;
+        }
+
+        .btn-primary {
+            background-color: #000080;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #000066;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(0, 0, 128, 0.3);
+        }
+
+        .btn-secondary {
+            background-color: #f5f5f5;
+            color: #333;
+            border: 1px solid #ddd;
+        }
+
+        .btn-secondary:hover {
+            background-color: #e8e8e8;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .timer-section {
+            margin-top: 2em;
+            padding-top: 1.5em;
+            border-top: 1px solid #eee;
+            animation: textSlideIn 0.5s ease-out 2s both;
+        }
+
+        .timer-label {
+            color: #666;
+            font-size: 0.85em;
+            margin-bottom: 0.8em;
+        }
+
+        .countdown-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5em;
+            margin-bottom: 1em;
+        }
+
+        .countdown-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #f44336;
+            min-width: 1em;
+            text-align: center;
+        }
+
+        .countdown-text {
+            font-size: 0.9em;
+            color: #666;
+        }
+
+        /* Responsive design */
+        @media (max-width: 500px) {
+            .container {
+                padding: 2em 1.5em;
+                margin: 0.5em;
+            }
+            
+            .logo-text {
+                font-size: 1.8em;
+            }
+            
+            .error-icon {
+                width: 60px;
+                height: 60px;
+            }
+            
+            .error-circle {
+                width: 60px;
+                height: 60px;
+                border-width: 3px;
+            }
+            
+            .error-cross-left,
+            .error-cross-right {
+                width: 3px;
+                height: 30px;
+                left: 28.5px;
+                top: 15px;
+            }
+            
+            .error-title {
+                font-size: 1.4em;
+            }
+            
+            .action-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn {
+                width: 100%;
+                max-width: 200px;
+            }
+        }
+
+        /* Accessibility improvements */
+        .btn:focus {
+            outline: 3px solid #4CAF50;
+            outline-offset: 2px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            * {
+                animation-duration: 0.01ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.01ms !important;
+            }
+        }
+
+        /* Hidden by default, shown when needed */
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-section">
+            <h1 class="logo-text">
+                <span class="logo-emoji">🔐</span>aws-runas
+            </h1>
+        </div>
+        
+        <div class="error-icon">
+            <div class="error-circle"></div>
+            <div class="error-cross-left"></div>
+            <div class="error-cross-right"></div>
+        </div>
+        
+        <h2 class="error-title">Authentication Failed</h2>
+        <p class="error-description">
+            We were unable to authenticate your credentials. Please check your login information and try again.
+        </p>
+        
+        <div id="errorDetails" class="error-details hidden">
+            <div id="errorCode" class="error-code"></div>
+            <div id="errorMessage" class="error-message"></div>
+        </div>
+        
+        <div class="actions-section">
+            <div class="action-buttons">
+                <button id="retryBtn" class="btn btn-primary">Try Again</button>
+                <button id="closeBtn" class="btn btn-secondary">Close</button>
+            </div>
+        </div>
+        
+        <div id="timerSection" class="timer-section hidden">
+            <div class="timer-label">This window will close automatically in</div>
+            <div class="countdown-wrapper">
+                <span id="countdown" class="countdown-number">10</span>
+                <span class="countdown-text">seconds</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const AUTO_CLOSE_DELAY = 10; // seconds
+        
+        // State
+        let timeLeft = AUTO_CLOSE_DELAY;
+        let autoCloseTimer = null;
+        
+        // DOM elements
+        const countdownElement = document.getElementById('countdown');
+        const timerSection = document.getElementById('timerSection');
+        const errorDetails = document.getElementById('errorDetails');
+        const errorCode = document.getElementById('errorCode');
+        const errorMessage = document.getElementById('errorMessage');
+        const retryBtn = document.getElementById('retryBtn');
+        const closeBtn = document.getElementById('closeBtn');
+        
+        // Parse URL parameters for error details
+        function parseErrorFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const error = urlParams.get('error');
+            const errorDescription = urlParams.get('error_description');
+            const code = urlParams.get('code');
+            
+            if (error || errorDescription || code) {
+                // Show error details section
+                errorDetails.classList.remove('hidden');
+                
+                if (code) {
+                    errorCode.textContent = `Error Code: ${code}`;
+                } else if (error) {
+                    errorCode.textContent = `Error: ${error}`;
+                }
+                
+                if (errorDescription) {
+                    errorMessage.textContent = decodeURIComponent(errorDescription);
+                } else if (error && error !== code) {
+                    errorMessage.textContent = getErrorMessage(error);
+                }
+            }
+        }
+        
+        // Get user-friendly error messages
+        function getErrorMessage(error) {
+            const errorMessages = {
+                'invalid_credentials': 'The username or password you entered is incorrect.',
+                'invalid_client': 'The application configuration is invalid.',
+                'access_denied': 'Access was denied. You may not have permission to access this resource.',
+                'invalid_request': 'The authentication request was malformed.',
+                'invalid_scope': 'The requested scope is invalid or unavailable.',
+                'server_error': 'An internal server error occurred. Please try again later.',
+                'temporarily_unavailable': 'The authentication service is temporarily unavailable.',
+                'unsupported_response_type': 'The authentication method is not supported.',
+                'invalid_grant': 'The provided authorization grant is invalid.',
+                'unauthorized_client': 'The client is not authorized to use this authentication method.',
+                'mfa_required': 'Multi-factor authentication is required.',
+                'expired_token': 'Your session has expired. Please authenticate again.',
+                'rate_limited': 'Too many authentication attempts. Please wait before trying again.'
+            };
+            
+            return errorMessages[error] || 'An unknown error occurred during authentication.';
+        }
+        
+        // Timer function
+        function updateTimer() {
+            countdownElement.textContent = timeLeft;
+            
+            if (timeLeft <= 0) {
+                closeWindow();
+            } else {
+                timeLeft--;
+                autoCloseTimer = setTimeout(updateTimer, 1000);
+            }
+        }
+        
+        // Start auto-close timer
+        function startAutoClose() {
+            timerSection.classList.remove('hidden');
+            autoCloseTimer = setTimeout(updateTimer, 1000);
+        }
+        
+        // Stop auto-close timer
+        function stopAutoClose() {
+            if (autoCloseTimer) {
+                clearTimeout(autoCloseTimer);
+                autoCloseTimer = null;
+            }
+            timerSection.classList.add('hidden');
+        }
+        
+        // Window closing logic
+        function closeWindow() {
+            try {
+                // For popup windows
+                if (window.opener !== null) {
+                    window.close();
+                    return;
+                }
+                
+                // For regular windows (may not work due to browser security)
+                window.close();
+                
+                // If we get here, show a message
+                setTimeout(showCloseMessage, 100);
+            } catch (e) {
+                showCloseMessage();
+            }
+        }
+        
+        function showCloseMessage() {
+            document.body.innerHTML = `
+                <div class="container">
+                    <div class="logo-section">
+                        <h1 class="logo-text">
+                            <span class="logo-emoji">🔐</span>aws-runas
+                        </h1>
+                    </div>
+                    <h2 class="error-title">Authentication Failed</h2>
+                    <p class="error-description">
+                        You can now safely close this tab or window.
+                    </p>
+                </div>
+            `;
+        }
+        
+        // Retry authentication
+        function retryAuthentication() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const retryUrl = urlParams.get('retry_url') || urlParams.get('auth_url');
+            
+            if (retryUrl) {
+                try {
+                    window.location.href = decodeURIComponent(retryUrl);
+                } catch (e) {
+                    console.warn('Invalid retry URL:', retryUrl);
+                    // Fallback: go back or refresh
+                    if (window.history.length > 1) {
+                        window.history.back();
+                    } else {
+                        window.location.reload();
+                    }
+                }
+            } else {
+                // Fallback: go back or refresh
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.location.reload();
+                }
+            }
+        }
+        
+        // Event listeners
+        retryBtn.addEventListener('click', function() {
+            stopAutoClose();
+            retryAuthentication();
+        });
+        
+        closeBtn.addEventListener('click', function() {
+            stopAutoClose();
+            closeWindow();
+        });
+        
+        // Keyboard support
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                stopAutoClose();
+                closeWindow();
+            } else if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                stopAutoClose();
+                retryAuthentication();
+            }
+        });
+        
+        // User interaction detection (stop auto-close if user interacts)
+        let userInteracted = false;
+        
+        function handleUserInteraction() {
+            if (!userInteracted) {
+                userInteracted = true;
+                stopAutoClose();
+            }
+        }
+        
+        // Listen for various user interactions
+        document.addEventListener('click', handleUserInteraction);
+        document.addEventListener('keydown', handleUserInteraction);
+        document.addEventListener('scroll', handleUserInteraction);
+        document.addEventListener('mousemove', handleUserInteraction);
+        
+        // Initialize page
+        window.addEventListener('load', function() {
+            parseErrorFromUrl();
+            
+            // Start auto-close timer after a delay (give user time to read)
+            setTimeout(function() {
+                if (!userInteracted) {
+                    startAutoClose();
+                }
+            }, 3000); // Wait 3 seconds before starting auto-close
+        });
+        
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                stopAutoClose();
+            }
+        });
+    </script>
+</body>
+</html>
