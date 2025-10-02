@@ -15,7 +15,6 @@ package client
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -101,8 +100,6 @@ func (c *samlRoleClient) CredentialsWithContext(ctx context.Context) (*credentia
 			return nil, err
 		}
 		c.roleProvider.SamlAssertion(saml)
-
-		fmt.Printf("\n%s\n", saml)
 
 		v, err = c.awsCredCache.Retrieve(ctx)
 		if err != nil {

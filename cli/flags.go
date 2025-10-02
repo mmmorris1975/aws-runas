@@ -26,7 +26,7 @@ import (
 var shortcutFlags = []cli.Flag{mfaFlag, rolesFlag, updateFlag, diagFlag, vFlag}
 var otherFlags = []cli.Flag{envFlag, fmtFlag, sessionFlag, refreshFlag, expFlag, whoamiFlag}
 var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag, mfaSerialFlag, mfaTypeFlag, externalIdFlag,
-	jumpRoleFlag, samlUrlFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
+	jumpRoleFlag, samlUrlFlag, samlEntityIdFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
 
 /*
  * Shortcut flags - perform some non-role credentialed action and exits.
@@ -126,7 +126,7 @@ var samlUrlFlag = &cli.StringFlag{
 
 var samlEntityIdFlag = &cli.StringFlag{
 	Name:        "saml-entityid",
-	Aliases:     []string{"S"},
+	Aliases:     []string{"I"},
 	Usage:       "Entity ID of the SAML authentication endpoint",
 	EnvVars:     []string{"SAML_ENTITY_ID"},
 	Destination: &cmdlineCfg.SamlEntityId,

@@ -31,11 +31,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/identity"
 )
 
-const (
-	PearsonPLC = `https://login.microsoftonline.com/8cc434d7-97d0-47d3-b5c5-14fe0e33e34b/saml2`
-	PearsonIO  = `https://login.microsoftonline.com/1539896d-376c-4ad9-a278-f3f8043521ea/saml2`
-)
-
 type browserNEClient struct {
 	*baseClient
 }
@@ -118,21 +113,21 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	urlType, err := samlSP.ServiceProvider.MakeRedirectAuthenticationRequest(``)
 	requri := urlType.String()
 	c.Logger.Debugf("Request URL being made to : %s\n", requri)
-	// Create a local web server to listen for the SAML response.
-
-	httpserver := &http.Server{
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  60 * time.Second,
-	}
 	mux := http.NewServeMux()
-	httpserver.SetKeepAlivesEnabled(false)
 	shutdown := make(chan bool, 1)
 
-	mux.HandleFunc(`/finished`, func(w http.ResponseWriter, r *http.Request) {
+	mux.HandleFunc(`/success`, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
 		w.Write([]byte(htmlsuccess))
-		// Auto close the window after 5 seconds.
+		// Notify the server to shutdown now that we are done.
+		shutdown <- true
+	})
+
+	mux.HandleFunc(`/fail`, func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Write([]byte(htmlfail))
+		// Auto close the window
+		//  after 5 seconds.
 		http.NoBody.Close()
 		// Notify the server to shutdown now that we are done.
 		shutdown <- true
@@ -142,23 +137,31 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 		// Verify and process the SAML response
 		encodedXML := r.FormValue(`SAMLResponse`)
 		if len(encodedXML) == 0 {
-			http.Error(w, "No SAMLResponse in the form", http.StatusBadRequest)
+			redir := "http://localhost:" + fmt.Sprintf("%d", listenPort) + "/fail"
+			http.Redirect(w, r, redir, http.StatusFound)
 			return
 		}
 		samlassertion = credentials.SamlAssertion(encodedXML)
 		c.saml = &samlassertion
-		redir := "http://localhost:" + fmt.Sprintf("%d", listenPort) + "/finished"
+		redir := "http://localhost:" + fmt.Sprintf("%d", listenPort) + "/success"
 		http.Redirect(w, r, redir, http.StatusFound)
-
 	})
-	httpserver.Handler = mux
-	// Start the server to listen for the SAML response.
-	go func() {
+
+	// Create a local web server to listen for the SAML response.
+	httpserver := &http.Server{
+		ReadTimeout:  30 * time.Second,
+		WriteTimeout: 30 * time.Second,
+		IdleTimeout:  60 * time.Second,
+		Handler:      mux,
+	}
+
+	// Start the server to listen for the SAML response in a separate goroutine.
+	go func(httpListener net.Listener) {
 		err = httpserver.Serve(httpListener)
 		if err != nil && err != http.ErrServerClosed {
 			c.Logger.Errorf("Error starting local web server: %v", err)
 		}
-	}()
+	}(httpListener)
 
 	c.Logger.Debugf("Request URL being made to : %s", requri)
 	err = openBrowser(requri)
@@ -169,6 +172,7 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	// Wait here until we get a notification to shutdown the server.
 	// This happens when we get the SAML response and process it.
 	<-shutdown
+	httpserver.Shutdown(context.Background())
 	sr, err := c.saml.Decode()
 	if err != nil {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
