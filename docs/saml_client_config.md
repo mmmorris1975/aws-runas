@@ -125,3 +125,35 @@ Once the browser is started, the user is in control of the authentication sessio
 There is no way to use the existing browser SSO information since a normal browser session isn't started with a CDP enabled browser so aws-runas will not be able to monitor events and retrieve the SAML response.
 
 This provider has only been tested with AzureAD but, should work for any other provider.
+
+
+### Browser New Experience Provider
+
+The browsene provider allows for aws-runas to open a new tab for the default browser connected to aws-runas through a local webserver that will recieved the SAMLResponse from the IDP.  This is accomplished by having aws-runas act as a SP and making the SAMLRequest with the Assertion Consummer Service of http://localhost:<port>/saml/acs.  This allows the user to authenticate through the default browser which will in most situations have the SSO credentials available.  This also prevents needing to have an alternate browser or browser profile making the authentication process much smoother and more seemless.  
+
+To use the browser provider update the `$HOME/.aws/config` file to include the following configurations.
+
+```text
+saml_auth_url = https://saml.provider.com/<saml endpoint>
+saml_entity_id = https://signin.aws.amazon.com/saml 
+saml_provider=browserne
+```
+
+saml_auth_url is the URL where you would make a SAMLRequest.  This provider was built and tested with MS EntraID so this would appear as below.   This should work with other SAML IDP's but, has not been tested.
+
+``` 
+saml_auth_url = https://login.microsoftonline.com/<Tenant ID>/saml2
+```
+
+saml_entity_id is used to identity the application used to return the SAMLResponse from the request.   This will often be the same as the AWS SAML end-point for sign-in but, could include and html anchor marker and a numeric component.
+
+```
+ saml_entity_id = http://signin.aws.amazon.com/saml
+```
+
+saml_provider is set to be `browserne` for the new experience.   The legacy ChromeDP provider is still available for backward compatibility.
+
+
+The new experience creates a localhost listener on a random port that acts as the ACS URL waiting for the SAMLResponse payload.   One this payload is recieved the user is notified via the browser of successfully retreiving the SAMLResponse.   After the response is recieved the SAMLResponse is used to authenticate to AWS and the local web listener is stopped.
+
+This provider has only be tested with MS EntraID but, will likely work with other IDP's.
