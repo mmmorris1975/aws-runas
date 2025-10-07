@@ -156,4 +156,47 @@ saml_provider is set to be `browserne` for the new experience.   The legacy Chro
 
 The new experience creates a localhost listener on a random port that acts as the ACS URL waiting for the SAMLResponse payload.   One this payload is recieved the user is notified via the browser of successfully retreiving the SAMLResponse.   After the response is recieved the SAMLResponse is used to authenticate to AWS and the local web listener is stopped.
 
-This provider has only be tested with MS EntraID but, will likely work with other IDP's.
+### Important Role Trust Policy Changes Required.
+
+Due to the way that the SAMLResponse is delivered to the browser via a localhost listener there is a required update to the roles `trust policy` to allow for the delivery of the SAMLResponse.   
+
+A typical trust policy for a role with SSO integration will have a policy statement that looks similar to below with a conditional statement for the `saml:aud` which allows a specific `Recipient` in the response.   This is almost always :
+
+#### Typical Role Trust Policy.
+
+```
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::<Account ID>:saml-provider/<Provider Name>
+            },
+            "Action": "sts:AssumeRoleWithSAML",
+            "Condition": {
+                "StringEquals": {
+                    "SAML:aud": "https://signin.aws.amazon.com/saml"
+                }
+            }
+        },
+```
+
+#### Required Trust for the Browser New Experience.
+
+The `browserne` provider creates the SAMLRequest with the ACS URL set to be a random port on http://localhost to recieve the SAMLResponse.  Due to this the Recipient in the response will match the ACS URL and this is what the `saml:uad` field is set to for policy evaluation.
+
+```
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Federated": "arn:aws:iam::<Account ID>:saml-provider/<Provider Name>"
+            },
+            "Action": "sts:AssumeRoleWithSAML",
+            "Condition": {
+                "StringLike": {
+                    "SAML:aud": "http://localhost:*/saml/acs"
+                }
+            }
+        },
+
+
+
+** Note: The `browserne` provider has only be tested with MS EntraID but, will likely work with other IDP's.
