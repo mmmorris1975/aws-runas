@@ -32,6 +32,9 @@ const (
 	unknownProvider   = "unknown"
 	azureadProvider   = "azuread"
 	browserProvider   = "browser"
+	// Alias for browser provider to select new experience login flows
+	browserNEProvider            = "browserne"
+	browserNewExperienceProvider = "browserNewExperience"
 )
 
 var errUnknownProvider = errors.New("unable to determine client provider type")
@@ -146,6 +149,16 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, 
 		if err != nil {
 			return nil, err
 		}
+		c.OidcClientConfig = cfg
+		c.Logger = cfg.Logger
+		c.MfaType = cfg.MfaType
+		return c, nil
+	case browserNEProvider, browserNewExperienceProvider:
+		c, err := NewBrowserNEClient(authUrl)
+		if err != nil {
+			return nil, err
+		}
+		c.SamlEntityId = cfg.SamlEntityId
 		c.OidcClientConfig = cfg
 		c.Logger = cfg.Logger
 		c.MfaType = cfg.MfaType

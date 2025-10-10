@@ -39,6 +39,7 @@ type AwsConfig struct {
 	SrcProfile             string        `ini:"source_profile,omitempty"`                                // env var not supported, only found in config file, and should not be explicitly set
 	JumpRoleArn            string        `ini:"jump_role_arn,omitempty" env:"JUMP_ROLE_ARN"`
 	SamlUrl                string        `ini:"saml_auth_url,omitempty" env:"SAML_AUTH_URL"`
+	SamlEntityId           string        `ini:"saml_auth_entityid,omitempty" env:"SAML_ENTITYID"`
 	SamlUsername           string        `ini:"saml_username,omitempty" env:"SAML_USERNAME"`
 	SamlProvider           string        `ini:"saml_provider,omitempty" env:"SAML_PROVIDER"`
 	WebIdentityUrl         string        `ini:"web_identity_auth_url,omitempty" env:"WEB_IDENTITY_AUTH_URL"`
@@ -151,6 +152,10 @@ func (c *AwsConfig) MergeIn(config ...*AwsConfig) {
 
 		if len(cfg.SamlUrl) > 0 {
 			c.SamlUrl = cfg.SamlUrl
+		}
+
+		if len(cfg.SamlEntityId) > 0 {
+			c.SamlEntityId = cfg.SamlEntityId
 		}
 
 		if len(cfg.SamlUsername) > 0 {
