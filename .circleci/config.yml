@@ -26,9 +26,9 @@ jobs:
     steps:
       - checkout
 
-      - go/load-cache
+      - go/load-mod-cache
       - go/mod-download
-      - go/save-cache
+      - go/save-mod-cache
 
       - run: go vet -tests=false ./...
       - go/test
@@ -66,7 +66,7 @@ jobs:
 
     steps:
       - checkout
-      - go/load-cache
+      - go/load-mod-cache
       - run: sudo apt-get update && sudo apt-get -y install upx
       - run:
           name: build linux/amd64
