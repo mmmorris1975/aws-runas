@@ -12,7 +12,7 @@ orbs:
 jobs:
   lint:
     docker:
-      - image: "golangci/golangci-lint:v2.50"
+      - image: "golangci/golangci-lint:v1.64"
 
     steps:
       - checkout
