@@ -19,7 +19,7 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.400.0
+	github.com/mmmorris1975/ssm-session-client v0.402.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.4.3
 	golang.org/x/crypto v0.33.0
