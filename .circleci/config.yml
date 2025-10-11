@@ -148,7 +148,7 @@ jobs:
   test-linux:
     executor:
       name: ruby/default
-      tag: '2.7'
+      tag: '3.2'
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials

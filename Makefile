@@ -99,7 +99,7 @@ rspec: $(EXE)
 	  -e ONELOGIN_SAML_URL -e ONELOGIN_OIDC_URL -e ONELOGIN_OIDC_CLIENT_ID -e ONELOGIN_PASSWORD \
 	  --mount type=bind,src=$${PWD},dst=/app \
 	  --mount type=bind,src=$${HOME}/.aws/credentials,dst=/app/testdata/aws_credentials,ro \
-	  --entrypoint scripts/run_rspec.sh cimg/ruby:2.7
+	  --entrypoint scripts/run_rspec.sh cimg/ruby:3.2
 
 test: gotest rspec
 
@@ -107,4 +107,4 @@ docs:
 	@if [ -z $${CIRCLECI} ]; then \
   		DOCKER_ARGS="--user root"; \
 	fi; \
-	docker run --rm -v $${PWD}:/app -w /app -p 4000:4000 -it $${DOCKER_ARGS} --entrypoint scripts/run_jekyll.sh cimg/ruby:2.7
+	docker run --rm -v $${PWD}:/app -w /app -p 4000:4000 -it $${DOCKER_ARGS} --entrypoint scripts/run_jekyll.sh cimg/ruby:3.1
