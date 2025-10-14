@@ -4,7 +4,7 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@1.7.1
+  go: circleci/go@3.0.3
   aws-cli: circleci/aws-cli@1.4.1
   ruby: circleci/ruby@1.4.0
   windows: circleci/windows@5.0.0
@@ -12,7 +12,7 @@ orbs:
 jobs:
   lint:
     docker:
-      - image: "golangci/golangci-lint:v1.50"
+      - image: "golangci/golangci-lint:v1.64"
 
     steps:
       - checkout
@@ -21,14 +21,14 @@ jobs:
   preflight:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
 
     steps:
       - checkout
 
-      - go/load-cache
+      - go/load-mod-cache
       - go/mod-download
-      - go/save-cache
+      - go/save-mod-cache
 
       - run: go vet -tests=false ./...
       - go/test
@@ -36,7 +36,7 @@ jobs:
   build-darwin:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
 
     steps:
       - checkout
@@ -62,11 +62,11 @@ jobs:
   build-linux:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
 
     steps:
       - checkout
-      - go/load-cache
+      - go/load-mod-cache
       - run: sudo apt-get update && sudo apt-get -y install upx
       - run:
           name: build linux/amd64
@@ -96,7 +96,7 @@ jobs:
   build-windows:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
 
     steps:
       - checkout
@@ -148,7 +148,7 @@ jobs:
   test-linux:
     executor:
       name: ruby/default
-      tag: '2.7'
+      tag: '3.2'
 
     environment:
       AWS_SHARED_CREDENTIALS_FILE: build/aws_credentials
@@ -192,7 +192,7 @@ jobs:
   package-darwin:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
     steps:
       - checkout
       - attach_workspace:
@@ -217,7 +217,7 @@ jobs:
   package-windows:
     executor:
       name: go/default
-      tag: '1.19'
+      tag: '1.23'
     steps:
       - checkout
       - attach_workspace:

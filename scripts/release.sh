@@ -17,7 +17,9 @@
 git describe --tags --exact-match --first-parent || exit 0
 VER=$(git describe --tags --exact-match --first-parent)
 
-wget -O - https://github.com/cli/cli/releases/download/v1.4.0/gh_1.4.0_linux_amd64.tar.gz | tar xzf - -C /var/tmp
+#wget -O - https://github.com/cli/cli/releases/download/v1.4.0/gh_1.4.0_linux_amd64.tar.gz | tar xzf - -C /var/tmp
+wget -O - https://github.com/cli/cli/releases/download/v2.81.0/gh_2.81.0_linux_386.tar.gz | tar xzf - -C /var/tmp
+
 GH=$(find /var/tmp/gh* -name gh)
 
 cd ${1:-.}
