@@ -15,6 +15,7 @@ package external
 
 import (
 	"context"
+	"encoding/base64"
 	"log"
 	"net/url"
 	"runtime"
@@ -112,6 +113,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	// Setup a listener to be called for each browser event in a separate go routine
 	chromedp.ListenTarget(taskCtx, c.targetListener)
 	// ensure that the browser process is started and navigate to auth page
+	c.Logger.Debugf("Auth Nav : %s", c.authUrl.String())
 	if err = chromedp.Run(taskCtx,
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
@@ -132,16 +134,26 @@ func (c *browserClient) targetListener(ev interface{}) {
 	switch ev := ev.(type) { //nolint:gocritic
 	case *network.EventRequestWillBeSent:
 		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
-			// parse and unescape the query string for the key value pair that contains SAMLResponse=xxxx
-			qs, err := url.ParseQuery(ev.Request.PostData)
-			if err != nil {
-				c.Logger.Errorf("Error parsing SAMLResponse: %v", err)
+			// This is now a slice of entries that are Base64 encoded key value pairs
+			// So we need to iterate through them to find the SAMLResponse
+
+			for i, entry := range ev.Request.PostDataEntries {
+				decoded, _ := base64.StdEncoding.DecodeString(entry.Bytes)
+				c.Logger.Debugf("%d - %s\n", i, string(decoded))
+				qs, err := url.ParseQuery(string(decoded))
+				if err != nil {
+					c.Logger.Errorf("Error parsing SAMLResponse: %v", err)
+					continue
+				}
+				saml := qs.Get("SAMLResponse")
+				if saml == "" {
+					continue
+				}
+				samlassert := credentials.SamlAssertion(saml)
+				c.saml = &samlassert
+				done.Done()
 				return
 			}
-			saml := qs.Get("SAMLResponse")
-			samlassert := credentials.SamlAssertion(saml)
-			c.saml = &samlassert
-			done.Done()
 		}
 	}
 }
