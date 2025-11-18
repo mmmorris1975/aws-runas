@@ -16,10 +16,11 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"github.com/aws/aws-sdk-go-v2/aws/arn"
-	"github.com/urfave/cli/v2"
 	"sort"
 	"strings"
+
+	"github.com/aws/aws-sdk-go-v2/aws/arn"
+	"github.com/urfave/cli/v2"
 )
 
 var rolesCmd = &cli.Command{
@@ -48,15 +49,17 @@ var rolesCmd = &cli.Command{
 			return err
 		}
 
+		roles, err := c.Roles()
+		if err != nil {
+			return err
+		}
+
+		// Moved identity call after roles so that username is populated from SAML assertion if available
 		id, err := c.Identity()
 		if err != nil {
 			return err
 		}
 
-		roles, err := c.Roles()
-		if err != nil {
-			return err
-		}
 		sort.Strings(*roles)
 
 		fmt.Printf("Available role ARNs for %s\n", id.Username)

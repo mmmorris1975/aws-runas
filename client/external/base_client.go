@@ -164,9 +164,6 @@ func (c *baseClient) handleSamlResponse(r io.Reader) error {
 }
 
 func (c *baseClient) identity(provider string) *identity.Identity {
-	if len(c.Username) < 1 {
-		_ = c.gatherCredentials()
-	}
 
 	id := &identity.Identity{
 		IdentityType: "user",
@@ -174,12 +171,20 @@ func (c *baseClient) identity(provider string) *identity.Identity {
 		Username:     c.Username,
 	}
 
-	if c.saml != nil && len(*c.saml) > 0 {
-		user, err := c.saml.RoleSessionName()
-		if err != nil {
-			return id
+	switch provider {
+	case browserNEProvider, browserNewExperienceProvider, browserProvider:
+		if c.saml != nil && len(*c.saml) > 0 {
+			user, err := c.saml.RoleSessionName()
+			if err != nil {
+				return id
+			}
+			id.Username = user
 		}
-		id.Username = user
+	default:
+		if len(c.Username) < 1 {
+			_ = c.gatherCredentials()
+		}
+		id.Username = c.Username
 	}
 
 	return id
