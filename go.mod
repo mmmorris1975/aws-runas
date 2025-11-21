@@ -22,10 +22,10 @@ require (
 	github.com/mmmorris1975/ssm-session-client v0.402.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.4.3
-	golang.org/x/crypto v0.43.0
-	golang.org/x/net v0.46.0
+	golang.org/x/crypto v0.45.0
+	golang.org/x/net v0.47.0
 	golang.org/x/sys v0.38.0
-	golang.org/x/term v0.36.0
+	golang.org/x/term v0.37.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
