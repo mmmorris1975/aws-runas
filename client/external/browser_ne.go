@@ -52,7 +52,7 @@ func NewBrowserNEClient(url string) (*browserNEClient, error) {
 }
 
 func (c *browserNEClient) Identity() (*identity.Identity, error) {
-	return c.identity(browserProvider), nil
+	return c.identity(browserNEProvider), nil
 }
 
 // Authenticate calls AuthenticateWithContext using a background context.
@@ -178,6 +178,7 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
 		return err
 	}
+	c.Username, _ = c.saml.RoleSessionName()
 	c.Logger.Debugf("SAML Response Issuer: %s", sr)
 	return nil
 }
