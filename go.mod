@@ -4,14 +4,14 @@ go 1.25.0
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0
-	github.com/aws/aws-sdk-go-v2 v1.39.4
-	github.com/aws/aws-sdk-go-v2/config v1.31.15
-	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.7
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.18.3
-	github.com/aws/aws-sdk-go-v2/service/iam v1.19.2
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.66.2
-	github.com/aws/aws-sdk-go-v2/service/sts v1.38.9
-	github.com/aws/smithy-go v1.23.1
+	github.com/aws/aws-sdk-go-v2 v1.41.3
+	github.com/aws/aws-sdk-go-v2/config v1.32.11
+	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.18
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.55.4
+	github.com/aws/aws-sdk-go-v2/service/iam v1.53.4
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.2
+	github.com/aws/aws-sdk-go-v2/service/sts v1.41.8
+	github.com/aws/smithy-go v1.24.2
 	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
 	github.com/chromedp/chromedp v0.14.2
 	github.com/crewjam/saml v0.5.1
@@ -19,30 +19,31 @@ require (
 	github.com/kevinburke/ssh_config v1.2.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.403.0
+	github.com/mmmorris1975/ssm-session-client v0.404.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.4.3
-	golang.org/x/crypto v0.45.0
-	golang.org/x/net v0.47.0
-	golang.org/x/sys v0.38.0
-	golang.org/x/term v0.37.0
+	golang.org/x/crypto v0.48.0
+	golang.org/x/net v0.51.0
+	golang.org/x/sys v0.41.0
+	golang.org/x/term v0.40.0
 	gopkg.in/ini.v1 v1.67.0
 )
 
 require (
 	github.com/andybalholm/cascadia v1.3.1 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.18.19 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.11 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.4 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.258.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.2 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.29.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.3 // indirect
-	github.com/aws/session-manager-plugin v0.0.0-20250205214155-b2b0bcd769d1 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.11 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.5 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.293.1 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.6 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.19 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.7 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.12 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.16 // indirect
+	github.com/aws/session-manager-plugin v0.0.0-20260212212525-20354200d14d // indirect
 	github.com/beevik/etree v1.5.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
@@ -67,6 +68,6 @@ require (
 	github.com/stretchr/testify v1.11.1 // indirect
 	github.com/twinj/uuid v0.0.0-20151029044442-89173bcdda19 // indirect
 	github.com/xtaci/smux v1.5.35 // indirect
-	golang.org/x/sync v0.18.0 // indirect
+	golang.org/x/sync v0.19.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
