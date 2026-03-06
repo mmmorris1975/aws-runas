@@ -11,11 +11,18 @@ orbs:
 
 jobs:
   lint:
-    docker:
-      - image: "golangci/golangci-lint:v1.64"
+    executor:
+      name: go/default
+      tag: '1.25'
 
     steps:
       - checkout
+      - go/load-mod-cache
+      - go/mod-download
+      - go/save-mod-cache
+      - run:
+          name: Install golangci-lint
+          command: go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.64.8
       - run: golangci-lint run -v
 
   preflight:

@@ -10,6 +10,7 @@ issues:
         - funlen
         - gocognit
         - gocyclo
+        - unused
 
 linters-settings:
   funlen:
@@ -19,29 +20,23 @@ linters-settings:
     min-complexity: 15
   gocyclo:
     min-complexity: 15
-  golint:
-    min-confidence: 0.9
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
   lll:
     line-length: 132
-  maligned:
-    suggest-new: true
 
 linters:
   disable-all: true
   enable:
     # These are the default linters
-    - deadcode
     - errcheck
     - gosimple
     - govet
     - ineffassign
     - staticcheck
-    - structcheck
     - typecheck
     - unused
-    - varcheck
 
     # These are some of the not enabled by default linters, which we may or may not enable
     - bodyclose
@@ -58,13 +53,11 @@ linters:
     - godot
     - gofmt
     #- goimports
-    - golint
     #- gomnd
     #- goprintffuncname
     - gosec
     #- interfacer
     #- lll
-    #- maligned
     #- misspell
     #- nakedret
     - noctx
