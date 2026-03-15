@@ -41,7 +41,6 @@ import (
 type baseClient struct {
 	OidcClientConfig
 	authUrl    *url.URL
-	entityId   string
 	httpClient *http.Client
 	saml       *credentials.SamlAssertion
 }
@@ -131,7 +130,7 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 	}
 
 	var res *http.Response
-	res, err = checkResponseError(c.httpClient.Do(req.Request))
+	res, err = checkResponseError(c.httpClient.Do(req.Request)) //nolint:bodyclose
 	if err != nil {
 		return fmt.Errorf("SAML request error %w", err)
 	}

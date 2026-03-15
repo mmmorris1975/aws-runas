@@ -216,7 +216,6 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 
 func loadFile(path string) (*ini.File, error) {
 	f, err := ini.LoadSources(ini.LoadOptions{IgnoreInlineComment: true}, path)
-	//f, err := ini.Load(path)
 	if err != nil {
 		if !os.IsNotExist(err) {
 			return nil, err
@@ -264,7 +263,7 @@ func writeFile(f *ini.File, dst string, mode os.FileMode) error {
 func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
 	f := ini.Empty(ini.LoadOptions{IgnoreInlineComment: true})
 
-	if sources == nil || len(sources) < 1 {
+	if len(sources) < 1 {
 		src := config.DefaultSharedConfigFilename()
 		if e, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
 			src = e
@@ -286,7 +285,7 @@ func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
 func resolveCredentialSources(sources ...interface{}) (*ini.File, error) {
 	f := ini.Empty()
 
-	if sources == nil || len(sources) < 1 {
+	if len(sources) < 1 {
 		src := config.DefaultSharedCredentialsFilename()
 		if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 			src = e
