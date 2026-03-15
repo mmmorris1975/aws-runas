@@ -24,7 +24,7 @@ import (
 )
 
 var shortcutFlags = []cli.Flag{mfaFlag, rolesFlag, updateFlag, diagFlag, vFlag}
-var otherFlags = []cli.Flag{envFlag, fmtFlag, sessionFlag, refreshFlag, expFlag, whoamiFlag}
+var otherFlags = []cli.Flag{envFlag, fmtFlag, sessionFlag, refreshFlag, expFlag, whoamiFlag, writeCredsFlag}
 var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag, mfaSerialFlag, mfaTypeFlag, externalIdFlag,
 	jumpRoleFlag, samlUrlFlag, samlEntityIdFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
 
@@ -230,4 +230,11 @@ var whoamiFlag = &cli.BoolFlag{
 	Aliases:     []string{"w"},
 	Usage:       "print the AWS identity information for the provided profile credentials",
 	Destination: nil,
+}
+
+var writeCredsFlag = &cli.BoolFlag{
+	Name:    "write-credentials",
+	Aliases: []string{"c"},
+	Usage:   "write credentials to the AWS credentials file in addition to the cache",
+	EnvVars: []string{"RUNAS_WRITE_CREDENTIALS"},
 }
