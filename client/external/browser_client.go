@@ -52,6 +52,9 @@ func NewBrowserClient(url string) (*browserClient, error) {
 }
 
 func (c *browserClient) Identity() (*identity.Identity, error) {
+	if c.baseClient == nil {
+		return nil, errNilClient
+	}
 	return c.identity(browserProvider), nil
 }
 
@@ -62,6 +65,9 @@ func (c *browserClient) Authenticate() error {
 
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
 func (c *browserClient) AuthenticateWithContext(context.Context) error {
+	if c.baseClient == nil || c.Logger == nil {
+		return errNilClient
+	}
 	var browserExec string
 	c.Logger.Debugf("Starting a browser to authenticate..")
 	network.Enable()
