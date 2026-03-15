@@ -69,7 +69,7 @@ $(BUILDDIR)/%:
 #	docker run --rm -e VER=$(VER) -v ${PWD}:/build --entrypoint /build/scripts/package.sh debian:stretch
 
 lint:
-	docker run --rm -v $${PWD}:/app -w /app -t golangci/golangci-lint:v1.41 golangci-lint run -v
+	docker run --rm -v $${PWD}:/app -w /app -t golangci/golangci-lint:v1.64 golangci-lint run -v
 
 clean:
 	rm -f $(EXE) $(EXE)-*-*-* $(EXE)*.rpm $(EXE)*.deb $(EXE)*.exe
