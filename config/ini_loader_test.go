@@ -16,8 +16,11 @@ package config
 import (
 	"fmt"
 	"os"
+	"sync"
 	"testing"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/credentials"
 )
 
 func TestIniLoader_Config(t *testing.T) {
@@ -549,6 +552,201 @@ func TestIniLoader_SaveCredentials(t *testing.T) {
 	t.Run("empty profile", func(t *testing.T) {
 		if err := DefaultIniLoader.SaveCredentials("", &AwsCredentials{SamlPassword: "test"}); err == nil {
 			t.Error("did not receive expected error")
+		}
+	})
+}
+
+func TestIniLoader_SaveStsCredentials(t *testing.T) {
+	tf, err := os.CreateTemp(t.TempDir(), t.Name())
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf.Name())
+	defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
+
+	t.Run("nil creds", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveStsCredentials("test", nil); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("empty profile", func(t *testing.T) {
+		if err := DefaultIniLoader.SaveStsCredentials("", &credentials.Credentials{AccessKeyId: "k", SecretAccessKey: "s"}); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("bad file", func(t *testing.T) {
+		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", "/no/such/dir/credentials")
+		defer os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf.Name())
+
+		cred := &credentials.Credentials{AccessKeyId: "mockAK", SecretAccessKey: "mockSK"}
+		if err := DefaultIniLoader.SaveStsCredentials("test", cred); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("access key and secret without token", func(t *testing.T) {
+		cred := &credentials.Credentials{AccessKeyId: "mockAK", SecretAccessKey: "mockSK"}
+		if err := DefaultIniLoader.SaveStsCredentials("no-token", cred); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		s, err := f.GetSection("no-token")
+		if err != nil {
+			t.Error("missing profile section")
+			return
+		}
+
+		c := new(credentials.Credentials)
+		if err = s.MapTo(c); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c.AccessKeyId != "mockAK" || c.SecretAccessKey != "mockSK" {
+			t.Error("data mismatch")
+		}
+
+		if s.HasKey("aws_session_token") {
+			t.Error("session token key should be absent when token is empty")
+		}
+	})
+
+	t.Run("access key secret and token", func(t *testing.T) {
+		cred := &credentials.Credentials{AccessKeyId: "mockAK2", SecretAccessKey: "mockSK2", Token: "mockToken"}
+		if err := DefaultIniLoader.SaveStsCredentials("with-token", cred); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		s, err := f.GetSection("with-token")
+		if err != nil {
+			t.Error("missing profile section")
+			return
+		}
+
+		c := new(credentials.Credentials)
+		if err = s.MapTo(c); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c.AccessKeyId != "mockAK2" || c.SecretAccessKey != "mockSK2" || c.Token != "mockToken" {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("preserves other sections", func(t *testing.T) {
+		// write a first profile
+		first := &credentials.Credentials{AccessKeyId: "firstAK", SecretAccessKey: "firstSK"}
+		if err := DefaultIniLoader.SaveStsCredentials("first-profile", first); err != nil {
+			t.Error(err)
+			return
+		}
+
+		// write a second profile
+		second := &credentials.Credentials{AccessKeyId: "secondAK", SecretAccessKey: "secondSK", Token: "secondToken"}
+		if err := DefaultIniLoader.SaveStsCredentials("second-profile", second); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		// first section must still be intact
+		s1, err := f.GetSection("first-profile")
+		if err != nil {
+			t.Error("first profile section was lost after writing second profile")
+			return
+		}
+
+		c1 := new(credentials.Credentials)
+		if err = s1.MapTo(c1); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c1.AccessKeyId != "firstAK" || c1.SecretAccessKey != "firstSK" {
+			t.Error("first profile data was corrupted")
+		}
+
+		// second section must also be present
+		s2, err := f.GetSection("second-profile")
+		if err != nil {
+			t.Error("second profile section missing")
+			return
+		}
+
+		c2 := new(credentials.Credentials)
+		if err = s2.MapTo(c2); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c2.AccessKeyId != "secondAK" || c2.SecretAccessKey != "secondSK" || c2.Token != "secondToken" {
+			t.Error("second profile data mismatch")
+		}
+	})
+
+	t.Run("concurrent writes", func(t *testing.T) {
+		profiles := []string{"concurrent-a", "concurrent-b", "concurrent-c", "concurrent-d", "concurrent-e"}
+		var wg sync.WaitGroup
+
+		for _, p := range profiles {
+			wg.Add(1)
+			go func(profile string) {
+				defer wg.Done()
+				cred := &credentials.Credentials{AccessKeyId: profile + "-AK", SecretAccessKey: profile + "-SK"}
+				if err := DefaultIniLoader.SaveStsCredentials(profile, cred); err != nil {
+					t.Errorf("concurrent write for profile %s failed: %v", profile, err)
+				}
+			}(p)
+		}
+
+		wg.Wait()
+
+		f, err := loadFile(tf.Name())
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		for _, p := range profiles {
+			s, err := f.GetSection(p)
+			if err != nil {
+				t.Errorf("profile %s missing after concurrent writes", p)
+				continue
+			}
+
+			c := new(credentials.Credentials)
+			if err = s.MapTo(c); err != nil {
+				t.Errorf("profile %s could not be read: %v", p, err)
+				continue
+			}
+
+			if c.AccessKeyId != p+"-AK" || c.SecretAccessKey != p+"-SK" {
+				t.Errorf("profile %s data corrupted after concurrent writes", p)
+			}
 		}
 	})
 }

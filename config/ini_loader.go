@@ -19,13 +19,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
 	"gopkg.in/ini.v1"
 )
 
 // DefaultIniLoader creates a default Loader type to gather configuration and credentials from ini-style data sources.
 var DefaultIniLoader = new(iniLoader)
+
+var iniFileMu sync.Mutex
 
 type iniLoader bool
 
@@ -202,6 +206,52 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 		src = e
 	}
 
+	f, err := loadFile(src)
+	if err != nil {
+		return err
+	}
+
+	if err = f.Section(profile).ReflectFrom(cred); err != nil {
+		return err
+	}
+
+	return writeFile(f, src, 0600)
+}
+
+// SaveStsCredentials writes AWS STS credentials (access key, secret, session token) to the AWS credentials
+// file under the given profile section, preserving all other sections. Safe for concurrent use across
+// goroutines and OS processes via an in-process mutex and an OS-level exclusive file lock on a companion
+// lock file. The write is fail-safe: credentials are written to a temp file and atomically renamed into place.
+func (l *iniLoader) SaveStsCredentials(profile string, cred *credentials.Credentials) (retErr error) {
+	if cred == nil {
+		return errors.New("invalid credentials, can not be nil")
+	}
+
+	if len(profile) < 1 {
+		return errors.New("profile name can not be empty")
+	}
+
+	src := config.DefaultSharedCredentialsFilename()
+	if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
+		src = e
+	}
+
+	// In-process lock
+	iniFileMu.Lock()
+	defer iniFileMu.Unlock()
+
+	// Cross-process lock via companion lock file
+	lockFile, err := acquireCredentialLock(src + ".lock")
+	if err != nil {
+		return fmt.Errorf("unable to lock credentials file: %w", err)
+	}
+	defer func() {
+		if err := releaseCredentialLock(lockFile); err != nil && retErr == nil {
+			retErr = err
+		}
+	}()
+
+	// Read-modify-write: load current file, update only the target section
 	f, err := loadFile(src)
 	if err != nil {
 		return err

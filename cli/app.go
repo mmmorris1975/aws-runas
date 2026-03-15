@@ -171,6 +171,12 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
+	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
+		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
+			log.Debugf("error writing credentials to file: %v", werr)
+		}
+	}
+
 	if strings.EqualFold(ctx.String(fmtFlag.Name), "json") {
 		// truly a one-shot operation, the credentials_process logic will re-exec the command to refresh credentials
 		// don't handle any other formatting options, or do any thing else, just poop out json formatted credentials
