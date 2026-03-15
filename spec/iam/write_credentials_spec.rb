@@ -21,8 +21,13 @@ $write_creds_file = "/tmp/aws_runas_write_credentials_test_#{Process.pid}"
 def setup_fresh_creds
     FileUtils.rm_f($write_creds_file)
     FileUtils.rm_f($write_creds_file + '.lock')
-    FileUtils.touch('testdata/aws_credentials') if !File.exist?('testdata/aws_credentials')
-    FileUtils.cp('testdata/aws_credentials', $write_creds_file)
+
+    if ENV.fetch("CIRCLECI", false).to_s === "true"; then
+        FileUtils.cp('build/aws_credentials', $write_creds_file)
+    else
+        FileUtils.cp('testdata/aws_credentials', $write_creds_file)
+    end
+
     FileUtils.chmod(0600, $write_creds_file)
 end
 
