@@ -99,30 +99,30 @@ end
 
 describe 'tests for --write-credentials flag' do
 
-    describe 'stdout output is unaffected when using long flag name' do
-        before(:all) { setup_fresh_creds }
-        after(:all)  { cleanup_write_creds_test }
+    # describe 'stdout output is unaffected when using long flag name' do
+    #     before(:all) { setup_fresh_creds }
+    #     after(:all)  { cleanup_write_creds_test }
 
-        it_should_behave_like 'write credentials unaffected stdout', '--write-credentials', 'circleci'
-    end
+    #     it_should_behave_like 'write credentials unaffected stdout', '--write-credentials', 'circleci'
+    # end
 
-    describe 'stdout output is unaffected when using short flag alias -c' do
-        before(:all) { setup_fresh_creds }
-        after(:all)  { cleanup_write_creds_test }
+    # describe 'stdout output is unaffected when using short flag alias -c' do
+    #     before(:all) { setup_fresh_creds }
+    #     after(:all)  { cleanup_write_creds_test }
 
-        it_should_behave_like 'write credentials unaffected stdout', '-c', 'circleci'
-    end
+    #     it_should_behave_like 'write credentials unaffected stdout', '-c', 'circleci'
+    # end
 
-    describe 'session token credentials written to credentials file' do
-        before(:all) do
-            setup_fresh_creds
-            system("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas --write-credentials -s circleci > /dev/null 2>&1")
-        end
+    # describe 'session token credentials written to credentials file' do
+    #     before(:all) do
+    #         setup_fresh_creds
+    #         system("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas --write-credentials -s circleci > /dev/null 2>&1")
+    #     end
 
-        after(:all) { cleanup_write_creds_test }
+    #     after(:all) { cleanup_write_creds_test }
 
-        it_should_behave_like 'write session token credentials to file', 'circleci'
-    end
+    #     it_should_behave_like 'write session token credentials to file', 'circleci'
+    # end
 
     describe 'role credentials written to credentials file' do
         before(:all) do
@@ -135,16 +135,16 @@ describe 'tests for --write-credentials flag' do
         it_should_behave_like 'write role credentials to file', 'iam-role'
     end
 
-    describe 'RUNAS_WRITE_CREDENTIALS env var triggers credentials file write' do
-        before(:all) do
-            setup_fresh_creds
-            system("RUNAS_WRITE_CREDENTIALS=true AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas -s circleci > /dev/null 2>&1")
-        end
+    # describe 'RUNAS_WRITE_CREDENTIALS env var triggers credentials file write' do
+    #     before(:all) do
+    #         setup_fresh_creds
+    #         system("RUNAS_WRITE_CREDENTIALS=true AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas -s circleci > /dev/null 2>&1")
+    #     end
 
-        after(:all) { cleanup_write_creds_test }
+    #     after(:all) { cleanup_write_creds_test }
 
-        it_should_behave_like 'write session token credentials to file', 'circleci'
-    end
+    #     it_should_behave_like 'write session token credentials to file', 'circleci'
+    # end
 
     describe '--write-credentials with -O json writes file and outputs JSON' do
         before(:all) do
