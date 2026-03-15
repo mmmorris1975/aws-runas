@@ -1,7 +1,7 @@
 //go:build windows
 
 /*
- * Copyright (c) 2021 Michael Morris. All Rights Reserved.
+ * Copyright (c) 2026 Michael Morris. All Rights Reserved.
  *
  * Licensed under the MIT license (the "License"). You may not use this file except in compliance
  * with the License. A copy of the License is located at
