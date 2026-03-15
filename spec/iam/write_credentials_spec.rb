@@ -1,5 +1,5 @@
 #
-# Copyright (c) 2021 Michael Morris. All Rights Reserved.
+# Copyright (c) 2026 Michael Morris. All Rights Reserved.
 #
 # Licensed under the MIT license (the "License"). You may not use this file except in compliance
 # with the License. A copy of the License is located at
@@ -21,10 +21,11 @@ $write_creds_file = "/tmp/aws_runas_write_credentials_test_#{Process.pid}"
 def setup_fresh_creds
     FileUtils.rm_f($write_creds_file)
     FileUtils.rm_f($write_creds_file + '.lock')
-    if File.exist?('testdata/aws_credentials'):
+    if File.exist?('testdata/aws_credentials')
         FileUtils.cp('testdata/aws_credentials', $write_creds_file)
-    else:
+    else
         FileUtils.touch($write_creds_file)
+    end
     FileUtils.chmod(0600, $write_creds_file)
 end
 
