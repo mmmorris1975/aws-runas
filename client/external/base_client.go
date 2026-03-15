@@ -38,10 +38,11 @@ import (
 	"github.com/mmmorris1975/aws-runas/shared"
 )
 
+var errNilClient = errors.New("client not initialized, use the appropriate constructor")
+
 type baseClient struct {
 	OidcClientConfig
 	authUrl    *url.URL
-	entityId   string
 	httpClient *http.Client
 	saml       *credentials.SamlAssertion
 }
@@ -131,7 +132,7 @@ func (c *baseClient) samlRequest(ctx context.Context, u *url.URL) error {
 	}
 
 	var res *http.Response
-	res, err = checkResponseError(c.httpClient.Do(req.Request))
+	res, err = checkResponseError(c.httpClient.Do(req.Request)) //nolint:bodyclose
 	if err != nil {
 		return fmt.Errorf("SAML request error %w", err)
 	}
@@ -171,15 +172,16 @@ func (c *baseClient) identity(provider string) *identity.Identity {
 		Username:     c.Username,
 	}
 
+	if c.saml != nil && len(*c.saml) > 0 {
+		if user, err := c.saml.RoleSessionName(); err == nil {
+			id.Username = user
+			return id
+		}
+	}
+
 	switch provider {
 	case browserNEProvider, browserNewExperienceProvider, browserProvider:
-		if c.saml != nil && len(*c.saml) > 0 {
-			user, err := c.saml.RoleSessionName()
-			if err != nil {
-				return id
-			}
-			id.Username = user
-		}
+		// username already set from SAML above if available
 	default:
 		if len(c.Username) < 1 {
 			_ = c.gatherCredentials()

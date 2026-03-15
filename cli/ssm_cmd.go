@@ -16,14 +16,15 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"os"
+	"os/exec"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/urfave/cli/v2"
-	"os"
-	"os/exec"
 )
 
 var ssmCmd = &cli.Command{
@@ -105,8 +106,8 @@ func execSsmPlugin(cfg aws.Config, in *ssm.StartSessionInput) error {
 		return err
 	}
 
-	var ep aws.Endpoint
-	ep, err = ssm.NewDefaultEndpointResolver().ResolveEndpoint(cfg.Region, ssm.EndpointResolverOptions{})
+	var ep aws.Endpoint                                                                                   //nolint:staticcheck
+	ep, err = ssm.NewDefaultEndpointResolver().ResolveEndpoint(cfg.Region, ssm.EndpointResolverOptions{}) //nolint:staticcheck
 	if err != nil {
 		return err
 	}

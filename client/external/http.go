@@ -73,6 +73,7 @@ func checkResponseError(r *http.Response, err error) (*http.Response, error) {
 	if err != nil {
 		return nil, err
 	} else if r.StatusCode != http.StatusOK {
+		r.Body.Close()
 		return nil, fmt.Errorf("http status %s (%d)", r.Status, r.StatusCode)
 	}
 	return r, err

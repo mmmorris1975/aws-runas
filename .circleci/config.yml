@@ -28,7 +28,7 @@ jobs:
   preflight:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
 
     steps:
       - checkout
@@ -43,7 +43,7 @@ jobs:
   build-darwin:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
 
     steps:
       - checkout
@@ -69,7 +69,7 @@ jobs:
   build-linux:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
 
     steps:
       - checkout
@@ -103,7 +103,7 @@ jobs:
   build-windows:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
 
     steps:
       - checkout
@@ -199,7 +199,7 @@ jobs:
   package-darwin:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
     steps:
       - checkout
       - attach_workspace:
@@ -224,7 +224,7 @@ jobs:
   package-windows:
     executor:
       name: go/default
-      tag: '1.23'
+      tag: '1.25'
     steps:
       - checkout
       - attach_workspace:

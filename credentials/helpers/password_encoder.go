@@ -94,7 +94,7 @@ func (e *passwordEncoder) Decode(s string) (string, error) {
 		return "", errors.New("invalid input")
 	}
 
-	cost, err := strconv.ParseInt(sp[0], 16, 8)
+	cost, err := strconv.ParseUint(sp[0], 16, 8)
 	if err != nil {
 		return "", err
 	}

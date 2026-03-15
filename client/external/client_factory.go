@@ -32,7 +32,7 @@ const (
 	unknownProvider   = "unknown"
 	azureadProvider   = "azuread"
 	browserProvider   = "browser"
-	// Alias for browser provider to select new experience login flows
+	// Alias for browser provider to select new experience login flows.
 	browserNEProvider            = "browserne"
 	browserNewExperienceProvider = "browserNewExperience"
 )

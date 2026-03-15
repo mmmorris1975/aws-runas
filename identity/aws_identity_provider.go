@@ -84,7 +84,7 @@ func (p *awsIdentityProvider) Identity() (*Identity, error) {
 // This method will check the inline and attached IAM policies for the user, and any groups the user is a member of.
 // It will return all roles the user is allowed to assume, even those specifying wildcards in the ARN fields.
 func (p *awsIdentityProvider) Roles(user ...string) (*Roles, error) {
-	if user == nil || len(user) < 1 || len(user[0]) < 1 {
+	if len(user) < 1 || len(user[0]) < 1 {
 		id, err := p.Identity()
 		if err != nil {
 			return nil, err

@@ -321,7 +321,7 @@ func runEcsSvc(client client.AwsClient, cfg *config.AwsConfig) (<-chan bool, err
 //nolint:gocognit
 func wrapCmd(cmd []string) []string {
 	var newCmd []string
-	if cmd == nil || len(cmd) < 1 {
+	if len(cmd) < 1 {
 		return newCmd
 	}
 

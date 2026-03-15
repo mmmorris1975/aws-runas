@@ -197,7 +197,7 @@ func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.
 	// using c.authUrl directly won't work, you need to fetch that URL, then process the response which
 	// contains the actual URL we need to submit (which is embedded in JS, because why wouldn't it be?).
 	req, _ := newHttpRequest(ctx, http.MethodGet, c.authUrl.String())
-	res, err := checkResponseError(c.httpClient.Do(req.Request))
+	res, err := checkResponseError(c.httpClient.Do(req.Request)) //nolint:bodyclose
 	if err != nil {
 		// We will see HTTP 200 even if the caller is unauthenticated, so any error here is probably something
 		// attempting authentication won't help, just bail out.
@@ -207,7 +207,7 @@ func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.
 
 	data, _ := io.ReadAll(res.Body)
 	match := samlRe.FindSubmatch(data)
-	if match == nil || len(match) < 2 {
+	if len(match) < 2 {
 		// response is probably a login page, so attempt re-auth
 		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
@@ -577,7 +577,7 @@ func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData int
 	req.withContentType(contentTypeJson).withBody(bytes.NewReader(mfaJson))
 
 	var res *http.Response
-	res, err = checkResponseError(c.httpClient.Do(req.Request))
+	res, err = checkResponseError(c.httpClient.Do(req.Request)) //nolint:bodyclose
 	if err != nil {
 		return err
 	}
@@ -598,7 +598,7 @@ func parseResponseNoClose(body io.Reader, out interface{}) error {
 	}
 
 	match := bodyRe.FindSubmatch(data)
-	if match == nil || len(match) < 2 {
+	if len(match) < 2 {
 		return errors.New("expected response content not found")
 	}
 	return json.Unmarshal(match[1], out)

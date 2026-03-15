@@ -61,6 +61,8 @@ func (c *browserNEClient) Authenticate() error {
 }
 
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
+//
+//nolint:funlen
 func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	var err error
 	var samlassertion credentials.SamlAssertion
@@ -118,17 +120,14 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 
 	mux.HandleFunc(`/success`, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(htmlsuccess))
+		_, _ = w.Write([]byte(htmlsuccess))
 		// Notify the server to shutdown now that we are done.
 		shutdown <- true
 	})
 
 	mux.HandleFunc(`/fail`, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "text/html")
-		w.Write([]byte(htmlfail))
-		// Auto close the window
-		//  after 5 seconds.
-		http.NoBody.Close()
+		_, _ = w.Write([]byte(htmlfail))
 		// Notify the server to shutdown now that we are done.
 		shutdown <- true
 	})
@@ -172,7 +171,7 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	// Wait here until we get a notification to shutdown the server.
 	// This happens when we get the SAML response and process it.
 	<-shutdown
-	httpserver.Shutdown(context.Background())
+	_ = httpserver.Shutdown(context.Background())
 	sr, err := c.saml.Decode()
 	if err != nil {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
