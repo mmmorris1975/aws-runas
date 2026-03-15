@@ -35,13 +35,15 @@ end
 
 # Verifies that normal credential output is unaffected when --write-credentials is used.
 shared_examples_for 'write credentials unaffected stdout' do |flag, profile|
-    describe command("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} aws-runas #{flag} -s #{profile}") do
+    ENV['AWS_SHARED_CREDENTIALS_FILE']=$write_creds_file
+    describe command("aws-runas #{flag} -s #{profile}") do
         its(:exit_status) { should eq 0 }
         its(:stdout) { should match /^export AWS_ACCESS_KEY_ID='ASIA\w+'$/ }
         its(:stdout) { should match /^export AWS_SECRET_ACCESS_KEY='.+'$/ }
         its(:stdout) { should match /^export AWS_SESSION_TOKEN='.+'$/ }
         its(:stdout) { should match /^export AWS_SECURITY_TOKEN='.+'$/ }
     end
+    ENV.delete('AWS_SHARED_CREDENTIALS_FILE')
 end
 
 # Verifies that STS session token credentials are written to the credentials file.
