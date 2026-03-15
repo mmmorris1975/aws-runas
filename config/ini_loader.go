@@ -246,8 +246,8 @@ func (l *iniLoader) SaveStsCredentials(profile string, cred *credentials.Credent
 		return fmt.Errorf("unable to lock credentials file: %w", err)
 	}
 	defer func() {
-		if err := releaseCredentialLock(lockFile); err != nil && retErr == nil {
-			retErr = err
+		if e := releaseCredentialLock(lockFile); e != nil && retErr == nil {
+			retErr = e
 		}
 	}()
 
