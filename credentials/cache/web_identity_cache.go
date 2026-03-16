@@ -145,6 +145,6 @@ func (c *webIdentityCache) flush() error {
 // The hash isn't directly serializable, use hex string encoding.
 func tokenCacheKey(url string) string {
 	h := fnv.New128()
-	h.Sum([]byte(url))
-	return hex.EncodeToString(h.Sum([]byte(url)))
+	_, _ = h.Write([]byte(url))
+	return hex.EncodeToString(h.Sum(nil))
 }
