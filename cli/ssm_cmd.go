@@ -48,6 +48,7 @@ var ssmUsePluginFlag = &cli.BoolFlag{
 	Usage:   "Use the SSM session plugin instead of built-in code",
 }
 
+//nolint:gocognit
 func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, error) {
 	profile, cfg, err := resolveConfig(ctx, expectedArgs)
 	if err != nil {
