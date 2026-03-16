@@ -5,9 +5,9 @@ version: 2.1
 
 orbs:
   go: circleci/go@3.0.3
-  aws-cli: circleci/aws-cli@1.4.1
-  ruby: circleci/ruby@1.4.0
-  windows: circleci/windows@5.0.0
+  aws-cli: circleci/aws-cli@5.4.1
+  ruby: circleci/ruby@1.4.1
+  windows: circleci/windows@5.1.1
 
 jobs:
   lint:
@@ -141,11 +141,10 @@ jobs:
       # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
       # a similar configuration can be used locally and with CI
       - aws-cli/setup:
-          skip-install-check: false
-          configure-default-region: false
-          profile-name: circleci
-          aws-access-key-id: AWS_ACCESSKEY
-          aws-secret-access-key: AWS_SECRETKEY
+          configure_default_region: false
+          profile_name: circleci
+          aws_access_key_id: AWS_ACCESSKEY
+          aws_secret_access_key: AWS_SECRETKEY
 
       - persist_to_workspace:
           root: build
@@ -286,8 +285,6 @@ jobs:
       - run: scripts/release.sh /var/tmp/release
 
 workflows:
-  version: 2
-
   # So far we don't have a 'requires' in build for lint, maybe something to change? I mean, who doesn't like clean code?
   build_and_test:
     jobs:
