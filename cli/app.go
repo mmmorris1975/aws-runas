@@ -175,6 +175,7 @@ func execCmd(ctx *cli.Context) error {
 		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
 			log.Debugf("error writing credentials to file: %v", werr)
 		}
+		log.Infof("Credentials written to AWS credentials file under profile: %s-awsrunas", profile)
 	}
 
 	if strings.EqualFold(ctx.String(fmtFlag.Name), "json") {
