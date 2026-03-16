@@ -23,6 +23,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
+	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/urfave/cli/v2"
 )
@@ -62,6 +63,13 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 	creds, err = c.Credentials()
 	if err != nil {
 		return "", nil, err
+	}
+
+	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
+		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
+			log.Debugf("error writing credentials to file: %v", werr)
+		}
+		log.Infof("Credentials written to AWS credentials file under profile: %s-awsrunas", profile)
 	}
 
 	if ctx.Bool(refreshFlag.Name) {
