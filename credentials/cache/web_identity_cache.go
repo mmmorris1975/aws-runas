@@ -54,7 +54,7 @@ type webIdentityCache struct {
 // force public access through WebIdentityCache() so we have better safety for concurrent access to individual files.
 func newWebIdentityCache(path string) (*webIdentityCache, error) {
 	// ensure all intermediate directories exist
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return nil, err
 	}
 

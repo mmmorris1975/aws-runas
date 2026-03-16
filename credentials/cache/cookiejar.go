@@ -58,7 +58,7 @@ type cookieJar struct {
 // solve cases where distinct processes use the same CookieJar(), we need to rely on our file handling logic for that.
 func newCookieJar(path string) (*cookieJar, error) {
 	// ensure all intermediate directories exist
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return nil, err
 	}
 
