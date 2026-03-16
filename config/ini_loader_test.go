@@ -732,7 +732,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 		}
 
 		for _, p := range profiles {
-			s, err := f.GetSection(p+"-awsrunas")
+			s, err := f.GetSection(p + "-awsrunas")
 			if err != nil {
 				t.Errorf("profile %s missing after concurrent writes", p)
 				continue

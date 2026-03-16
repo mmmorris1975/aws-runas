@@ -257,7 +257,7 @@ func (l *iniLoader) SaveStsCredentials(profile string, cred *credentials.Credent
 		return err
 	}
 
-	if err = f.Section(profile+"-awsrunas").ReflectFrom(cred); err != nil {
+	if err = f.Section(profile + "-awsrunas").ReflectFrom(cred); err != nil {
 		return err
 	}
 
