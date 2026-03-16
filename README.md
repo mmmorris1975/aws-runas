@@ -45,7 +45,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     aws-runas [global options] [subcommand] profile [arguments...]
     
     VERSION:
-    3.1.0
+    3.6.1
     
     COMMANDS:
     list, ls              Shows IAM roles or MFA device configuration
@@ -65,6 +65,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --external-id value, -X value    external ID to use with Assume Role [$EXTERNAL_ID]
     --jump-role value, -J value      ARN of the 'jump role' to use with SAML or Web Identity integration [$JUMP_ROLE_ARN]
     --saml-url value, -S value       URL of the SAML authentication endpoint [$SAML_AUTH_URL]
+    --saml-entityid value, -I value  Entity ID of the SAML authentication endpoint [$SAML_ENTITY_ID]
     --web-url value, -W value        URL of the Web Identity (OIDC) authentication endpoint [$WEB_AUTH_URL]
     --web-redirect value, -T value   Web Identity (OIDC) redirect URI [$WEB_REDIRECT_URI]
     --web-client value, -C value     Web Identity (OIDC) client ID [$WEB_CLIENT_ID]
@@ -81,7 +82,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --list-roles, -l                 list role ARNs you are able to assume (default: false)
     --update, -u                     check for updates to aws-runas (default: false)
     --diagnose, -D                   run diagnostics to gather information to aid in troubleshooting (default: false)
-    --verbose value, -v value        output debug logging, use twice for AWS call tracing (default: standard logging)
+    --verbose, -v                    output debug logging, use twice for AWS call tracing (default: standard logging)
     --help, -h                       show help (default: false)
     --version, -V                    print the version (default: false)
 
@@ -89,7 +90,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
 
 ### Build Requirements
 
-Developed and tested using the go 1.16 tool chain and aws-sdk-go-v2
+Developed and tested using the go 1.25 tool chain and aws-sdk-go-v2
 
 ### Build Steps
 
