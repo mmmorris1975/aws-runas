@@ -5,8 +5,8 @@ version: 2.1
 
 orbs:
   go: circleci/go@3.0.3
-  aws-cli: circleci/aws-cli@5.4.1
-  ruby: circleci/ruby@1.4.1
+  aws-cli: circleci/aws-cli@1.4.1
+  ruby: circleci/ruby@2.6.0
   windows: circleci/windows@5.1.1
 
 jobs:
@@ -273,7 +273,7 @@ jobs:
             - aws-runas*.rpm
             - aws-runas*.deb
 
-  release:
+  git-release:
     docker:
       - image: alpine:3
 
@@ -365,7 +365,7 @@ workflows:
             <<: *release-filter
           requires:
             - build-windows
-      - release:
+      - git-release:
           filters:
             <<: *release-filter
           requires:
