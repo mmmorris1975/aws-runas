@@ -278,13 +278,12 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 	defer r.Body.Close()
 
 	if r.Method == http.MethodPost {
-		buf := make([]byte, 256) // if there's a profile name longer than this ... I mean, really
-		n, err := r.Body.Read(buf)
+		body, err := io.ReadAll(io.LimitReader(r.Body, 256)) // if there's a profile name longer than this ... I mean, really
 		if err != nil && !errors.Is(err, io.EOF) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		profile := string(buf[:n])
+		profile := strings.TrimSpace(string(body))
 
 		// Do this unconditionally so we can get any potential changes in the config or credentials files
 		s.awsConfig, s.awsClient, err = s.getConfigAndClient(profile)
