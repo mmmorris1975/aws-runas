@@ -141,10 +141,10 @@ jobs:
       # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
       # a similar configuration can be used locally and with CI
       - aws-cli/setup:
-          configure_default_region: false
-          profile_name: circleci
-          aws_access_key_id: AWS_ACCESSKEY
-          aws_secret_access_key: AWS_SECRETKEY
+          configure-default-region: false
+          profile-name: circleci
+          aws-access-key-id: AWS_ACCESSKEY
+          aws-secret-access-key: AWS_SECRETKEY
 
       - persist_to_workspace:
           root: build
