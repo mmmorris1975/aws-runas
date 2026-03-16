@@ -56,7 +56,7 @@ shared_examples_for 'write session token credentials to file' do |profile|
     describe file($write_creds_file) do
         it { should exist }
         it { should be_mode 600 }
-        its(:content) { should match /^\[#{Regexp.escape(profile)}\]$/ }
+        its(:content) { should match /^\[#{Regexp.escape(profile)}-awsrunas\]$/ }
         its(:content) { should match /^aws_access_key_id\s*=\s*ASIA\w+/ }
         its(:content) { should match /^aws_secret_access_key\s*=\s*.+/ }
         its(:content) { should match /^aws_session_token\s*=\s*.+/ }
@@ -68,7 +68,7 @@ shared_examples_for 'write role credentials to file' do |profile|
     describe file($write_creds_file) do
         it { should exist }
         it { should be_mode 600 }
-        its(:content) { should match /^\[#{Regexp.escape(profile)}\]$/ }
+        its(:content) { should match /^\[#{Regexp.escape(profile)}-awsrunas\]$/ }
         its(:content) { should match /^aws_access_key_id\s*=\s*ASIA\w+/ }
         its(:content) { should match /^aws_secret_access_key\s*=\s*.+/ }
         its(:content) { should match /^aws_session_token\s*=\s*.+/ }
@@ -81,7 +81,7 @@ shared_examples_for 'existing sections preserved' do |written_profile|
         its(:content) { should match /^\[pre-existing\]$/ }
         its(:content) { should match /^aws_access_key_id\s*=\s*AKIAPREEXISTING/ }
         its(:content) { should match /^aws_secret_access_key\s*=\s*preexistingsecret/ }
-        its(:content) { should match /^\[#{Regexp.escape(written_profile)}\]$/ }
+        its(:content) { should match /^\[#{Regexp.escape(written_profile)}-awsrunas\]$/ }
         its(:content) { should match /^aws_access_key_id\s*=\s*ASIA\w+/ }
     end
 end
@@ -90,39 +90,25 @@ end
 shared_examples_for 'no duplicate sections on repeated runs' do |profile|
     describe file($write_creds_file) do
         it { should exist }
-        its(:content) { should match /^\[#{Regexp.escape(profile)}\]$/ }
-        it "contains exactly one [#{profile}] section" do
-            expect(subject.content.scan(/^\[#{Regexp.escape(profile)}\]$/).length).to eq(1)
+        its(:content) { should match /^\[#{Regexp.escape(profile)}-awsrunas\]$/ }
+        it "contains exactly one [#{profile}-awsrunas] section" do
+            expect(subject.content.scan(/^\[#{Regexp.escape(profile)}-awsrunas\]$/).length).to eq(1)
         end
     end
 end
 
 describe 'tests for --write-credentials flag' do
 
-    # describe 'stdout output is unaffected when using long flag name' do
-    #     before(:all) { setup_fresh_creds }
-    #     after(:all)  { cleanup_write_creds_test }
+    describe 'session token credentials written to credentials file' do
+        before(:all) do
+            setup_fresh_creds
+            system("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas --write-credentials -s circleci > /dev/null 2>&1")
+        end
 
-    #     it_should_behave_like 'write credentials unaffected stdout', '--write-credentials', 'circleci'
-    # end
+        after(:all) { cleanup_write_creds_test }
 
-    # describe 'stdout output is unaffected when using short flag alias -c' do
-    #     before(:all) { setup_fresh_creds }
-    #     after(:all)  { cleanup_write_creds_test }
-
-    #     it_should_behave_like 'write credentials unaffected stdout', '-c', 'circleci'
-    # end
-
-    # describe 'session token credentials written to credentials file' do
-    #     before(:all) do
-    #         setup_fresh_creds
-    #         system("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas --write-credentials -s circleci > /dev/null 2>&1")
-    #     end
-
-    #     after(:all) { cleanup_write_creds_test }
-
-    #     it_should_behave_like 'write session token credentials to file', 'circleci'
-    # end
+        it_should_behave_like 'write session token credentials to file', 'circleci'
+    end
 
     describe 'role credentials written to credentials file' do
         before(:all) do
@@ -135,16 +121,16 @@ describe 'tests for --write-credentials flag' do
         it_should_behave_like 'write role credentials to file', 'iam-role'
     end
 
-    # describe 'RUNAS_WRITE_CREDENTIALS env var triggers credentials file write' do
-    #     before(:all) do
-    #         setup_fresh_creds
-    #         system("RUNAS_WRITE_CREDENTIALS=true AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas -s circleci > /dev/null 2>&1")
-    #     end
+    describe 'RUNAS_WRITE_CREDENTIALS env var triggers credentials file write' do
+        before(:all) do
+            setup_fresh_creds
+            system("RUNAS_WRITE_CREDENTIALS=true AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} build/aws-runas -s circleci > /dev/null 2>&1")
+        end
 
-    #     after(:all) { cleanup_write_creds_test }
+        after(:all) { cleanup_write_creds_test }
 
-    #     it_should_behave_like 'write session token credentials to file', 'circleci'
-    # end
+        it_should_behave_like 'write session token credentials to file', 'circleci'
+    end
 
     describe '--write-credentials with -O json writes file and outputs JSON' do
         before(:all) do
