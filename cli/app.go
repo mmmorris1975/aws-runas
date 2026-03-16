@@ -171,12 +171,7 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
-		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
-			log.Debugf("error writing credentials to file: %v", werr)
-		}
-		log.Infof("Credentials written to AWS credentials file under profile: %s-awsrunas", profile)
-	}
+	saveStsCredentials(ctx, profile, creds)
 
 	if strings.EqualFold(ctx.String(fmtFlag.Name), "json") {
 		// truly a one-shot operation, the credentials_process logic will re-exec the command to refresh credentials
