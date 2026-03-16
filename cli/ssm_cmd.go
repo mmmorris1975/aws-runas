@@ -59,6 +59,10 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
+	if ctx.Bool(refreshFlag.Name) {
+		refreshCreds(c)
+	}
+
 	var creds *credentials.Credentials
 	creds, err = c.Credentials()
 	if err != nil {
@@ -66,10 +70,6 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 	}
 
 	saveStsCredentials(ctx, profile, creds)
-
-	if ctx.Bool(refreshFlag.Name) {
-		refreshCreds(c)
-	}
 
 	if ctx.Bool(expFlag.Name) || ctx.Bool(whoamiFlag.Name) {
 		if ctx.Bool(expFlag.Name) {
