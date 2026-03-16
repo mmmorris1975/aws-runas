@@ -601,7 +601,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 			return
 		}
 
-		s, err := f.GetSection("no-token")
+		s, err := f.GetSection("no-token-awsrunas")
 		if err != nil {
 			t.Error("missing profile section")
 			return
@@ -635,7 +635,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 			return
 		}
 
-		s, err := f.GetSection("with-token")
+		s, err := f.GetSection("with-token-awsrunas")
 		if err != nil {
 			t.Error("missing profile section")
 			return
@@ -674,7 +674,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 		}
 
 		// first section must still be intact
-		s1, err := f.GetSection("first-profile")
+		s1, err := f.GetSection("first-profile-awsrunas")
 		if err != nil {
 			t.Error("first profile section was lost after writing second profile")
 			return
@@ -691,7 +691,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 		}
 
 		// second section must also be present
-		s2, err := f.GetSection("second-profile")
+		s2, err := f.GetSection("second-profile-awsrunas")
 		if err != nil {
 			t.Error("second profile section missing")
 			return
@@ -732,7 +732,7 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 		}
 
 		for _, p := range profiles {
-			s, err := f.GetSection(p)
+			s, err := f.GetSection(p+"-awsrunas")
 			if err != nil {
 				t.Errorf("profile %s missing after concurrent writes", p)
 				continue
