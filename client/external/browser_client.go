@@ -37,9 +37,8 @@ const (
 
 type browserClient struct {
 	*baseClient
+	done sync.WaitGroup
 }
-
-var done sync.WaitGroup
 
 // NewbrowserClient provides a Saml and Web client suitable for testing code outside of this package.
 // It returns zero-value objects, and never errors.
@@ -48,7 +47,7 @@ func NewBrowserClient(url string) (*browserClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &browserClient{bc}, nil
+	return &browserClient{baseClient: bc}, nil
 }
 
 func (c *browserClient) Identity() (*identity.Identity, error) {
@@ -78,7 +77,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	}
 	dir += `/.aws/.browser`
 	// Remove the default option for headless
-	opts := chromedp.DefaultExecAllocatorOptions[0:1]
+	opts := []chromedp.ExecAllocatorOption{chromedp.DefaultExecAllocatorOptions[0]}
 	c.Logger.Debugf("Browser specified from config [ %s ] (Chrome is default)", c.AuthBrowser)
 
 	switch c.AuthBrowser {
@@ -115,7 +114,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	taskCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	defer cancel()
 	// Waitgroup to wait on the browser SAMLResponse
-	done.Add(1)
+	c.done.Add(1)
 	// Setup a listener to be called for each browser event in a separate go routine
 	chromedp.ListenTarget(taskCtx, c.targetListener)
 	// ensure that the browser process is started and navigate to auth page
@@ -123,12 +122,12 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	if err = chromedp.Run(taskCtx,
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
-		done.Done()
+		c.done.Done()
 		_ = chromedp.Cancel(taskCtx)
 		return err
 	}
 	// Wait for SAMLResponse from Browser
-	done.Wait()
+	c.done.Wait()
 	_ = chromedp.Cancel(taskCtx)
 	c.Logger.Debugf("Authentication Finished.")
 	return nil
@@ -157,7 +156,7 @@ func (c *browserClient) targetListener(ev interface{}) {
 				}
 				samlassert := credentials.SamlAssertion(saml)
 				c.saml = &samlassert
-				done.Done()
+				c.done.Done()
 				return
 			}
 		}
