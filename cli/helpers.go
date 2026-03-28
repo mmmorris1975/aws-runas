@@ -228,7 +228,8 @@ var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ..
 func saveStsCredentials(ctx *cli.Context, profile string, creds *credentials.Credentials) {
 	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
 		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
-			log.Debugf("error writing credentials to file: %v", werr)
+			log.Warningf("error writing credentials to file: %v", werr)
+			return
 		}
 		log.Infof("Credentials written to AWS credentials file under profile: %s-awsrunas", profile)
 	}
