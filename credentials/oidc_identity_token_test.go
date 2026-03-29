@@ -23,7 +23,7 @@ import (
 
 func TestOidcIdentityToken_IsExpired(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		j, _ := json.Marshal(map[string]interface{}{"exp": time.Now().Add(1 * time.Hour).UTC().Unix()})
+		j, _ := json.Marshal(map[string]any{"exp": time.Now().Add(1 * time.Hour).UTC().Unix()})
 		tok := OidcIdentityToken(fmt.Sprintf("mock.%s.mock", base64.RawURLEncoding.EncodeToString(j)))
 		if tok.IsExpired() {
 			t.Error("unexpected expired token")
@@ -53,7 +53,7 @@ func TestOidcIdentityToken_IsExpired(t *testing.T) {
 	})
 
 	t.Run("invalid payload expiration", func(t *testing.T) {
-		j, _ := json.Marshal(map[string]interface{}{"exp": "invalid"})
+		j, _ := json.Marshal(map[string]any{"exp": "invalid"})
 		tok := OidcIdentityToken(fmt.Sprintf("mock.%s.mock", base64.RawURLEncoding.EncodeToString(j)))
 		if !tok.IsExpired() {
 			t.Error("handled invalid token")

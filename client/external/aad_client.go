@@ -423,10 +423,7 @@ func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) 
 		SessionId:    mfaRes.SessionId,
 	}
 
-	wait := time.Duration(authRes.PerAuthPollingInterval[factor.AuthMethodID]) * time.Second
-	if wait < 500*time.Millisecond {
-		wait = 500 * time.Millisecond
-	}
+	wait := max(time.Duration(authRes.PerAuthPollingInterval[factor.AuthMethodID])*time.Second, 500*time.Millisecond)
 
 	switch c.MfaType {
 	case MfaTypePush:
@@ -567,7 +564,7 @@ func (c *aadClient) sendMfaReply(mfaUrl string, mfaReq aadMfaRequest) (*aadMfaRe
 	return mfaRes, nil
 }
 
-func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData interface{}) error {
+func (c *aadClient) submitJson(submitUrl string, inData any, outData any) error {
 	mfaJson, err := json.Marshal(inData)
 	if err != nil {
 		return err
@@ -586,12 +583,12 @@ func (c *aadClient) submitJson(submitUrl string, inData interface{}, outData int
 	return json.NewDecoder(res.Body).Decode(outData)
 }
 
-func parseResponse(body io.ReadCloser, out interface{}) error {
+func parseResponse(body io.ReadCloser, out any) error {
 	defer body.Close()
 	return parseResponseNoClose(body, out)
 }
 
-func parseResponseNoClose(body io.Reader, out interface{}) error {
+func parseResponseNoClose(body io.Reader, out any) error {
 	data, err := io.ReadAll(body)
 	if err != nil {
 		return err
@@ -662,7 +659,7 @@ type aadMfaRequest struct {
 type aadMfaResponse struct {
 	Success       bool
 	ResultValue   string
-	Message       interface{}
+	Message       any
 	AuthMethodId  string
 	ErrCode       int
 	Retry         bool

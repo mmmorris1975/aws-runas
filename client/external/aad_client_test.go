@@ -425,7 +425,7 @@ $Config=%s;
 <body></body>
 </html>
 `
-	return []byte(fmt.Sprintf(body, j)), nil
+	return fmt.Appendf(nil, body, j), nil
 }
 
 func genFormResponse(actionUrl string, fields map[string]string) ([]byte, error) {

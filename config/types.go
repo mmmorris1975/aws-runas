@@ -39,8 +39,8 @@ type EnvLoader interface {
 // Loader defines the methods which load configuration and credentials for a specified profile from one or more
 // implementation specific sources.
 type Loader interface {
-	Config(profile string, sources ...interface{}) (*AwsConfig, error)
-	Credentials(profile string, sources ...interface{}) (*AwsCredentials, error)
+	Config(profile string, sources ...any) (*AwsConfig, error)
+	Credentials(profile string, sources ...any) (*AwsCredentials, error)
 }
 
 // Resolver defines the methods for retrieving configuration and credential information using profile names.

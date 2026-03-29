@@ -28,7 +28,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
-	"sort"
+	"slices"
 	"syscall"
 	"time"
 )
@@ -205,14 +205,14 @@ func bashCompleteProfile(ctx *cli.Context) {
 		vals[i] = k
 		i++
 	}
-	sort.Strings(vals)
+	slices.Sort(vals)
 
 	for _, v := range vals {
 		fmt.Println(v)
 	}
 }
 
-var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...any) {
 	if log != nil {
 		switch c {
 		case logging.Warn:

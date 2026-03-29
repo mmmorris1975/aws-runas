@@ -20,30 +20,30 @@ import (
 
 type badLoader bool
 
-func (l *badLoader) Config(string, ...interface{}) (*AwsConfig, error) {
+func (l *badLoader) Config(string, ...any) (*AwsConfig, error) {
 	return nil, errors.New("bad config")
 }
 
-func (l *badLoader) Credentials(string, ...interface{}) (*AwsCredentials, error) {
+func (l *badLoader) Credentials(string, ...any) (*AwsCredentials, error) {
 	return nil, errors.New("bad credentials")
 }
 
 type simpleLoader bool
 
-func (l *simpleLoader) Config(string, ...interface{}) (*AwsConfig, error) {
+func (l *simpleLoader) Config(string, ...any) (*AwsConfig, error) {
 	c := &AwsConfig{
 		Region: "mockRegion",
 	}
 	return c, nil
 }
 
-func (l *simpleLoader) Credentials(string, ...interface{}) (*AwsCredentials, error) {
+func (l *simpleLoader) Credentials(string, ...any) (*AwsCredentials, error) {
 	return new(AwsCredentials), nil
 }
 
 type samlLoader bool
 
-func (l *samlLoader) Config(string, ...interface{}) (*AwsConfig, error) {
+func (l *samlLoader) Config(string, ...any) (*AwsConfig, error) {
 	c := &AwsConfig{
 		CredentialsDuration: 1 * time.Hour,
 		RoleArn:             "mockRole",
@@ -53,13 +53,13 @@ func (l *samlLoader) Config(string, ...interface{}) (*AwsConfig, error) {
 	return c, nil
 }
 
-func (l *samlLoader) Credentials(string, ...interface{}) (*AwsCredentials, error) {
+func (l *samlLoader) Credentials(string, ...any) (*AwsCredentials, error) {
 	return &AwsCredentials{SamlPassword: "mockPassword"}, nil
 }
 
 type sourceProfileLoader bool
 
-func (l *sourceProfileLoader) Config(string, ...interface{}) (*AwsConfig, error) {
+func (l *sourceProfileLoader) Config(string, ...any) (*AwsConfig, error) {
 	src := &AwsConfig{
 		CredentialsDuration: 4 * time.Hour,
 		MfaSerial:           "mockMfa",
@@ -74,6 +74,6 @@ func (l *sourceProfileLoader) Config(string, ...interface{}) (*AwsConfig, error)
 	return c, nil
 }
 
-func (l *sourceProfileLoader) Credentials(string, ...interface{}) (*AwsCredentials, error) {
+func (l *sourceProfileLoader) Credentials(string, ...any) (*AwsCredentials, error) {
 	return new(AwsCredentials), nil
 }

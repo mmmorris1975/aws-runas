@@ -510,7 +510,7 @@ func oktaVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 
 	reply.Status = "MFA_CHALLENGE"
 	reply.FactorResult = "WAITING"
-	reply.Links = map[string]interface{}{"next": map[string]string{"href": fmt.Sprintf("http://%s%s?success=1", r.Host, r.URL.Path)}}
+	reply.Links = map[string]any{"next": map[string]string{"href": fmt.Sprintf("http://%s%s?success=1", r.Host, r.URL.Path)}}
 
 	j, _ := json.Marshal(reply)
 	w.Header().Set("Content-Type", "application/json")

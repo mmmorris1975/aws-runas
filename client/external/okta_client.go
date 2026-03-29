@@ -267,7 +267,7 @@ func (c *oktaClient) handleDuoMfa(ctx context.Context, stateToken string, factor
 
 	// Duo MFA done, complete Okta MFA login workflow
 	var nextUrl string
-	if v, ok := r.Links["next"].(map[string]interface{}); ok {
+	if v, ok := r.Links["next"].(map[string]any); ok {
 		nextUrl, _ = v["href"].(string)
 	}
 
@@ -546,7 +546,7 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 
 	for strings.EqualFold(res.Status, "MFA_CHALLENGE") && strings.EqualFold(res.FactorResult, "WAITING") {
 		var nextUrl string
-		if v, ok := res.Links["next"].(map[string]interface{}); ok {
+		if v, ok := res.Links["next"].(map[string]any); ok {
 			nextUrl, _ = v["href"].(string)
 		}
 
@@ -635,15 +635,15 @@ func (c *oktaClient) handleAuthResponse(res *http.Response) (*oktaAuthnResponse,
 }
 
 type oktaAuthnResponse struct {
-	Status       string                 `json:"status"`
-	SessionToken string                 `json:"sessionToken,omitempty"`
-	StateToken   string                 `json:"stateToken,omitempty"`
-	FactorResult string                 `json:"factorResult"`
-	Links        map[string]interface{} `json:"_links"`
+	Status       string         `json:"status"`
+	SessionToken string         `json:"sessionToken,omitempty"`
+	StateToken   string         `json:"stateToken,omitempty"`
+	FactorResult string         `json:"factorResult"`
+	Links        map[string]any `json:"_links"`
 	EmbeddedData struct {
 		MfaFactors []*oktaMfaFactor `json:"factors"`
 		MfaFactor  *oktaMfaFactor   `json:"factor"`
-	} `json:"_embedded,omitempty"`
+	} `json:"_embedded"`
 }
 
 type oktaMfaFactor struct {
@@ -653,7 +653,7 @@ type oktaMfaFactor struct {
 	Links      map[string]struct {
 		Href string `json:"href"`
 	} `json:"_links"`
-	EmbeddedData map[string]map[string]interface{} `json:"_embedded,omitempty"`
+	EmbeddedData map[string]map[string]any `json:"_embedded,omitempty"`
 }
 
 type oktaMfaResponse struct {

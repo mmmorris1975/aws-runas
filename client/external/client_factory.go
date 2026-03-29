@@ -80,7 +80,7 @@ func MustGetWebIdentityClient(provider, authUrl string, cfg OidcClientConfig) We
 // the switch statement will continue to grow as new providers are added, so keep the linter quiet
 //
 //nolint:gocyclo,funlen,gocognit
-func lookupClient(provider, authUrl string, cfg OidcClientConfig) (interface{}, error) {
+func lookupClient(provider, authUrl string, cfg OidcClientConfig) (any, error) {
 	if len(provider) < 1 {
 		provider = divineClient(authUrl, http.MethodHead)
 	}

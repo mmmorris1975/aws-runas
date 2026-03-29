@@ -71,7 +71,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		cfg.ProfileName = ""
 	}
 
-	var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+	var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...any) {
 		if f.options.Logger != nil {
 			switch c {
 			case logging.Warn:

@@ -28,7 +28,7 @@ func NewChainLoader(chain []Loader) *chainLoader {
 // never return an error, but is required to satisfy the Loader interface.
 //
 // Values retrieved via the various loaders are merged using the AwsConfig.MergeIn() method.
-func (l *chainLoader) Config(profile string, sources ...interface{}) (*AwsConfig, error) {
+func (l *chainLoader) Config(profile string, sources ...any) (*AwsConfig, error) {
 	c := new(AwsConfig)
 
 	for _, ldr := range l.loaders {
@@ -50,7 +50,7 @@ func (l *chainLoader) Config(profile string, sources ...interface{}) (*AwsConfig
 // never return an error, but is required to satisfy the Loader interface.
 //
 // Values retrieved via the various loaders are merged using the AwsCredentials.MergeIn() method.
-func (l *chainLoader) Credentials(profile string, sources ...interface{}) (*AwsCredentials, error) {
+func (l *chainLoader) Credentials(profile string, sources ...any) (*AwsCredentials, error) {
 	c := new(AwsCredentials)
 
 	for _, ldr := range l.loaders {

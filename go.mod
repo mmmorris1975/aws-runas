@@ -1,6 +1,6 @@
 module github.com/mmmorris1975/aws-runas
 
-go 1.25.0
+go 1.26.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.8.0

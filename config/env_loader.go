@@ -30,13 +30,13 @@ type envLoader bool
 
 // Config is the implementation of the Loader interface.  The profile and sources arguments are ignored, and the value
 // is returned via delegation to the EnvConfig() method.
-func (l *envLoader) Config(string, ...interface{}) (*AwsConfig, error) {
+func (l *envLoader) Config(string, ...any) (*AwsConfig, error) {
 	return l.EnvConfig()
 }
 
 // Credentials is the implementation of the Loader interface.  The profile and sources arguments are ignored, and the value
 // is returned via delegation to the EnvCredentials() method.
-func (l *envLoader) Credentials(string, ...interface{}) (*AwsCredentials, error) {
+func (l *envLoader) Credentials(string, ...any) (*AwsCredentials, error) {
 	return l.EnvCredentials()
 }
 
@@ -58,9 +58,9 @@ func (l *envLoader) EnvCredentials() (*AwsCredentials, error) {
 	return c, nil
 }
 
-func resolveEnv(t interface{}) error {
+func resolveEnv(t any) error {
 	tv := reflect.ValueOf(t)
-	if tv.Kind() != reflect.Ptr {
+	if tv.Kind() != reflect.Pointer {
 		return errors.New("not a pointer")
 	}
 	tt := tv.Elem().Type()
@@ -79,7 +79,7 @@ func resolveEnv(t interface{}) error {
 
 func getEnvVar(tag string) string {
 	// loop through tag value of potential env vars to use, return the 1st one which is set
-	for _, envVar := range strings.Split(tag, `,`) {
+	for envVar := range strings.SplitSeq(tag, `,`) {
 		if envVal, ok := os.LookupEnv(envVar); ok && len(envVal) > 0 {
 			return envVal
 		}

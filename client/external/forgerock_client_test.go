@@ -285,7 +285,7 @@ func mockForgerockHandler(w http.ResponseWriter, r *http.Request) {
 							reply.Callbacks = []*frCallback{
 								{
 									Type: "PasswordCallback",
-									Input: []map[string]interface{}{
+									Input: []map[string]any{
 										{"name": "IDToken1", "value": ""},
 									},
 								},
