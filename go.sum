@@ -109,8 +109,8 @@ github.com/mitchellh/go-homedir v1.1.0 h1:lukF9ziXFxDFPkA1vsr5zpc1XuPDn/wFntq5mG
 github.com/mitchellh/go-homedir v1.1.0/go.mod h1:SfyaCUpYCn1Vlf4IUYiD9fPX4A5wJrkLzIz1N1q0pr0=
 github.com/mmmorris1975/simple-logger v0.5.1 h1:Qmbs7HZmuDac3YUCAMXdgNzT502EZzs/AXwA+Yx5xEw=
 github.com/mmmorris1975/simple-logger v0.5.1/go.mod h1:6Ut7vszvSG4je1HHyzUzH4MWRbyWPHCJxLbnEoCo7kk=
-github.com/mmmorris1975/ssm-session-client v0.404.0 h1:gKxq4gpnFqKdGY9rQUE2lrsUDa2X4vrXHPag+xvgNO4=
-github.com/mmmorris1975/ssm-session-client v0.404.0/go.mod h1:OSFITaX15XZD/J6dm88V/At7mjVT4HqJatdhAJCRo+A=
+github.com/mmmorris1975/ssm-session-client v0.404.1 h1:N7plaTzHP6u6xF7lUWz68lOIpdd3xRDEER2LoP36oiQ=
+github.com/mmmorris1975/ssm-session-client v0.404.1/go.mod h1:OSFITaX15XZD/J6dm88V/At7mjVT4HqJatdhAJCRo+A=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde h1:x0TT0RDC7UhAVbbWWBzr41ElhJx5tXPWkIHA2HWPRuw=
 github.com/orisano/pixelmatch v0.0.0-20220722002657-fb0b55479cde/go.mod h1:nZgzbfBr3hhjoZnS66nKrHmduYNpc34ny7RK4z5/HM0=
 github.com/pkg/diff v0.0.0-20210226163009-20ebb0f2a09e/go.mod h1:pJLUxLENpZxwdsKMEsNbx1VGcRFpLqf3715MtcvvzbA=
