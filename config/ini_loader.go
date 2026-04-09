@@ -236,6 +236,14 @@ func (l *iniLoader) SaveStsCredentials(profile string, cred *credentials.Credent
 		src = e
 	}
 
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
+
+	if err := os.MkdirAll(filepath.Dir(src), 0750); err != nil {
+		return fmt.Errorf("unable to create credentials directory: %w", err)
+	}
+
 	// In-process lock
 	iniFileMu.Lock()
 	defer iniFileMu.Unlock()

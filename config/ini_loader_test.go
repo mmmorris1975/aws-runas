@@ -16,6 +16,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -705,6 +706,95 @@ func TestIniLoader_SaveStsCredentials(t *testing.T) {
 
 		if c2.AccessKeyId != "secondAK" || c2.SecretAccessKey != "secondSK" || c2.Token != "secondToken" {
 			t.Error("second profile data mismatch")
+		}
+	})
+
+	t.Run("creates missing directory", func(t *testing.T) {
+		newFile := filepath.Join(t.TempDir(), "subdir", "credentials")
+		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", newFile)
+		defer os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf.Name())
+
+		cred := &credentials.Credentials{AccessKeyId: "mkdirAK", SecretAccessKey: "mkdirSK"}
+		if err := DefaultIniLoader.SaveStsCredentials("mkdir-test", cred); err != nil {
+			t.Error(err)
+			return
+		}
+
+		info, err := os.Stat(filepath.Dir(newFile))
+		if err != nil {
+			t.Errorf("credentials directory not created: %v", err)
+			return
+		}
+
+		if mode := info.Mode().Perm(); mode != 0750 {
+			t.Errorf("directory mode %04o, want 0750", mode)
+		}
+
+		f, err := loadFile(newFile)
+		if err != nil {
+			t.Errorf("credentials file not readable: %v", err)
+			return
+		}
+
+		s, err := f.GetSection("mkdir-test-awsrunas")
+		if err != nil {
+			t.Error("missing profile section")
+			return
+		}
+
+		c := new(credentials.Credentials)
+		if err = s.MapTo(c); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c.AccessKeyId != "mkdirAK" || c.SecretAccessKey != "mkdirSK" {
+			t.Error("data mismatch")
+		}
+	})
+
+	t.Run("follows symlink", func(t *testing.T) {
+		dir := t.TempDir()
+		realPath := filepath.Join(dir, "real_credentials")
+		linkPath := filepath.Join(dir, "link_credentials")
+
+		if err := os.WriteFile(realPath, []byte{}, 0600); err != nil {
+			t.Fatal(err)
+		}
+
+		if err := os.Symlink(realPath, linkPath); err != nil {
+			t.Fatal(err)
+		}
+
+		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", linkPath)
+		defer os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf.Name())
+
+		cred := &credentials.Credentials{AccessKeyId: "symlinkAK", SecretAccessKey: "symlinkSK"}
+		if err := DefaultIniLoader.SaveStsCredentials("symlink-test", cred); err != nil {
+			t.Error(err)
+			return
+		}
+
+		f, err := loadFile(realPath)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		s, err := f.GetSection("symlink-test-awsrunas")
+		if err != nil {
+			t.Error("missing profile section in real file")
+			return
+		}
+
+		c := new(credentials.Credentials)
+		if err = s.MapTo(c); err != nil {
+			t.Error(err)
+			return
+		}
+
+		if c.AccessKeyId != "symlinkAK" || c.SecretAccessKey != "symlinkSK" {
+			t.Error("data mismatch")
 		}
 	})
 
