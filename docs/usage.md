@@ -44,6 +44,7 @@ GLOBAL OPTIONS:
    --refresh, -r                    force a refresh of the cached credentials
    --expiration, -e                 show credential expiration time
    --whoami, -w                     print the AWS identity information for the provided profile credentials
+   --write-credentials, -c          write credentials to the AWS credentials file in addition to the cache
    --list-mfa, -m                   list the ARN of the MFA device associated with your IAM account
    --list-roles, -l                 list role ARNs you are able to assume
    --update, -u                     check for updates to aws-runas
@@ -78,6 +79,7 @@ the behavior of aws-runas:
     The environment variables SAML_PASSWORD or WEB_PASSWORD are also accepted.
   * RUNAS_PROVIDER (string) - The name of the SAML or OIDC identity provider to use, overriding auto-detection, like the `-R` flag
     The environment variables SAML_PROFILE or WEB_PROVIDER are also accepted.
+  * RUNAS_WRITE_CREDENTIALS (boolean) - Set to any "truth-y" value to write retrieved STS credentials to the AWS credentials file, like the `-c` flag
 
 ### Diagnostics
 
@@ -134,3 +136,21 @@ $ aws-runas --whoami my-profile
 {UserId:AROAxxx:my_iam_user Arn:arn:aws:sts::0123456789:assumed-role/MyRole/my_iam_user Account:0123456789}
 ...
 ```
+
+### Writing Credentials to the AWS Credentials File
+
+Use the `--write-credentials` (`-c`) flag to persist the retrieved STS credentials to the AWS credentials file
+(`~/.aws/credentials`) in addition to the internal cache. This is useful when other tools or SDKs need to read
+credentials directly from the credentials file rather than via the environment or a credential provider.
+
+The credentials are written under a profile name formed by appending `-awsrunas` to the source profile name. For
+example, using a profile called `my-profile` would write credentials under the `[my-profile-awsrunas]` section:
+
+```shell
+$ aws-runas --write-credentials my-profile -- aws s3 ls
+INFO   Credentials written to AWS credentials file under profile: my-profile-awsrunas
+...
+```
+
+This flag also works with the `ssm` subcommands. The `RUNAS_WRITE_CREDENTIALS` environment variable can be used
+instead of the flag.

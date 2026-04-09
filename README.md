@@ -78,6 +78,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     --refresh, -r                    force a refresh of the cached credentials (default: false)
     --expiration, -e                 show credential expiration time (default: false)
     --whoami, -w                     print the AWS identity information for the provided profile credentials (default: false)
+    --write-credentials, -c          write credentials to the AWS credentials file in addition to the cache (default: false) [$RUNAS_WRITE_CREDENTIALS]
     --list-mfa, -m                   list the ARN of the MFA device associated with your IAM account (default: false)
     --list-roles, -l                 list role ARNs you are able to assume (default: false)
     --update, -u                     check for updates to aws-runas (default: false)
