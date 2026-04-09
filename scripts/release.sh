@@ -29,4 +29,4 @@ NAME="aws-runas"
 sha256sum aws-runas*.zip aws-runas*.deb aws-runas*.rpm >${NAME}_${VER}.sha256sum
 cat *.sha256sum
 
-$GH release create $VER *.deb *.rpm *.zip *.sha256sum -R mmmorris1975/$NAME -n "release $VER"
+$GH release create $VER *.deb *.rpm *.zip *.sha256sum -R mmmorris1975/$NAME -n "release $VER" --draft
