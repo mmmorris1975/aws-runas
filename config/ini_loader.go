@@ -292,7 +292,7 @@ func loadFile(path string) (*ini.File, error) {
 }
 
 func writeFile(f *ini.File, dst string, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0770); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
 		return err
 	}
 
