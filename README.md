@@ -45,7 +45,7 @@ Pre-compiled binaries for various platforms can be downloaded [here](https://git
     aws-runas [global options] [subcommand] profile [arguments...]
     
     VERSION:
-    3.6.1
+    3.7.0
     
     COMMANDS:
     list, ls              Shows IAM roles or MFA device configuration
