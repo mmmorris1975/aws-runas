@@ -129,7 +129,7 @@ func TestWebIdentityCache_Cache(t *testing.T) {
 
 func TestWebIdentityCache_Load(t *testing.T) {
 	t.Run("good", func(t *testing.T) {
-		ex := map[string]interface{}{"exp": time.Now().Add(1 * time.Hour).UTC().Unix()}
+		ex := map[string]any{"exp": time.Now().Add(1 * time.Hour).UTC().Unix()}
 		j, _ := json.Marshal(ex)
 		rawTok := fmt.Sprintf("mock.%s.mock", base64.RawURLEncoding.EncodeToString(j))
 		tok := credentials.OidcIdentityToken(rawTok)
@@ -150,7 +150,7 @@ func TestWebIdentityCache_Load(t *testing.T) {
 	})
 
 	t.Run("expired", func(t *testing.T) {
-		ex := map[string]interface{}{"exp": time.Now().Add(-1 * time.Second).UTC().Unix()}
+		ex := map[string]any{"exp": time.Now().Add(-1 * time.Second).UTC().Unix()}
 		j, _ := json.Marshal(ex)
 		rawTok := fmt.Sprintf("mock.%s.mock", base64.RawURLEncoding.EncodeToString(j))
 		tok := credentials.OidcIdentityToken(rawTok)

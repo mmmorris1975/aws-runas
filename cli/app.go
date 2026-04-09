@@ -101,7 +101,7 @@ var App = &cli.App{
 		return nil
 	},
 
-	Metadata: map[string]interface{}{
+	Metadata: map[string]any{
 		"url": "https://github.com/mmmorris1975/aws-runas",
 	},
 
@@ -170,6 +170,8 @@ func execCmd(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	saveStsCredentials(ctx, profile, creds)
 
 	if strings.EqualFold(ctx.String(fmtFlag.Name), "json") {
 		// truly a one-shot operation, the credentials_process logic will re-exec the command to refresh credentials

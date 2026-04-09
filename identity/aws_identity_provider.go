@@ -22,7 +22,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/shared"
 	"net/url"
-	"sort"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -111,7 +111,7 @@ func (p *awsIdentityProvider) Roles(user ...string) (*Roles, error) {
 		i++
 	}
 
-	sort.Strings(roles)
+	slices.Sort(roles)
 	r := Roles(roles)
 	return &r, nil
 }
@@ -287,7 +287,7 @@ func (p *awsIdentityProvider) findPolicyRoles(doc *string, ch chan<- string) {
 		return
 	}
 
-	polJson := make(map[string]interface{})
+	polJson := make(map[string]any)
 	if err := json.Unmarshal([]byte(escDoc), &polJson); err != nil {
 		p.logger.Errorf("error unmarshalling policy document json: %v", err)
 		return
@@ -299,15 +299,15 @@ func (p *awsIdentityProvider) findPolicyRoles(doc *string, ch chan<- string) {
 }
 
 //nolint:gocognit // Thanks AWS for letting the Action be either a string or an []interface{}
-func (p *awsIdentityProvider) findRoles(data interface{}) []string {
+func (p *awsIdentityProvider) findRoles(data any) []string {
 	roles := make([]string, 0)
 
 	switch t := data.(type) {
-	case []interface{}:
+	case []any:
 		for _, v := range t {
 			roles = append(roles, p.findRoles(v)...)
 		}
-	case map[string]interface{}:
+	case map[string]any:
 		assumeRoleAction := "sts:AssumeRole"
 
 		if t["Effect"] == "Allow" {
@@ -316,7 +316,7 @@ func (p *awsIdentityProvider) findRoles(data interface{}) []string {
 				if v == assumeRoleAction {
 					roles = append(roles, p.parseRoles(t["Resource"])...)
 				}
-			case []interface{}:
+			case []any:
 				for _, val := range v {
 					if val == assumeRoleAction {
 						roles = append(roles, p.parseRoles(t["Resource"])...)
@@ -329,7 +329,7 @@ func (p *awsIdentityProvider) findRoles(data interface{}) []string {
 	return roles
 }
 
-func (p *awsIdentityProvider) parseRoles(data interface{}) []string {
+func (p *awsIdentityProvider) parseRoles(data any) []string {
 	roles := make([]string, 0)
 
 	switch r := data.(type) {
@@ -337,7 +337,7 @@ func (p *awsIdentityProvider) parseRoles(data interface{}) []string {
 		if p.isRoleArn(r) {
 			roles = append(roles, r)
 		}
-	case []interface{}:
+	case []any:
 		for _, i := range r {
 			if p.isRoleArn(i.(string)) {
 				roles = append(roles, i.(string))

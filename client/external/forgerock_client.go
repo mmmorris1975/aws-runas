@@ -411,9 +411,9 @@ type frMfaPrompt struct {
 }
 
 type frCallback struct {
-	Type   string                   `json:"type"`
-	Input  []map[string]interface{} `json:"input"`
-	Output []map[string]interface{} `json:"output"`
+	Type   string           `json:"type"`
+	Input  []map[string]any `json:"input"`
+	Output []map[string]any `json:"output"`
 }
 
 type frApiError struct {

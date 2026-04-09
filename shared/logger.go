@@ -24,23 +24,23 @@ package shared
 //
 // Setup of the concrete logger type will be handled during program initialization.
 type Logger interface {
-	Debugf(string, ...interface{})
-	Infof(string, ...interface{})
-	Warningf(string, ...interface{})
-	Errorf(string, ...interface{})
+	Debugf(string, ...any)
+	Infof(string, ...any)
+	Warningf(string, ...any)
+	Errorf(string, ...any)
 }
 
 // DefaultLogger is a Logger-compatible implementation for use as a fallback/default logger.  It does nothing.
 type DefaultLogger bool
 
 // Debugf does nothing.
-func (l *DefaultLogger) Debugf(string, ...interface{}) {}
+func (l *DefaultLogger) Debugf(string, ...any) {}
 
 // Infof does nothing.
-func (l *DefaultLogger) Infof(string, ...interface{}) {}
+func (l *DefaultLogger) Infof(string, ...any) {}
 
 // Warningf does nothing.
-func (l *DefaultLogger) Warningf(string, ...interface{}) {}
+func (l *DefaultLogger) Warningf(string, ...any) {}
 
 // Errorf does nothing.
-func (l *DefaultLogger) Errorf(string, ...interface{}) {}
+func (l *DefaultLogger) Errorf(string, ...any) {}

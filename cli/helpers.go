@@ -28,7 +28,7 @@ import (
 	"github.com/urfave/cli/v2"
 	"os"
 	"os/signal"
-	"sort"
+	"slices"
 	"syscall"
 	"time"
 )
@@ -205,14 +205,14 @@ func bashCompleteProfile(ctx *cli.Context) {
 		vals[i] = k
 		i++
 	}
-	sort.Strings(vals)
+	slices.Sort(vals)
 
 	for _, v := range vals {
 		fmt.Println(v)
 	}
 }
 
-var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...interface{}) {
+var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...any) {
 	if log != nil {
 		switch c {
 		case logging.Warn:
@@ -222,5 +222,15 @@ var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ..
 		default:
 			log.Infof(fmt, v...)
 		}
+	}
+}
+
+func saveStsCredentials(ctx *cli.Context, profile string, creds *credentials.Credentials) {
+	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
+		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
+			log.Warningf("error writing credentials to file: %v", werr)
+			return
+		}
+		log.Infof("Credentials written to AWS credentials file under profile: %s-awsrunas", profile)
 	}
 }

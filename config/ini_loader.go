@@ -19,13 +19,17 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
 	"gopkg.in/ini.v1"
 )
 
 // DefaultIniLoader creates a default Loader type to gather configuration and credentials from ini-style data sources.
 var DefaultIniLoader = new(iniLoader)
+
+var iniFileMu sync.Mutex
 
 type iniLoader bool
 
@@ -34,7 +38,7 @@ type iniLoader bool
 // optional variadic sources argument can be provided which can be any of the supported go-ini data source types.  If no
 // sources are specified, the default AWS config file (~/.aws/config) is used, unless overridden with the AWS_CONFIG_FILE
 // environment variable.
-func (l *iniLoader) Config(profile string, sources ...interface{}) (*AwsConfig, error) {
+func (l *iniLoader) Config(profile string, sources ...any) (*AwsConfig, error) {
 	file, err := resolveConfigSources(sources...)
 	if err != nil {
 		return nil, err
@@ -91,7 +95,7 @@ func (l *iniLoader) Config(profile string, sources ...interface{}) (*AwsConfig, 
 // An optional variadic sources argument can be provided which can be any of the supported go-ini data source types.  If no
 // no sources are specified, the default AWS config file (~/.aws/config) is used, unless overridden with the
 // AWS_SHARED_CREDENTIALS_FILE environment variable.
-func (l *iniLoader) Credentials(profile string, sources ...interface{}) (*AwsCredentials, error) {
+func (l *iniLoader) Credentials(profile string, sources ...any) (*AwsCredentials, error) {
 	file, err := resolveCredentialSources(sources...)
 	if err != nil {
 		return nil, err
@@ -116,7 +120,7 @@ func (l *iniLoader) Credentials(profile string, sources ...interface{}) (*AwsCre
 
 // Roles enumerates the profile sections in the default configuration file and returns a list of section (profile)
 // names which contain the role_arn parameter.
-func (l *iniLoader) Roles(sources ...interface{}) ([]string, error) {
+func (l *iniLoader) Roles(sources ...any) ([]string, error) {
 	roles := make([]string, 0)
 	if p, err := l.Profiles(sources...); err == nil {
 		for k, v := range p {
@@ -133,7 +137,7 @@ func (l *iniLoader) Roles(sources ...interface{}) ([]string, error) {
 
 // Profiles returns a map with profile names as keys and a boolean indicating if the profile is a role (determined by
 // the presence of the role_arn configuration attribute in the profile.
-func (l *iniLoader) Profiles(sources ...interface{}) (map[string]bool, error) {
+func (l *iniLoader) Profiles(sources ...any) (map[string]bool, error) {
 	file, err := resolveConfigSources(sources...)
 	if err != nil {
 		return nil, err
@@ -214,6 +218,60 @@ func (l *iniLoader) SaveCredentials(profile string, cred *AwsCredentials) error 
 	return writeFile(f, src, 0600)
 }
 
+// SaveStsCredentials writes AWS STS credentials (access key, secret, session token) to the AWS credentials
+// file under the given profile section, preserving all other sections. Safe for concurrent use across
+// goroutines and OS processes via an in-process mutex and an OS-level exclusive file lock on a companion
+// lock file. The write is fail-safe: credentials are written to a temp file and atomically renamed into place.
+func (l *iniLoader) SaveStsCredentials(profile string, cred *credentials.Credentials) (retErr error) {
+	if cred == nil {
+		return errors.New("invalid credentials, can not be nil")
+	}
+
+	if len(profile) < 1 {
+		return errors.New("profile name can not be empty")
+	}
+
+	src := config.DefaultSharedCredentialsFilename()
+	if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
+		src = e
+	}
+
+	if resolved, err := filepath.EvalSymlinks(src); err == nil {
+		src = resolved
+	}
+
+	if err := os.MkdirAll(filepath.Dir(src), 0750); err != nil {
+		return fmt.Errorf("unable to create credentials directory: %w", err)
+	}
+
+	// In-process lock
+	iniFileMu.Lock()
+	defer iniFileMu.Unlock()
+
+	// Cross-process lock via companion lock file
+	lockFile, err := acquireCredentialLock(src + ".lock")
+	if err != nil {
+		return fmt.Errorf("unable to lock credentials file: %w", err)
+	}
+	defer func() {
+		if e := releaseCredentialLock(lockFile); e != nil && retErr == nil {
+			retErr = e
+		}
+	}()
+
+	// Read-modify-write: load current file, update only the target section
+	f, err := loadFile(src)
+	if err != nil {
+		return err
+	}
+
+	if err = f.Section(profile + "-awsrunas").ReflectFrom(cred); err != nil {
+		return err
+	}
+
+	return writeFile(f, src, 0600)
+}
+
 func loadFile(path string) (*ini.File, error) {
 	f, err := ini.LoadSources(ini.LoadOptions{IgnoreInlineComment: true}, path)
 	if err != nil {
@@ -234,7 +292,7 @@ func loadFile(path string) (*ini.File, error) {
 }
 
 func writeFile(f *ini.File, dst string, mode os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(dst), 0770); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0750); err != nil {
 		return err
 	}
 
@@ -260,7 +318,7 @@ func writeFile(f *ini.File, dst string, mode os.FileMode) error {
 	return err
 }
 
-func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
+func resolveConfigSources(sources ...any) (*ini.File, error) {
 	f := ini.Empty(ini.LoadOptions{IgnoreInlineComment: true})
 
 	if len(sources) < 1 {
@@ -268,7 +326,7 @@ func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
 		if e, ok := os.LookupEnv("AWS_CONFIG_FILE"); ok {
 			src = e
 		}
-		sources = make([]interface{}, 1)
+		sources = make([]any, 1)
 		sources[0] = src
 		logger.Debugf("using configuration source %s", src)
 	}
@@ -282,7 +340,7 @@ func resolveConfigSources(sources ...interface{}) (*ini.File, error) {
 	return f, nil
 }
 
-func resolveCredentialSources(sources ...interface{}) (*ini.File, error) {
+func resolveCredentialSources(sources ...any) (*ini.File, error) {
 	f := ini.Empty()
 
 	if len(sources) < 1 {
@@ -290,7 +348,7 @@ func resolveCredentialSources(sources ...interface{}) (*ini.File, error) {
 		if e, ok := os.LookupEnv("AWS_SHARED_CREDENTIALS_FILE"); ok {
 			src = e
 		}
-		sources = make([]interface{}, 1)
+		sources = make([]any, 1)
 		sources[0] = src
 		logger.Debugf("using credentials source %s", src)
 	}

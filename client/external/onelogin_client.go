@@ -445,7 +445,7 @@ func (c *oneloginClient) exchangeToken(st string) error {
 	return nil
 }
 
-func (c *oneloginClient) apiPostReq(ctx context.Context, u string, body interface{}) (*http.Request, error) {
+func (c *oneloginClient) apiPostReq(ctx context.Context, u string, body any) (*http.Request, error) {
 	var r io.Reader = http.NoBody
 
 	if body != nil {

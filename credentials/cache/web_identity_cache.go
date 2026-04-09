@@ -54,7 +54,7 @@ type webIdentityCache struct {
 // force public access through WebIdentityCache() so we have better safety for concurrent access to individual files.
 func newWebIdentityCache(path string) (*webIdentityCache, error) {
 	// ensure all intermediate directories exist
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0750); err != nil {
 		return nil, err
 	}
 
@@ -145,6 +145,6 @@ func (c *webIdentityCache) flush() error {
 // The hash isn't directly serializable, use hex string encoding.
 func tokenCacheKey(url string) string {
 	h := fnv.New128()
-	h.Sum([]byte(url))
-	return hex.EncodeToString(h.Sum([]byte(url)))
+	_, _ = h.Write([]byte(url))
+	return hex.EncodeToString(h.Sum(nil))
 }

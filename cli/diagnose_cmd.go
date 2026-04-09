@@ -177,6 +177,7 @@ func checkProvider(url string) {
 	res, err = http.DefaultClient.Do(req)
 	if err != nil {
 		log.Errorf("error communicating with external provider endpoint: %v", err)
+		return
 	}
 	defer res.Body.Close()
 

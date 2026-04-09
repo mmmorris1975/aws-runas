@@ -16,7 +16,7 @@ package cli
 import (
 	"errors"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
@@ -60,7 +60,7 @@ var rolesCmd = &cli.Command{
 			return err
 		}
 
-		sort.Strings(*roles)
+		slices.Sort(*roles)
 
 		fmt.Printf("Available role ARNs for %s\n", id.Username)
 		for _, r := range *roles {

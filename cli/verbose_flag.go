@@ -110,7 +110,7 @@ func (a *boolSlice) Set(s string) error {
 	return nil
 }
 
-func (a *boolSlice) Get() interface{} {
+func (a *boolSlice) Get() any {
 	return a.val
 }
 

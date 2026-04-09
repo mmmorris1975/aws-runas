@@ -27,6 +27,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/shared"
 	"github.com/syndtr/gocapability/capability"
 	"io"
+	"maps"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -278,13 +279,12 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 	defer r.Body.Close()
 
 	if r.Method == http.MethodPost {
-		buf := make([]byte, 256) // if there's a profile name longer than this ... I mean, really
-		n, err := r.Body.Read(buf)
+		body, err := io.ReadAll(io.LimitReader(r.Body, 256)) // if there's a profile name longer than this ... I mean, really
 		if err != nil && !errors.Is(err, io.EOF) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		profile := string(buf[:n])
+		profile := strings.TrimSpace(string(body))
 
 		// Do this unconditionally so we can get any potential changes in the config or credentials files
 		s.awsConfig, s.awsClient, err = s.getConfigAndClient(profile)
@@ -784,15 +784,13 @@ func logHandler(nextHandler http.HandlerFunc) http.HandlerFunc {
 
 		// rec.Result().Write() prints all of the details about the response, including the status line and such,
 		// which is passed along in the body of the upstream writer. Need to be more specific/precise
-		for k, v := range rec.Header() {
-			w.Header()[k] = v
-		}
+		maps.Copy(w.Header(), rec.Header())
 		w.WriteHeader(rec.Code)
 		_, _ = rec.Body.WriteTo(w)
 	}
 }
 
-func writeJson(w http.ResponseWriter, data interface{}) {
+func writeJson(w http.ResponseWriter, data any) {
 	body, err := json.Marshal(data)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

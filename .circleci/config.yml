@@ -4,16 +4,16 @@
 version: 2.1
 
 orbs:
-  go: circleci/go@3.0.3
-  aws-cli: circleci/aws-cli@1.4.1
-  ruby: circleci/ruby@1.4.0
-  windows: circleci/windows@5.0.0
+  go: circleci/go@3.0.4
+  aws-cli: circleci/aws-cli@1.4.1 # orb version 1.4.1 is the last to use aws-cli v1
+  ruby: circleci/ruby@2.6.0
+  windows: circleci/windows@5.1.1
 
 jobs:
   lint:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
 
     steps:
       - checkout
@@ -28,7 +28,7 @@ jobs:
   preflight:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
 
     steps:
       - checkout
@@ -43,7 +43,7 @@ jobs:
   build-darwin:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
 
     steps:
       - checkout
@@ -69,7 +69,7 @@ jobs:
   build-linux:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
 
     steps:
       - checkout
@@ -103,7 +103,7 @@ jobs:
   build-windows:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
 
     steps:
       - checkout
@@ -141,7 +141,6 @@ jobs:
       # confusing aws-runas when we're running the tests. Also use a specific, non-default profile name so
       # a similar configuration can be used locally and with CI
       - aws-cli/setup:
-          skip-install-check: false
           configure-default-region: false
           profile-name: circleci
           aws-access-key-id: AWS_ACCESSKEY
@@ -199,7 +198,7 @@ jobs:
   package-darwin:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
     steps:
       - checkout
       - attach_workspace:
@@ -224,7 +223,7 @@ jobs:
   package-windows:
     executor:
       name: go/default
-      tag: '1.25'
+      tag: '1.26'
     steps:
       - checkout
       - attach_workspace:
@@ -274,7 +273,7 @@ jobs:
             - aws-runas*.rpm
             - aws-runas*.deb
 
-  release:
+  git-release:
     docker:
       - image: alpine:3
 
@@ -286,8 +285,6 @@ jobs:
       - run: scripts/release.sh /var/tmp/release
 
 workflows:
-  version: 2
-
   # So far we don't have a 'requires' in build for lint, maybe something to change? I mean, who doesn't like clean code?
   build_and_test:
     jobs:
@@ -368,7 +365,7 @@ workflows:
             <<: *release-filter
           requires:
             - build-windows
-      - release:
+      - git-release:
           filters:
             <<: *release-filter
           requires:

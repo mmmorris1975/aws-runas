@@ -62,7 +62,7 @@ func (t *OidcIdentityToken) sections() ([]string, error) {
 	return parts, nil
 }
 
-func (t *OidcIdentityToken) decodePayload() (map[string]interface{}, error) {
+func (t *OidcIdentityToken) decodePayload() (map[string]any, error) {
 	parts, err := t.sections()
 	if err != nil {
 		return nil, err
@@ -73,7 +73,7 @@ func (t *OidcIdentityToken) decodePayload() (map[string]interface{}, error) {
 		return nil, err
 	}
 
-	v := make(map[string]interface{})
+	v := make(map[string]any)
 	if err = json.Unmarshal(data, &v); err != nil {
 		return nil, err
 	}
