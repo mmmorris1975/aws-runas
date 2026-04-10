@@ -152,5 +152,13 @@ INFO   Credentials written to AWS credentials file under profile: my-profile-aws
 ...
 ```
 
+A separate profile name is used intentionally rather than updating the original profile. The original profile
+typically has a `role_arn` (and possibly `source_profile`, `credential_process`, or similar) in `~/.aws/config`.
+Overwriting it with STS credentials would create an ambiguous state: the config still describes role assumption
+while the credentials file holds static session credentials. Different AWS SDKs and tools resolve this conflict
+inconsistently, and when those STS credentials expire the profile would be broken with no way to refresh — the
+role assumption chain defined in the config would no longer be reachable. The `-awsrunas` profile contains only
+static credentials with no corresponding config entry, so its behavior is unambiguous across all tools.
+
 This flag also works with the `ssm` subcommands. The `RUNAS_WRITE_CREDENTIALS` environment variable can be used
 instead of the flag.
