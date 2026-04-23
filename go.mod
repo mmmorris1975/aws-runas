@@ -3,55 +3,54 @@ module github.com/mmmorris1975/aws-runas
 go 1.26.1
 
 require (
-	github.com/PuerkitoBio/goquery v1.8.0
-	github.com/aws/aws-sdk-go-v2 v1.41.3
-	github.com/aws/aws-sdk-go-v2/config v1.32.11
-	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.18
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.55.4
-	github.com/aws/aws-sdk-go-v2/service/iam v1.53.4
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.2
-	github.com/aws/aws-sdk-go-v2/service/sts v1.41.8
-	github.com/aws/smithy-go v1.24.2
-	github.com/chromedp/cdproto v0.0.0-20250803210736-d308e07a266d
-	github.com/chromedp/chromedp v0.14.2
+	github.com/PuerkitoBio/goquery v1.12.0
+	github.com/aws/aws-sdk-go-v2 v1.41.6
+	github.com/aws/aws-sdk-go-v2/config v1.32.16
+	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.21
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.57.1
+	github.com/aws/aws-sdk-go-v2/service/iam v1.53.8
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.5
+	github.com/aws/aws-sdk-go-v2/service/sts v1.42.0
+	github.com/aws/smithy-go v1.25.0
+	github.com/chromedp/cdproto v0.0.0-20260321001828-e3e3800016bc
+	github.com/chromedp/chromedp v0.15.1
 	github.com/crewjam/saml v0.5.1
-	github.com/dustin/go-humanize v1.0.1-0.20210705192016-249ff6c91207
-	github.com/kevinburke/ssh_config v1.2.0
+	github.com/dustin/go-humanize v1.0.1
+	github.com/kevinburke/ssh_config v1.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.404.2
+	github.com/mmmorris1975/ssm-session-client v0.404.3
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.4.3
-	golang.org/x/crypto v0.48.0
-	golang.org/x/net v0.51.0
-	golang.org/x/sys v0.41.0
-	golang.org/x/term v0.40.0
-	gopkg.in/ini.v1 v1.67.0
+	golang.org/x/crypto v0.50.0
+	golang.org/x/net v0.53.0
+	golang.org/x/sys v0.43.0
+	golang.org/x/term v0.42.0
+	gopkg.in/ini.v1 v1.67.1
 )
 
 require (
-	github.com/andybalholm/cascadia v1.3.1 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.11 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.19 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.19 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.19 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/ini v1.8.5 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ec2 v1.293.1 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.19 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.0.7 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.12 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.16 // indirect
-	github.com/aws/session-manager-plugin v0.0.0-20260212212525-20354200d14d // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.15 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ec2 v1.299.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.8 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.22 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.10 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.16 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.20 // indirect
+	github.com/aws/session-manager-plugin v0.0.0-20260317185859-1fc63e3f5a01 // indirect
 	github.com/beevik/etree v1.5.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
-	github.com/eiannone/keyboard v0.0.0-20220611211555-0d226195f203 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
-	github.com/go-json-experiment/json v0.0.0-20251027170946-4849db3c2f7e // indirect
+	github.com/go-json-experiment/json v0.0.0-20260214004413-d219187c3433 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
