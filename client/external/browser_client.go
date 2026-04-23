@@ -16,10 +16,10 @@ package external
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"log"
 	"net/url"
 	"runtime"
-	"sync"
 
 	"github.com/chromedp/cdproto/fetch"
 	"github.com/chromedp/cdproto/network"
@@ -37,7 +37,7 @@ const (
 
 type browserClient struct {
 	*baseClient
-	done sync.WaitGroup
+	done chan struct{}
 }
 
 // NewbrowserClient provides a Saml and Web client suitable for testing code outside of this package.
@@ -113,8 +113,8 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	// also set up a custom error logger
 	taskCtx, cancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	defer cancel()
-	// Waitgroup to wait on the browser SAMLResponse
-	c.done.Add(1)
+	// Channel to signal receipt of the SAMLResponse
+	c.done = make(chan struct{}, 1)
 	// Setup a listener to be called for each browser event in a separate go routine
 	chromedp.ListenTarget(taskCtx, c.targetListener)
 	// ensure that the browser process is started and navigate to auth page
@@ -122,12 +122,15 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	if err = chromedp.Run(taskCtx,
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
-		c.done.Done()
 		_ = chromedp.Cancel(taskCtx)
 		return err
 	}
-	// Wait for SAMLResponse from Browser
-	c.done.Wait()
+	// Wait for SAMLResponse from Browser, or bail if the browser is closed
+	select {
+	case <-c.done:
+	case <-taskCtx.Done():
+		return fmt.Errorf("browser closed before authentication completed")
+	}
 	_ = chromedp.Cancel(taskCtx)
 	c.Logger.Debugf("Authentication Finished.")
 	return nil
@@ -156,7 +159,7 @@ func (c *browserClient) targetListener(ev any) {
 				}
 				samlassert := credentials.SamlAssertion(saml)
 				c.saml = &samlassert
-				c.done.Done()
+				c.done <- struct{}{}
 				return
 			}
 		}
