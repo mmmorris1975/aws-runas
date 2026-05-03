@@ -120,6 +120,9 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	// ensure that the browser process is started and navigate to auth page
 	c.Logger.Debugf("Auth Nav : %s", c.authUrl.String())
 	if err = chromedp.Run(taskCtx,
+		chromedp.ActionFunc(func(ctx context.Context) error {
+			return nil
+		}),
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
 		_ = chromedp.Cancel(taskCtx)
