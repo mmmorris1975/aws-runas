@@ -4,15 +4,15 @@ go 1.26.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
-	github.com/aws/aws-sdk-go-v2 v1.41.6
-	github.com/aws/aws-sdk-go-v2/config v1.32.16
-	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.21
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.57.1
-	github.com/aws/aws-sdk-go-v2/service/iam v1.53.8
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.5
-	github.com/aws/aws-sdk-go-v2/service/sts v1.42.0
-	github.com/aws/smithy-go v1.25.0
-	github.com/chromedp/cdproto v0.0.0-20260321001828-e3e3800016bc
+	github.com/aws/aws-sdk-go-v2 v1.41.7
+	github.com/aws/aws-sdk-go-v2/config v1.32.17
+	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.22
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.57.2
+	github.com/aws/aws-sdk-go-v2/service/iam v1.53.10
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.6
+	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
+	github.com/aws/smithy-go v1.25.1
+	github.com/chromedp/cdproto v0.0.0-20260427013145-5737772c319b
 	github.com/chromedp/chromedp v0.15.1
 	github.com/crewjam/saml v0.5.1
 	github.com/dustin/go-humanize v1.0.1
@@ -26,23 +26,23 @@ require (
 	golang.org/x/net v0.53.0
 	golang.org/x/sys v0.43.0
 	golang.org/x/term v0.42.0
-	gopkg.in/ini.v1 v1.67.1
+	gopkg.in/ini.v1 v1.67.2
 )
 
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.15 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.22 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.23 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.16 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.23 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.24 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.299.0 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.8 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.22 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.0.10 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.16 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.20 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.9 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.23 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.0.11 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.17 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.21 // indirect
 	github.com/aws/session-manager-plugin v0.0.0-20260317185859-1fc63e3f5a01 // indirect
 	github.com/beevik/etree v1.5.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
