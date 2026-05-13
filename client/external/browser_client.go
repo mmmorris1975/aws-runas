@@ -103,6 +103,8 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	opts = append(opts,
 		chromedp.UserDataDir(dir),
 		chromedp.Flag(`profile-directory`, `aws-runas`),
+		chromedp.Flag(`disable-session-crashed-bubble`, true),
+		chromedp.Flag(`noerrdialogs`, true),
 		chromedp.WindowSize(400, 700),
 		chromedp.NoDefaultBrowserCheck,
 	)
@@ -120,9 +122,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 	// ensure that the browser process is started and navigate to auth page
 	c.Logger.Debugf("Auth Nav : %s", c.authUrl.String())
 	if err = chromedp.Run(taskCtx,
-		chromedp.ActionFunc(func(ctx context.Context) error {
-			return nil
-		}),
+		chromedp.Evaluate(`1`, nil),
 		chromedp.Navigate(c.authUrl.String()),
 	); err != nil {
 		_ = chromedp.Cancel(taskCtx)
