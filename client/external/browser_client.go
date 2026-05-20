@@ -226,51 +226,35 @@ func persistSessionCookies(ctx context.Context) {
 // killOrphanedChrome reads Chrome's SingletonLock symlink to find a stale process, terminates it,
 // and waits for it to fully exit before returning. No-op on Windows.
 func killOrphanedChrome(profileDir string) {
-	if runtime.GOOS == `windows` {
+	if runtime.GOOS == "windows" {
 		return
 	}
-	target, err := os.Readlink(filepath.Join(profileDir, "SingletonLock"))
-	if err != nil {
+	pid := chromePIDFromLock(profileDir)
+	if pid <= 0 {
 		return
 	}
-	parts := strings.Split(target, "-")
-	if len(parts) < 2 {
+	if !chromeCmdlineMatches(pid, profileDir) {
 		return
-	}
-	pid, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil || pid <= 0 {
-		return
-	}
-	// On Linux verify via /proc that the PID is actually our Chrome process before killing.
-	// macOS has no /proc, but SingletonLock is Chrome-specific so skip cmdline check there.
-	if runtime.GOOS == `linux` {
-		data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-		if err != nil {
-			return
-		}
-		// /proc/<pid>/cmdline separates arguments with null bytes
-		args := strings.TrimSpace(strings.ReplaceAll(string(data), "\x00", " "))
-		if !strings.Contains(strings.ToLower(args), "chrome") || !strings.Contains(args, profileDir) {
-			return
-		}
 	}
 	if proc, err := os.FindProcess(pid); err == nil {
 		_ = proc.Signal(syscall.SIGTERM)
 	}
+	waitForProcessExit(pid, 3*time.Second)
+}
 
-	// Poll until the process is gone (up to 3s) so its file locks are fully released
-	// before the new ExecAllocator tries to use the same profile directory.
-	deadline := time.Now().Add(3 * time.Second)
-	for time.Now().Before(deadline) {
-		proc, err := os.FindProcess(pid)
-		if err != nil {
-			break
-		}
-		if err := proc.Signal(syscall.Signal(0)); err != nil {
-			break
-		}
-		time.Sleep(100 * time.Millisecond)
+// chromeCmdlineMatches verifies on Linux that pid belongs to a Chrome process using profileDir.
+// Always returns true on non-Linux systems (no /proc, but SingletonLock is Chrome-specific).
+func chromeCmdlineMatches(pid int, profileDir string) bool {
+	if runtime.GOOS != "linux" {
+		return true
 	}
+	// /proc/<pid>/cmdline separates arguments with null bytes
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		return false
+	}
+	args := strings.TrimSpace(strings.ReplaceAll(string(data), "\x00", " "))
+	return strings.Contains(strings.ToLower(args), "chrome") && strings.Contains(args, profileDir)
 }
 
 func chromePIDFromLock(profileDir string) int {
