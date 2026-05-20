@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strconv"
@@ -87,15 +86,16 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 
 	var execPath string
 	switch c.AuthBrowser {
-	case "msedge":
-		if runtime.GOOS == "windows" {
+	case `msedge`:
+		switch runtime.GOOS {
+		case `windows`:
 			execPath = WinOSEdge
-		} else if runtime.GOOS == "darwin" {
+		case `darwin`:
 			execPath = MacOSEdge
-		} else {
+		default:
 			c.Logger.Infof("msedge not supported on %s, using chrome", runtime.GOOS)
 		}
-	case "chrome", "":
+	case `chrome`, "":
 	default:
 		c.Logger.Infof("browser %s not supported, using chrome if available.", c.AuthBrowser)
 	}
@@ -226,7 +226,7 @@ func persistSessionCookies(ctx context.Context) {
 // killOrphanedChrome reads Chrome's SingletonLock symlink to find a stale process, terminates it,
 // and waits for it to fully exit before returning. No-op on Windows.
 func killOrphanedChrome(profileDir string) {
-	if runtime.GOOS == "windows" {
+	if runtime.GOOS == `windows` {
 		return
 	}
 	target, err := os.Readlink(filepath.Join(profileDir, "SingletonLock"))
@@ -241,15 +241,22 @@ func killOrphanedChrome(profileDir string) {
 	if err != nil || pid <= 0 {
 		return
 	}
-	out, err := exec.Command("ps", "-p", strconv.Itoa(pid), "-o", "args=").Output()
-	if err != nil {
-		return
+	// On Linux verify via /proc that the PID is actually our Chrome process before killing.
+	// macOS has no /proc, but SingletonLock is Chrome-specific so skip cmdline check there.
+	if runtime.GOOS == `linux` {
+		data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+		if err != nil {
+			return
+		}
+		// /proc/<pid>/cmdline separates arguments with null bytes
+		args := strings.TrimSpace(strings.ReplaceAll(string(data), "\x00", " "))
+		if !strings.Contains(strings.ToLower(args), "chrome") || !strings.Contains(args, profileDir) {
+			return
+		}
 	}
-	args := strings.TrimSpace(string(out))
-	if !strings.Contains(strings.ToLower(args), "chrome") || !strings.Contains(args, profileDir) {
-		return
+	if proc, err := os.FindProcess(pid); err == nil {
+		_ = proc.Signal(syscall.SIGTERM)
 	}
-	_ = exec.Command("kill", strconv.Itoa(pid)).Run()
 
 	// Poll until the process is gone (up to 3s) so its file locks are fully released
 	// before the new ExecAllocator tries to use the same profile directory.
