@@ -27,7 +27,6 @@ import (
 	"syscall"
 	"time"
 
-	cdpbrowser "github.com/chromedp/cdproto/browser"
 	"github.com/chromedp/cdproto/cdp"
 	"github.com/chromedp/cdproto/network"
 	"github.com/chromedp/cdproto/page"
@@ -175,13 +174,23 @@ func (c *browserClient) startBrowser(profileDir, execPath string) (context.Conte
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
-	taskCtx, taskCancel := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
+	taskCtx, _ := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	cancel := func() {
 		pid := chromePIDFromLock(profileDir)
-		_ = chromedp.Run(taskCtx, chromedp.ActionFunc(func(ctx context.Context) error {
-			return cdpbrowser.Close().Do(ctx)
-		}))
-		taskCancel()
+		// chromedp.Cancel runs the proper graceful-shutdown protocol: it closes
+		// closingGracefully (suppressing the LostConnection slam-cancel) before
+		// sending Browser.close, so Chrome flushes Preferences with exit_type=Normal
+		// instead of dying on a SIGKILL from the cancelled exec context.
+		done := make(chan error, 1)
+		go func() { done <- chromedp.Cancel(taskCtx) }()
+		select {
+		case err := <-done:
+			if err != nil {
+				c.Logger.Debugf("chromedp.Cancel: %v", err)
+			}
+		case <-time.After(5 * time.Second):
+			c.Logger.Debugf("chromedp.Cancel: timed out, forcing shutdown")
+		}
 		allocCancel()
 		waitForProcessExit(pid, 3*time.Second)
 	}
