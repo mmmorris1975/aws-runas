@@ -632,7 +632,7 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	switch vr := verifyReq; {
-	case vr.DeviceId == 555:
+	case vr.DeviceId == "555":
 		// code mfa
 		if vr.OtpToken == "54321" {
 			data, _ := json.Marshal(&oneloginAuthReplyV2{Data: "token", Message: "success"})
@@ -641,7 +641,7 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		data, _ := json.Marshal(&oneloginApiErrorV2{Status: http.StatusUnauthorized, Message: "Failed authentication with this factor"})
 		http.Error(w, string(data), http.StatusUnauthorized)
-	case vr.DeviceId == 666:
+	case vr.DeviceId == "666":
 		// push mfa — success on seconds divisible by 10, pending otherwise
 		var reply *oneloginAuthReplyV2
 		if time.Now().Second()%10 == 0 {

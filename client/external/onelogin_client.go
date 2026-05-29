@@ -24,7 +24,6 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -396,11 +395,7 @@ func (c *oneloginClient) activeMfaFactors(ctx context.Context, userId int) ([]*o
 }
 
 func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
-	id, err := strconv.Atoi(factor.Id)
-	if err != nil {
-		return "", fmt.Errorf("invalid device_id: %w", err)
-	}
-	req.DeviceId = id
+	req.DeviceId = factor.Id
 
 	r, err := c.apiPostReq(ctx, url, req)
 	if err != nil {
@@ -432,21 +427,15 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 }
 
 func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
-	id, err := strconv.Atoi(factor.Id)
-	if err != nil {
-		return "", fmt.Errorf("invalid device_id: %w", err)
-	}
-	req.DeviceId = id
+	req.DeviceId = factor.Id
 
 	if len(c.MfaTokenCode) < 1 {
-		var code string
-
 		if c.MfaTokenProvider == nil {
 			return "", errMfaNotConfigured
 		}
 
 		c.mfaFactorName = factor.DisplayName
-		code, err = c.MfaTokenProvider()
+		code, err := c.MfaTokenProvider()
 		if err != nil {
 			return "", err
 		}
@@ -651,7 +640,7 @@ type oneloginMfaFactor struct {
 
 type oneloginVerifyFactorRequest struct {
 	AppId       string `json:"app_id"`
-	DeviceId    int    `json:"device_id"`
+	DeviceId    string    `json:"device_id"`
 	DoNotNotify bool   `json:"do_not_notify"`
 	OtpToken    string `json:"otp_token"`
 	StateToken  string `json:"state_token"`
