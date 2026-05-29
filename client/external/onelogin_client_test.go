@@ -313,6 +313,7 @@ func newMockOneloginClient() *oneloginClient {
 	c.httpClient = oneloginMock.Client()
 	c.Logger = new(shared.DefaultLogger)
 	c.subdomain = strings.Split(c.authUrl.Host, `.`)[0]
+	c.appId = "mockAppId"
 	c.setApiBaseUrl()
 
 	c.apiToken = &oneloginApiToken{

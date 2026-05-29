@@ -324,14 +324,5 @@ func (c *baseClient) gatherCredentials() error {
 		c.Password = p
 	}
 
-	m := c.MfaTokenCode
-	if c.MfaType == MfaTypeCode && len(m) < 1 && c.MfaTokenProvider != nil {
-		m, err = c.MfaTokenProvider()
-		if err != nil {
-			return err
-		}
-		c.MfaTokenCode = m
-	}
-
 	return nil
 }
