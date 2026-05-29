@@ -151,10 +151,12 @@ func (c *oneloginClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 //     - No knowledge of the App Id value required, but we still need an admin to provide Client ID/secret (the `token`
 //     query param in the AWS config URL) in order to make the client work
 //
-// Option 1 would be the most "OneLogin" way of doing this and is probably the more correct implementation
+// Option 1 would be the most "OneLogin" way of doing this and is probably the more correct implementation.
 func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
-	if err := c.gatherCredentials(); err != nil {
-		return nil, err
+	if c.Username == "" || c.Password == "" {
+		if err := c.gatherCredentials(); err != nil {
+			return nil, err
+		}
 	}
 
 	u := fmt.Sprintf("%s/api/2/saml_assertion", c.apiBaseUrl)
@@ -177,7 +179,7 @@ func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credent
 	}
 
 	t := new(oneloginSamlReply)
-	if err := json.Unmarshal(data, t); err != nil {
+	if err = json.Unmarshal(data, t); err != nil {
 		return nil, err
 	}
 
@@ -331,9 +333,7 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 		// fall through
 	case MfaTypeCode:
 		for _, d := range factors {
-			// FIXME: we don't know what the OneLogin Protect app's code type is
-			// Is it the same "OneLogin" as the push MFA, but would need to explicitly set "code" or "push" in the config?
-			if slices.Contains([]string{"Google Authenticator", "SMS", "OneLogin Email"}, d.Type) {
+			if slices.Contains([]string{"OneLogin", "Google Authenticator", "SMS", "OneLogin Email"}, d.Type) {
 				mfaReq.DeviceId = d.Id
 				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d.DisplayName)
 			}
