@@ -154,6 +154,10 @@ func (c *oneloginClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 //
 // Option 1 would be the most "OneLogin" way of doing this and is probably the more correct implementation.
 func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
+	if c.appId == "" {
+		return nil, &oneloginApiErrorV2{Status: -1, Message: "missing app_id query parameter"}
+	}
+
 	if c.Username == "" || c.Password == "" {
 		if err := c.gatherCredentials(); err != nil {
 			return nil, err
@@ -457,7 +461,8 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 
 	body, err := c.sendApiV2Request(r)
 	if err != nil {
-		if strings.Contains(err.Error(), "Failed authentication with this factor") {
+		var olError *oneloginApiErrorV2
+		if errors.As(err, &olError) && strings.Contains(olError.Message, "Failed authentication with this factor") {
 			fmt.Println("Invalid MFA Code ... try again")
 			c.MfaTokenCode = ""
 			return c.handleCodeMfa(ctx, url, req, factor)
