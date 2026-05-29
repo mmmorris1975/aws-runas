@@ -310,11 +310,9 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	return token, nil
 }
 
-func (c *baseClient) gatherCredentials() (err error) {
-	u := c.Username
-	p := c.Password
-	if len(u) < 1 || len(p) < 1 {
-		u, p, err = c.CredentialInputProvider(u, p)
+func (c *baseClient) gatherCredentials() error {
+	if len(c.Username) < 1 || len(c.Password) < 1 {
+		u, p, err := c.CredentialInputProvider(c.Username, c.Password)
 		if err != nil {
 			return err
 		}
