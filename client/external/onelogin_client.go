@@ -335,42 +335,26 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 	case MfaTypeCode:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "Google Authenticator", "SMS", "OneLogin Email"}, d.Type) {
-				id, err := strconv.Atoi(d.Id)
-				if err != nil {
-					return "", fmt.Errorf("invalid device_id: %w", err)
-				}
-				mfaReq.DeviceId = id
-				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d.DisplayName)
+				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d)
 			}
 		}
 	case MfaTypePush:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
-				id, err := strconv.Atoi(d.Id)
-				if err != nil {
-					return "", fmt.Errorf("invalid device_id: %w", err)
-				}
 				mfaReq.DoNotNotify = false
-				mfaReq.DeviceId = id
-				return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq)
+				return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d)
 			}
 		}
 	default:
 		for _, d := range factors {
-			id, err := strconv.Atoi(d.Id)
-			if err != nil {
-				return "", fmt.Errorf("invalid device_id: %w", err)
-			}
-			mfaReq.DeviceId = id
-
 			if d.Default {
 				if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
 					mfaReq.DoNotNotify = false
-					return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq)
+					return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d)
 				}
 
 				// assume all others require prompting for the code
-				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d.DisplayName)
+				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d)
 			}
 		}
 	}
@@ -407,7 +391,13 @@ func (c *oneloginClient) activeMfaFactors(ctx context.Context, userId int) ([]*o
 	return nil, errors.New("no active MFA factors found")
 }
 
-func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest) (string, error) {
+func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
+	id, err := strconv.Atoi(factor.Id)
+	if err != nil {
+		return "", fmt.Errorf("invalid device_id: %w", err)
+	}
+	req.DeviceId = id
+
 	r, err := c.apiPostReq(ctx, url, req)
 	if err != nil {
 		return "", err
@@ -427,7 +417,7 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 		fmt.Println("Waiting for Push MFA confirmation...")
 		time.Sleep(1250 * time.Millisecond)
 		req.DoNotNotify = true
-		return c.handlePushMfa(ctx, url, req)
+		return c.handlePushMfa(ctx, url, req, factor)
 	} else if strings.EqualFold(ar.Message, "success") {
 		if len(ar.Data) > 0 {
 			return ar.Data, nil
@@ -437,13 +427,19 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected push MFA response"}
 }
 
-func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, name string) (string, error) {
+func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
+	id, err := strconv.Atoi(factor.Id)
+	if err != nil {
+		return "", fmt.Errorf("invalid device_id: %w", err)
+	}
+	req.DeviceId = id
+	
 	if len(c.MfaTokenCode) < 1 {
 		if c.MfaTokenProvider == nil {
 			return "", errMfaNotConfigured
 		}
 
-		c.mfaFactorName = name
+		c.mfaFactorName = factor.DisplayName
 		t, err := c.MfaTokenProvider()
 		if err != nil {
 			return "", err
@@ -462,7 +458,7 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 		if strings.Contains(err.Error(), "Failed authentication with this factor") {
 			fmt.Println("Invalid MFA Code ... try again")
 			c.MfaTokenCode = ""
-			return c.handleCodeMfa(ctx, url, req, name)
+			return c.handleCodeMfa(ctx, url, req, factor)
 		}
 
 		return "", err
@@ -479,7 +475,7 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 
 	if strings.Contains(strings.ToLower(ar.Message), "pending") {
 		c.MfaTokenCode = ""
-		return c.handleCodeMfa(ctx, url, req, name)
+		return c.handleCodeMfa(ctx, url, req, factor)
 	}
 
 	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected code MFA response"}
