@@ -42,9 +42,10 @@ var errNilClient = errors.New("client not initialized, use the appropriate const
 
 type baseClient struct {
 	OidcClientConfig
-	authUrl    *url.URL
-	httpClient *http.Client
-	saml       *credentials.SamlAssertion
+	authUrl       *url.URL
+	httpClient    *http.Client
+	saml          *credentials.SamlAssertion
+	mfaFactorName string
 }
 
 func newBaseClient(u string) (*baseClient, error) {
@@ -60,7 +61,11 @@ func newBaseClient(u string) (*baseClient, error) {
 	c := &baseClient{
 		authUrl: authUrl,
 	}
-	c.MfaTokenProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
+	p := helpers.NewMfaTokenProvider(os.Stdin)
+	c.MfaTokenProvider = func() (string, error) {
+		p.TokenName = c.mfaFactorName
+		return p.ReadInput()
+	}
 	c.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput
 	c.MfaType = MfaTypeAuto
 	c.setHttpClient()
