@@ -30,7 +30,7 @@ var (
 	// credential caching, logging, and MFA and Credential input prompting.
 	DefaultOptions = &Options{
 		EnableCache:             true,
-		MfaInputProvider:        helpers.NewMfaTokenProvider(os.Stdin).ReadInput,
+		MfaInputProvider:        nil,
 		CredentialInputProvider: helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput,
 		Logger:                  new(shared.DefaultLogger),
 		AwsLogLevel:             logging.Warn,

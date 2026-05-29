@@ -44,7 +44,9 @@ func NewSessionTokenClient(cfg aws.Config, clientCfg *SessionTokenClientConfig) 
 	p.Duration = clientCfg.Duration
 	p.SerialNumber = clientCfg.SerialNumber
 	p.TokenCode = clientCfg.TokenCode
-	p.TokenProvider = clientCfg.TokenProvider
+	if clientCfg.TokenProvider != nil {
+		p.TokenProvider = clientCfg.TokenProvider
+	}
 	p.Logger = clientCfg.Logger
 
 	c.provider = p

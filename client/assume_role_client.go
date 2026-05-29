@@ -44,7 +44,9 @@ func NewAssumeRoleClient(cfg aws.Config, clientCfg *AssumeRoleClientConfig) *ass
 	p.Duration = clientCfg.Duration
 	p.SerialNumber = clientCfg.SerialNumber
 	p.TokenCode = clientCfg.TokenCode
-	p.TokenProvider = clientCfg.TokenProvider
+	if clientCfg.TokenProvider != nil {
+		p.TokenProvider = clientCfg.TokenProvider
+	}
 	p.ExternalId = clientCfg.ExternalId
 	p.RoleSessionName = clientCfg.RoleSessionName
 	p.Logger = clientCfg.Logger

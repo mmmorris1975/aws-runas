@@ -79,7 +79,7 @@ func MustGetWebIdentityClient(provider, authUrl string, cfg OidcClientConfig) We
 
 // the switch statement will continue to grow as new providers are added, so keep the linter quiet
 //
-//nolint:gocyclo,funlen,gocognit
+//nolint:gocyclo,funlen
 func lookupClient(provider, authUrl string, cfg OidcClientConfig) (any, error) {
 	if len(provider) < 1 {
 		provider = divineClient(authUrl, http.MethodHead)
@@ -89,83 +89,73 @@ func lookupClient(provider, authUrl string, cfg OidcClientConfig) (any, error) {
 		cfg.Logger = new(shared.DefaultLogger)
 	}
 
+	var (
+		result any
+		bc     *baseClient
+	)
+
 	switch strings.ToLower(provider) {
 	case forgerockProvider:
 		c, err := NewForgerockClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case keycloakProvider:
 		c, err := NewKeycloakClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case oneloginProvider:
 		c, err := NewOneloginClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case oktaProvider:
 		c, err := NewOktaClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case mockProvider:
 		c, err := NewMockClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case azureadProvider:
 		c, err := NewAadClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case browserProvider:
 		c, err := NewBrowserClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	case browserNEProvider, browserNewExperienceProvider:
 		c, err := NewBrowserNEClient(authUrl)
 		if err != nil {
 			return nil, err
 		}
-		c.SamlEntityId = cfg.SamlEntityId
-		c.OidcClientConfig = cfg
-		c.Logger = cfg.Logger
-		c.MfaType = cfg.MfaType
-		return c, nil
+		bc, result = c.baseClient, c
 	default:
 		return nil, errUnknownProvider
 	}
+
+	defaultProvider := bc.MfaTokenProvider
+	bc.OidcClientConfig = cfg
+	bc.Logger = cfg.Logger
+	bc.MfaType = cfg.MfaType
+	if bc.MfaTokenProvider == nil {
+		bc.MfaTokenProvider = defaultProvider
+	}
+
+	return result, nil
 }
 
 func divineClient(u, method string) string {

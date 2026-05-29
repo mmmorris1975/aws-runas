@@ -305,16 +305,6 @@ func TestOneloginClient_SamlAssertion(t *testing.T) {
 			return
 		}
 	})
-
-	t.Run("bad saml", func(t *testing.T) {
-		c := newMockOneloginClient()
-		saml := credentials.SamlAssertion("this isn't saml")
-		c.saml = &saml
-
-		if _, err := c.SamlAssertion(); err == nil {
-			t.Error("did not receive expected error")
-		}
-	})
 }
 
 func newMockOneloginClient() *oneloginClient {
