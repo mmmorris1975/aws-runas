@@ -433,18 +433,20 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 		return "", fmt.Errorf("invalid device_id: %w", err)
 	}
 	req.DeviceId = id
-	
+
 	if len(c.MfaTokenCode) < 1 {
+		var code string
+
 		if c.MfaTokenProvider == nil {
 			return "", errMfaNotConfigured
 		}
 
 		c.mfaFactorName = factor.DisplayName
-		t, err := c.MfaTokenProvider()
+		code, err = c.MfaTokenProvider()
 		if err != nil {
 			return "", err
 		}
-		c.MfaTokenCode = t
+		c.MfaTokenCode = code
 	}
 	req.OtpToken = c.MfaTokenCode
 
