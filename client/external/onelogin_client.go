@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -334,21 +335,33 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 	case MfaTypeCode:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "Google Authenticator", "SMS", "OneLogin Email"}, d.Type) {
-				mfaReq.DeviceId = d.Id
+				id, err := strconv.Atoi(d.Id)
+				if err != nil {
+					return "", fmt.Errorf("invalid device_id: %w", err)
+				}
+				mfaReq.DeviceId = id
 				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d.DisplayName)
 			}
 		}
 	case MfaTypePush:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
+				id, err := strconv.Atoi(d.Id)
+				if err != nil {
+					return "", fmt.Errorf("invalid device_id: %w", err)
+				}
 				mfaReq.DoNotNotify = false
-				mfaReq.DeviceId = d.Id
+				mfaReq.DeviceId = id
 				return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq)
 			}
 		}
 	default:
 		for _, d := range factors {
-			mfaReq.DeviceId = d.Id
+			id, err := strconv.Atoi(d.Id)
+			if err != nil {
+				return "", fmt.Errorf("invalid device_id: %w", err)
+			}
+			mfaReq.DeviceId = id
 
 			if d.Default {
 				if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
@@ -635,7 +648,7 @@ type oneloginMfaFactor struct {
 
 type oneloginVerifyFactorRequest struct {
 	AppId       string `json:"app_id"`
-	DeviceId    string `json:"device_id"`
+	DeviceId    int    `json:"device_id"`
 	DoNotNotify bool   `json:"do_not_notify"`
 	OtpToken    string `json:"otp_token"`
 	StateToken  string `json:"state_token"`
