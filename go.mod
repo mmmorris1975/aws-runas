@@ -4,14 +4,14 @@ go 1.26.1
 
 require (
 	github.com/PuerkitoBio/goquery v1.12.0
-	github.com/aws/aws-sdk-go-v2 v1.41.7
-	github.com/aws/aws-sdk-go-v2/config v1.32.17
-	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.22
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.57.2
-	github.com/aws/aws-sdk-go-v2/service/iam v1.53.10
-	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.6
-	github.com/aws/aws-sdk-go-v2/service/sts v1.42.1
-	github.com/aws/smithy-go v1.25.1
+	github.com/aws/aws-sdk-go-v2 v1.41.8
+	github.com/aws/aws-sdk-go-v2/config v1.32.19
+	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.32.23
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.57.3
+	github.com/aws/aws-sdk-go-v2/service/iam v1.53.11
+	github.com/aws/aws-sdk-go-v2/service/ssm v1.68.7
+	github.com/aws/aws-sdk-go-v2/service/sts v1.42.2
+	github.com/aws/smithy-go v1.26.0
 	github.com/chromedp/cdproto v0.0.0-20260427013145-5737772c319b
 	github.com/chromedp/chromedp v0.15.1
 	github.com/crewjam/saml v0.5.1
@@ -22,8 +22,8 @@ require (
 	github.com/mmmorris1975/ssm-session-client v0.404.5
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v2 v2.4.3
-	golang.org/x/crypto v0.51.0
-	golang.org/x/net v0.54.0
+	golang.org/x/crypto v0.52.0
+	golang.org/x/net v0.55.0
 	golang.org/x/sys v0.45.0
 	golang.org/x/term v0.43.0
 	gopkg.in/ini.v1 v1.67.2
@@ -32,17 +32,17 @@ require (
 require (
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/aws/aws-sdk-go v1.55.8 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.19.16 // indirect
-	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.23 // indirect
-	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.24 // indirect
+	github.com/aws/aws-sdk-go-v2/credentials v1.19.18 // indirect
+	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.18.24 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/configsources v1.4.24 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.7.24 // indirect
+	github.com/aws/aws-sdk-go-v2/internal/v4a v1.4.25 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.303.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.9 // indirect
-	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.23 // indirect
-	github.com/aws/aws-sdk-go-v2/service/signin v1.0.11 // indirect
-	github.com/aws/aws-sdk-go-v2/service/sso v1.30.17 // indirect
-	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.35.21 // indirect
+	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.13.24 // indirect
+	github.com/aws/aws-sdk-go-v2/service/signin v1.1.0 // indirect
+	github.com/aws/aws-sdk-go-v2/service/sso v1.30.18 // indirect
+	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.36.1 // indirect
 	github.com/aws/session-manager-plugin v0.0.0-20260317185859-1fc63e3f5a01 // indirect
 	github.com/beevik/etree v1.5.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
