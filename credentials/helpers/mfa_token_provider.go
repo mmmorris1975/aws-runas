@@ -20,7 +20,7 @@ import (
 )
 
 type mfaTokenProvider struct {
-	input io.Reader
+	input     io.Reader
 	TokenName string
 }
 
