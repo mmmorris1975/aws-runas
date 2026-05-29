@@ -640,7 +640,7 @@ type oneloginMfaFactor struct {
 
 type oneloginVerifyFactorRequest struct {
 	AppId       string `json:"app_id"`
-	DeviceId    string    `json:"device_id"`
+	DeviceId    string `json:"device_id"`
 	DoNotNotify bool   `json:"do_not_notify"`
 	OtpToken    string `json:"otp_token"`
 	StateToken  string `json:"state_token"`
