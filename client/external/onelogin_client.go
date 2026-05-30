@@ -190,6 +190,9 @@ func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credent
 	if len(t.Data) > 0 {
 		c.saml = (*credentials.SamlAssertion)(&t.Data)
 	} else if len(t.Devices) > 0 {
+		verifier := samlV2MfaVerifier
+		verifier.send = c.sendApiV2Request
+
 		var saml string
 		saml, err = c.handleMfa(ctx, &t.oneloginAuthData)
 		if err != nil {
@@ -302,6 +305,9 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 	sessionToken := authReply.Data[0].SessionToken
 
 	if len(authReply.Data[0].Devices) > 0 {
+		verifier := authV1MfaVerifier
+		verifier.send = c.sendApiRequest
+
 		sessionToken, err = c.handleMfa(ctx, authReply.Data[0])
 		if err != nil {
 			return err
@@ -662,4 +668,53 @@ type oneloginApiErrorV2 struct {
 
 func (e *oneloginApiErrorV2) Error() string {
 	return e.Message
+}
+
+type mfaVerifier struct {
+	send             func(*http.Request) ([]byte, error)
+	isInvalidAttempt func(error) bool
+	parse            func([]byte) (mfaResult, error)
+}
+
+type mfaResult struct {
+	pending bool
+	token   string
+}
+
+var authV1MfaVerifier = mfaVerifier{
+	isInvalidAttempt: func(err error) bool {
+		var e *oneloginApiError
+		return errors.As(err, &e) && strings.Contains(e.Status.Message, "Failed authentication with this factor")
+	},
+	parse: func(b []byte) (mfaResult, error) {
+		mfaReply := new(oneloginAuthReply)
+		if err := json.Unmarshal(b, mfaReply); err != nil {
+			return mfaResult{}, err
+		}
+
+		if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && len(mfaReply.Data[0].SessionToken) > 0 {
+			return mfaResult{pending: false, token: mfaReply.Data[0].SessionToken}, nil
+		}
+
+		return mfaResult{pending: true}, nil
+	},
+}
+
+var samlV2MfaVerifier = mfaVerifier{
+	isInvalidAttempt: func(err error) bool {
+		var e *oneloginApiErrorV2
+		return errors.As(err, &e) && strings.Contains(e.Message, "Failed authentication with this factor")
+	},
+	parse: func(b []byte) (mfaResult, error) {
+		mfaReply := new(oneloginAuthReplyV2)
+		if err := json.Unmarshal(b, mfaReply); err != nil {
+			return mfaResult{}, err
+		}
+
+		if strings.EqualFold(mfaReply.Message, "success") && len(mfaReply.Data) > 0 {
+			return mfaResult{pending: false, token: mfaReply.Data}, nil
+		}
+
+		return mfaResult{pending: true}, nil
+	},
 }
