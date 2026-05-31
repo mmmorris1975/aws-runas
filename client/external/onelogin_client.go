@@ -302,6 +302,10 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 	if err = json.Unmarshal(data, authReply); err != nil {
 		return err
 	}
+
+	if len(authReply.Data) == 0 || authReply.Data[0] == nil {
+		return errors.New("invalid authenication response received")
+	}
 	sessionToken := authReply.Data[0].SessionToken
 
 	if len(authReply.Data[0].Devices) > 0 {
@@ -319,7 +323,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 
 //nolint:gocognit // won't simplify
 func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData, verifier mfaVerifier) (string, error) {
-	if data.User == nil {
+	if data == nil || data.User == nil {
 		return "", errors.New("invalid MFA response received")
 	}
 
@@ -660,6 +664,9 @@ type oneloginApiError struct {
 }
 
 func (e *oneloginApiError) Error() string {
+	if e == nil || e.Status == nil || e.Status.Message == "" {
+		return "unexpected OneLogin API response"
+	}
 	return e.Status.Message
 }
 
@@ -700,7 +707,7 @@ var authV1MfaVerifier = mfaVerifier{
 				return mfaResult{pending: true}, nil
 			}
 
-			if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && len(mfaReply.Data[0].SessionToken) > 0 {
+			if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && mfaReply.Data[0] != nil && len(mfaReply.Data[0].SessionToken) > 0 {
 				return mfaResult{pending: false, token: mfaReply.Data[0].SessionToken}, nil
 			}
 		}
