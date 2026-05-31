@@ -319,6 +319,10 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 
 //nolint:gocognit // won't simplify
 func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData, verifier mfaVerifier) (string, error) {
+	if data.User == nil {
+		return "", errors.New("invalid MFA response received")
+	}
+
 	factors, err := c.activeMfaFactors(ctx, data.User.Id)
 	if err != nil {
 		return "", err
@@ -336,7 +340,7 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData, 
 		return "", err
 	}
 
-	data.CallbackUrl = c.apiBaseUrl + u.Path
+	data.CallbackUrl = c.apiBaseUrl + u.RequestURI()
 
 	switch c.MfaType {
 	case MfaTypeNone:
@@ -644,7 +648,7 @@ type oneloginMfaFactor struct {
 }
 
 type oneloginVerifyFactorRequest struct {
-	AppId       string `json:"app_id"`
+	AppId       string `json:"app_id,omitempty"`
 	DeviceId    string `json:"device_id"`
 	DoNotNotify bool   `json:"do_not_notify"`
 	OtpToken    string `json:"otp_token"`

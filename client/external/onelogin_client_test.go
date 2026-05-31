@@ -276,6 +276,15 @@ func TestOneloginClient_SamlAssertion(t *testing.T) {
 			t.Error("did not receive expected error")
 		}
 	})
+
+	t.Run("missing app_id", func(t *testing.T) {
+		c := newMockOneloginClient()
+		c.appId = ""
+
+		if _, err := c.SamlAssertion(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
 }
 
 func TestOneloginClient_SamlAssertion_Plain(t *testing.T) {
