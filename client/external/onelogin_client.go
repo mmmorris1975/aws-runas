@@ -655,7 +655,7 @@ type oneloginVerifyFactorRequest struct {
 	AppId       string `json:"app_id,omitempty"`
 	DeviceId    string `json:"device_id"`
 	DoNotNotify bool   `json:"do_not_notify"`
-	OtpToken    string `json:"otp_token"`
+	OtpToken    string `json:"otp_token,omitempty"`
 	StateToken  string `json:"state_token"`
 }
 
@@ -677,6 +677,9 @@ type oneloginApiErrorV2 struct {
 }
 
 func (e *oneloginApiErrorV2) Error() string {
+	if e == nil || e.Message == "" {
+		return "unexpected OneLogin API response"
+	}
 	return e.Message
 }
 
