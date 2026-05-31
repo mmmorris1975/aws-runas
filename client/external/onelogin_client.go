@@ -304,7 +304,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 	}
 
 	if len(authReply.Data) == 0 || authReply.Data[0] == nil {
-		return errors.New("invalid authenication response received")
+		return errors.New("invalid authentication response received")
 	}
 	sessionToken := authReply.Data[0].SessionToken
 
