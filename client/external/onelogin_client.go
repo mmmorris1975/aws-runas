@@ -429,7 +429,7 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 		return c.handlePushMfa(ctx, url, req, factor, verifier)
 	}
 
-	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected push MFA response"}
+	return "", errors.New("unexpected push MFA response")
 }
 
 func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
@@ -479,7 +479,7 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 		return c.handleCodeMfa(ctx, url, req, factor, verifier)
 	}
 
-	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected code MFA response"}
+	return "", errors.New("unexpected push MFA response")
 }
 
 func (c *oneloginClient) exchangeToken(st string) error {
@@ -683,7 +683,7 @@ type mfaResult struct {
 var authV1MfaVerifier = mfaVerifier{
 	isInvalidAttempt: func(err error) bool {
 		var e *oneloginApiError
-		return errors.As(err, &e) && strings.Contains(e.Status.Message, "Failed authentication with this factor")
+		return errors.As(err, &e) && e.Status != nil && strings.Contains(e.Status.Message, "Failed authentication with this factor")
 	},
 	parse: func(b []byte) (mfaResult, error) {
 		mfaReply := new(oneloginAuthReply)
@@ -691,14 +691,17 @@ var authV1MfaVerifier = mfaVerifier{
 			return mfaResult{}, err
 		}
 
-		if strings.Contains(strings.ToLower(mfaReply.Status.Message), "pending") {
-			return mfaResult{pending: true}, nil
+		if mfaReply.Status != nil {
+			if strings.Contains(strings.ToLower(mfaReply.Status.Message), "pending") {
+				return mfaResult{pending: true}, nil
+			}
+
+			if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && len(mfaReply.Data[0].SessionToken) > 0 {
+				return mfaResult{pending: false, token: mfaReply.Data[0].SessionToken}, nil
+			}
 		}
 
-		if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && len(mfaReply.Data[0].SessionToken) > 0 {
-			return mfaResult{pending: false, token: mfaReply.Data[0].SessionToken}, nil
-		}
-
+		return mfaResult{}, nil
 	},
 }
 
@@ -721,5 +724,6 @@ var samlV2MfaVerifier = mfaVerifier{
 			return mfaResult{pending: false, token: mfaReply.Data}, nil
 		}
 
+		return mfaResult{}, nil
 	},
 }

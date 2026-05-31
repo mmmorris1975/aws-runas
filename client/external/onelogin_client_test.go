@@ -635,7 +635,11 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 	case vr.DeviceId == "555":
 		// code mfa
 		if vr.OtpToken == "54321" {
-			data, _ := json.Marshal(&oneloginAuthReplyV2{Data: "token", Message: "success"})
+			data, _ := json.Marshal(&oneloginAuthReply{
+				Status: &oneloginApiStatus{Code: http.StatusOK, Message: "success"},
+				Data:   []*oneloginAuthData{{SessionToken: "token"}},
+			})
+
 			_, _ = w.Write(data)
 			return
 		}
@@ -643,12 +647,15 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, string(data), http.StatusUnauthorized)
 	case vr.DeviceId == "666":
 		// push mfa — success on seconds divisible by 10, pending otherwise
-		var reply *oneloginAuthReplyV2
-		if time.Now().Second()%10 == 0 {
-			reply = &oneloginAuthReplyV2{Data: "session token", Message: "success"}
-		} else {
-			reply = &oneloginAuthReplyV2{Message: "pending"}
+		reply := &oneloginAuthReply{
+			Status: &oneloginApiStatus{Code: http.StatusOK, Message: "Authentication pending"},
 		}
+
+		if time.Now().Second()%10 == 0 {
+			reply.Status.Message = "success"
+			reply.Data = []*oneloginAuthData{{SessionToken: "session token"}}
+		}
+
 		data, _ := json.Marshal(reply)
 		_, _ = w.Write(data)
 	default:
