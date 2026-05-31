@@ -194,7 +194,7 @@ func (c *oneloginClient) SamlAssertionWithContext(ctx context.Context) (*credent
 		verifier.send = c.sendApiV2Request
 
 		var saml string
-		saml, err = c.handleMfa(ctx, &t.oneloginAuthData)
+		saml, err = c.handleMfa(ctx, &t.oneloginAuthData, verifier)
 		if err != nil {
 			return nil, err
 		}
@@ -308,7 +308,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 		verifier := authV1MfaVerifier
 		verifier.send = c.sendApiRequest
 
-		sessionToken, err = c.handleMfa(ctx, authReply.Data[0])
+		sessionToken, err = c.handleMfa(ctx, authReply.Data[0], verifier)
 		if err != nil {
 			return err
 		}
@@ -318,7 +318,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 }
 
 //nolint:gocognit // won't simplify
-func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) (string, error) {
+func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData, verifier mfaVerifier) (string, error) {
 	factors, err := c.activeMfaFactors(ctx, data.User.Id)
 	if err != nil {
 		return "", err
@@ -344,14 +344,14 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 	case MfaTypeCode:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "Google Authenticator", "SMS", "OneLogin Email"}, d.Type) {
-				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d)
+				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d, verifier)
 			}
 		}
 	case MfaTypePush:
 		for _, d := range factors {
 			if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
 				mfaReq.DoNotNotify = false
-				return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d)
+				return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d, verifier)
 			}
 		}
 	default:
@@ -359,11 +359,11 @@ func (c *oneloginClient) handleMfa(ctx context.Context, data *oneloginAuthData) 
 			if d.Default {
 				if slices.Contains([]string{"OneLogin", "OneLogin Voice"}, d.Type) {
 					mfaReq.DoNotNotify = false
-					return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d)
+					return c.handlePushMfa(ctx, data.CallbackUrl, mfaReq, d, verifier)
 				}
 
 				// assume all others require prompting for the code
-				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d)
+				return c.handleCodeMfa(ctx, data.CallbackUrl, mfaReq, d, verifier)
 			}
 		}
 	}
@@ -400,7 +400,7 @@ func (c *oneloginClient) activeMfaFactors(ctx context.Context, userId int) ([]*o
 	return nil, errors.New("no active MFA factors found")
 }
 
-func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
+func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
 	req.DeviceId = factor.Id
 
 	r, err := c.apiPostReq(ctx, url, req)
@@ -408,31 +408,31 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 		return "", err
 	}
 
-	data, err := c.sendApiV2Request(r)
+	body, err := verifier.send(r)
 	if err != nil {
 		return "", err
 	}
 
-	ar := new(oneloginAuthReplyV2)
-	if err := json.Unmarshal(data, ar); err != nil {
+	result, err := verifier.parse(body)
+	if err != nil {
 		return "", err
 	}
 
-	if strings.Contains(ar.Message, "pending") {
+	if result.token != "" {
+		return result.token, nil
+	}
+
+	if result.pending {
 		fmt.Println("Waiting for Push MFA confirmation...")
 		time.Sleep(1250 * time.Millisecond)
 		req.DoNotNotify = true
-		return c.handlePushMfa(ctx, url, req, factor)
-	} else if strings.EqualFold(ar.Message, "success") {
-		if len(ar.Data) > 0 {
-			return ar.Data, nil
-		}
+		return c.handlePushMfa(ctx, url, req, factor, verifier)
 	}
 
 	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected push MFA response"}
 }
 
-func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor) (string, error) {
+func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
 	req.DeviceId = factor.Id
 
 	if len(c.MfaTokenCode) < 1 {
@@ -454,30 +454,29 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 		return "", err
 	}
 
-	body, err := c.sendApiV2Request(r)
+	body, err := verifier.send(r)
 	if err != nil {
-		var olError *oneloginApiErrorV2
-		if errors.As(err, &olError) && strings.Contains(olError.Message, "Failed authentication with this factor") {
+		if verifier.isInvalidAttempt(err) {
 			fmt.Println("Invalid MFA Code ... try again")
 			c.MfaTokenCode = ""
-			return c.handleCodeMfa(ctx, url, req, factor)
+			return c.handleCodeMfa(ctx, url, req, factor, verifier)
 		}
 
 		return "", err
 	}
 
-	ar := new(oneloginAuthReplyV2)
-	if err = json.Unmarshal(body, ar); err != nil {
+	result, err := verifier.parse(body)
+	if err != nil {
 		return "", err
 	}
 
-	if strings.EqualFold(ar.Message, "success") && len(ar.Data) > 0 {
-		return ar.Data, nil
+	if result.token != "" {
+		return result.token, nil
 	}
 
-	if strings.Contains(strings.ToLower(ar.Message), "pending") {
+	if result.pending {
 		c.MfaTokenCode = ""
-		return c.handleCodeMfa(ctx, url, req, factor)
+		return c.handleCodeMfa(ctx, url, req, factor, verifier)
 	}
 
 	return "", &oneloginApiErrorV2{Status: -1, Message: "unexpected code MFA response"}
@@ -692,11 +691,14 @@ var authV1MfaVerifier = mfaVerifier{
 			return mfaResult{}, err
 		}
 
+		if strings.Contains(strings.ToLower(mfaReply.Status.Message), "pending") {
+			return mfaResult{pending: true}, nil
+		}
+
 		if strings.EqualFold(mfaReply.Status.Message, "success") && len(mfaReply.Data) > 0 && len(mfaReply.Data[0].SessionToken) > 0 {
 			return mfaResult{pending: false, token: mfaReply.Data[0].SessionToken}, nil
 		}
 
-		return mfaResult{pending: true}, nil
 	},
 }
 
@@ -711,10 +713,13 @@ var samlV2MfaVerifier = mfaVerifier{
 			return mfaResult{}, err
 		}
 
+		if strings.Contains(strings.ToLower(mfaReply.Message), "pending") {
+			return mfaResult{pending: true}, nil
+		}
+
 		if strings.EqualFold(mfaReply.Message, "success") && len(mfaReply.Data) > 0 {
 			return mfaResult{pending: false, token: mfaReply.Data}, nil
 		}
 
-		return mfaResult{pending: true}, nil
 	},
 }
