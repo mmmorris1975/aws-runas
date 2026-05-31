@@ -643,7 +643,9 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 			_, _ = w.Write(data)
 			return
 		}
-		data, _ := json.Marshal(&oneloginApiErrorV2{Status: http.StatusUnauthorized, Message: "Failed authentication with this factor"})
+		data, _ := json.Marshal(&oneloginApiError{
+			Status: &oneloginApiStatus{Code: http.StatusUnauthorized, Message: "Failed authentication with this factor", Error: true},
+		})
 		http.Error(w, string(data), http.StatusUnauthorized)
 	case vr.DeviceId == "666":
 		// push mfa — success on seconds divisible by 10, pending otherwise

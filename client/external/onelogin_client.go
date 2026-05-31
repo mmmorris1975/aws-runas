@@ -479,7 +479,7 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 		return c.handleCodeMfa(ctx, url, req, factor, verifier)
 	}
 
-	return "", errors.New("unexpected push MFA response")
+	return "", errors.New("unexpected code MFA response")
 }
 
 func (c *oneloginClient) exchangeToken(st string) error {
