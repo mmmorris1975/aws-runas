@@ -497,7 +497,6 @@ func olSamlHandler(w http.ResponseWriter, r *http.Request) {
 	_, _ = fmt.Fprintf(w, body, r.Host)
 }
 
-// TODO - enhance handler to test MFA cases, since it is now separate from the Authenticate() path.  Use olAuthHandler() for guidance
 func olSamlAssertionHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 	body, err := io.ReadAll(r.Body)
@@ -589,7 +588,7 @@ func olSamlVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 		// push mfa — success on seconds divisible by 6, pending otherwise
 		reply := &oneloginAuthReplyV2{
 			Message: "Authentication pending",
-			Data: "",
+			Data:    "",
 		}
 
 		if time.Now().Second()%6 == 0 {
