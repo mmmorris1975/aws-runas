@@ -82,6 +82,10 @@ OneLogin is a commercial identity management service which provides the necessar
 with numerous 3rd party applications. The aws-runas SAML client auto-discovery logic looks for `.onelogin.com` in the
 hostname portion of the URL.
 
+The following instructions apply to configurations performing SAML or OIDC authentication via the OneLogin API.  If you are
+using the 'browser' saml_provider, this configuration is not necessary, and the bare application portal URL visible to the
+user can be configured without extra query parameters.
+
 The OneLogin platform requires the use of application-level authentication for interacting with any portion of their API
 (even for authenticating public/untrusted apps). This requires your OneLogin admins to create a set of API credentials
 which can be shared as they see fit to allow aws-runas the ability to communicate with the OneLogin API.  The API credentials
@@ -99,9 +103,9 @@ echo -n 'client_id:client_secret' | base64
 Substituting client_id and client_secret with your actual values, of course. On some Linux systems you may need to add
 the `-w0` flag to the base64 command to disable text wrapping.
 
-As of the 3.8.0 release, the `saml_auth_url` parameter also requries the `app_id` query string parameter when configuring
-aws-runas for OneLogin SAML authentication.  This value is visible in the OneLogin AWS Application URL in the OneLogin
-management portal (/apps/<app_id>/edit)
+As of the 3.8.0 release, when using SAML, the `saml_auth_url` parameter also requries the `app_id` query string parameter
+when configuring aws-runas for OneLogin SAML authentication.  This value is visible in the OneLogin AWS Application URL in
+the OneLogin management portal (/apps/<app_id>/edit)
 
 Example OneLogin info in the .aws/config file:
 ```text
