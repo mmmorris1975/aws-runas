@@ -84,7 +84,8 @@ hostname portion of the URL.
 
 The OneLogin platform requires the use of application-level authentication for interacting with any portion of their API
 (even for authenticating public/untrusted apps). This requires your OneLogin admins to create a set of API credentials
-which can be shared as they see fit to allow aws-runas the ability to communicate with the OneLogin API.  The OneLogin API
+which can be shared as they see fit to allow aws-runas the ability to communicate with the OneLogin API.  The API credentials
+can be scoped to the `auth-only` credential type, to limit the API access the clients are granted.  The OneLogin API
 credentials will be a Client ID and Client Secret, which are added as the query string parameter `token` to the OneLogin
 URL in the .aws/config file.  This is an aws-runas specific configuration, and not supported as part of interacting with
 the OneLogin API.  The format of the token parameter is the base64 encoding of the Client ID and Client Secret values
@@ -98,12 +99,16 @@ echo -n 'client_id:client_secret' | base64
 Substituting client_id and client_secret with your actual values, of course. On some Linux systems you may need to add
 the `-w0` flag to the base64 command to disable text wrapping.
 
+As of the 3.8.0 release, the `saml_auth_url` parameter also requries the `app_id` query string parameter when configuring
+aws-runas for OneLogin SAML authentication.  This value is visible in the OneLogin AWS Application URL in the OneLogin
+management portal (/apps/<app_id>/edit)
+
 Example OneLogin info in the .aws/config file:
 ```text
-saml_auth_url = https://my-onelogin-hostname.com/trust/saml2/launch/__app_id__?token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQ=
+saml_auth_url = https://my-onelogin-hostname.com/trust/saml2/launch/__portal_id__?app_id=1234567&token=Y2xpZW50X2lkOmNsaWVudF9zZWNyZXQ=
 saml_provider = onelogin
 ```
-The app-id value can be found on the user's application landing page, hovering over the OneLogin AWS Application, and
+The portal_id value can be found on the user's application landing page, hovering over the OneLogin AWS Application, and
 getting the last element in the URL path.
 
 ### Browser Provider
