@@ -20,7 +20,8 @@ import (
 )
 
 type mfaTokenProvider struct {
-	input io.Reader
+	input     io.Reader
+	TokenName string
 }
 
 // NewMfaTokenProvider returns a MfaInputProvider which will read the MFA token information
@@ -34,7 +35,11 @@ func NewMfaTokenProvider(in io.Reader) *mfaTokenProvider {
 func (p *mfaTokenProvider) ReadInput() (string, error) {
 	var val string
 
-	_, _ = fmt.Fprint(os.Stderr, "MFA token code: ")
+	prefix := ""
+	if p.TokenName != "" {
+		prefix = p.TokenName + " "
+	}
+	_, _ = fmt.Fprintf(os.Stderr, "%sMFA token code: ", prefix)
 	_, err := fmt.Fscanln(p.input, &val)
 	if err != nil && err != io.EOF {
 		return "", err

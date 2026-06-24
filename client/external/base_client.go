@@ -42,9 +42,10 @@ var errNilClient = errors.New("client not initialized, use the appropriate const
 
 type baseClient struct {
 	OidcClientConfig
-	authUrl    *url.URL
-	httpClient *http.Client
-	saml       *credentials.SamlAssertion
+	authUrl       *url.URL
+	httpClient    *http.Client
+	saml          *credentials.SamlAssertion
+	mfaFactorName string
 }
 
 func newBaseClient(u string) (*baseClient, error) {
@@ -60,7 +61,11 @@ func newBaseClient(u string) (*baseClient, error) {
 	c := &baseClient{
 		authUrl: authUrl,
 	}
-	c.MfaTokenProvider = helpers.NewMfaTokenProvider(os.Stdin).ReadInput
+	p := helpers.NewMfaTokenProvider(os.Stdin)
+	c.MfaTokenProvider = func() (string, error) {
+		p.TokenName = c.mfaFactorName
+		return p.ReadInput()
+	}
 	c.CredentialInputProvider = helpers.NewUserPasswordInputProvider(os.Stdin).ReadInput
 	c.MfaType = MfaTypeAuto
 	c.setHttpClient()
@@ -306,26 +311,13 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 }
 
 func (c *baseClient) gatherCredentials() error {
-	var err error
-
-	u := c.Username
-	p := c.Password
-	if len(u) < 1 || len(p) < 1 {
-		u, p, err = c.CredentialInputProvider(u, p)
+	if len(c.Username) < 1 || len(c.Password) < 1 {
+		u, p, err := c.CredentialInputProvider(c.Username, c.Password)
 		if err != nil {
 			return err
 		}
 		c.Username = u
 		c.Password = p
-	}
-
-	m := c.MfaTokenCode
-	if c.MfaType == MfaTypeCode && len(m) < 1 && c.MfaTokenProvider != nil {
-		m, err = c.MfaTokenProvider()
-		if err != nil {
-			return err
-		}
-		c.MfaTokenCode = m
 	}
 
 	return nil
