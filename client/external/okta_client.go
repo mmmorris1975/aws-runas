@@ -471,7 +471,11 @@ OUTER:
 		case "FAILURE":
 			return "", errors.New("failed to complete multi-factor authentication")
 		default:
-			time.Sleep(1 * time.Second)
+			select {
+			case <-ctx.Done():
+				return "", ctx.Err()
+			case <-time.After(1 * time.Second):
+			}
 			return c.fetchDuoCookie(ctx, host, sid, txid)
 		}
 	}
