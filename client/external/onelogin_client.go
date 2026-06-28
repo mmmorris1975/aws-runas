@@ -411,33 +411,38 @@ func (c *oneloginClient) activeMfaFactors(ctx context.Context, userId int) ([]*o
 func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
 	req.DeviceId = factor.Id
 
-	r, err := c.apiPostReq(ctx, url, req)
-	if err != nil {
-		return "", err
-	}
+	for {
+		r, err := c.apiPostReq(ctx, url, req)
+		if err != nil {
+			return "", err
+		}
 
-	body, err := verifier.send(r)
-	if err != nil {
-		return "", err
-	}
+		body, err := verifier.send(r)
+		if err != nil {
+			return "", err
+		}
 
-	result, err := verifier.parse(body)
-	if err != nil {
-		return "", err
-	}
+		result, err := verifier.parse(body)
+		if err != nil {
+			return "", err
+		}
 
-	if result.token != "" {
-		return result.token, nil
-	}
+		if result.token != "" {
+			return result.token, nil
+		}
 
-	if result.pending {
+		if !result.pending {
+			return "", errors.New("unexpected push MFA response")
+		}
+
 		fmt.Println("Waiting for Push MFA confirmation...")
-		time.Sleep(1250 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(1250 * time.Millisecond):
+		}
 		req.DoNotNotify = true
-		return c.handlePushMfa(ctx, url, req, factor, verifier)
 	}
-
-	return "", errors.New("unexpected push MFA response")
 }
 
 func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {

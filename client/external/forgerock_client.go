@@ -20,13 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/identity"
 )
 
 const (
@@ -254,7 +255,11 @@ func (c *forgerockClient) authMfaPush(ctx context.Context, u string) error {
 
 	fmt.Println("Waiting for Push MFA confirmation")
 	for {
-		time.Sleep(1250 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(1250 * time.Millisecond):
+		}
 
 		req, err := frAuthReq(ctx, u, bytes.NewReader(body))
 		if err != nil {

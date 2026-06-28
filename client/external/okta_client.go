@@ -552,7 +552,11 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 
 		body, _ := json.Marshal(oktaMfaResponse{Token: res.StateToken})
 
-		time.Sleep(1250 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(1250 * time.Millisecond):
+		}
 		fmt.Print(".")
 
 		var r *http.Response
