@@ -507,16 +507,8 @@ func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 
 func (c *aadClient) handleCodeMfa(ctx context.Context, mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
 	for {
-		if len(c.MfaTokenCode) < 1 {
-			if c.MfaTokenProvider != nil {
-				t, err := c.MfaTokenProvider()
-				if err != nil {
-					return nil, err
-				}
-				c.MfaTokenCode = t
-			} else {
-				return nil, errMfaNotConfigured
-			}
+		if err := c.ensureMfaTokenCode(); err != nil {
+			return nil, err
 		}
 
 		mfaReq.AdditionalAuthData = c.MfaTokenCode
@@ -537,6 +529,21 @@ func (c *aadClient) handleCodeMfa(ctx context.Context, mfaUrl string, mfaReq aad
 		case <-time.After(wait):
 		}
 	}
+}
+
+func (c *aadClient) ensureMfaTokenCode() error {
+	if len(c.MfaTokenCode) > 0 {
+		return nil
+	}
+	if c.MfaTokenProvider == nil {
+		return errMfaNotConfigured
+	}
+	t, err := c.MfaTokenProvider()
+	if err != nil {
+		return err
+	}
+	c.MfaTokenCode = t
+	return nil
 }
 
 func (c *aadClient) handlePushMfa(ctx context.Context, mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {

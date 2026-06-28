@@ -463,21 +463,18 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 		return "", err
 	}
 
-OUTER:
-	for {
-		switch result.Response.Result {
-		case "SUCCESS":
-			break OUTER
-		case "FAILURE":
-			return "", errors.New("failed to complete multi-factor authentication")
-		default:
-			select {
-			case <-ctx.Done():
-				return "", ctx.Err()
-			case <-time.After(1 * time.Second):
-			}
-			return c.fetchDuoCookie(ctx, host, sid, txid)
+	switch result.Response.Result {
+	case "SUCCESS":
+		// fall through to cookie retrieval
+	case "FAILURE":
+		return "", errors.New("failed to complete multi-factor authentication")
+	default:
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-time.After(1 * time.Second):
 		}
+		return c.fetchDuoCookie(ctx, host, sid, txid)
 	}
 
 	if len(result.Response.Sid) > 0 {
