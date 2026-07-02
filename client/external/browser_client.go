@@ -197,7 +197,7 @@ func (c *browserClient) startBrowser(profileDir, execPath string) (context.Conte
 	return taskCtx, cancel, nil
 }
 
-// persistSessionCookies converts session cookies (Expires == -1) to persistent cookies with a 24-hour
+// persistSessionCookies converts session cookies (Expires == -1) to persistent cookies with a 12-hour
 // expiry so they survive the graceful browser shutdown. Without this, Chrome's normal exit clears
 // all session cookies, forcing MFA and KMSI prompts on every invocation.
 func persistSessionCookies(ctx context.Context) {
@@ -209,7 +209,7 @@ func persistSessionCookies(ctx context.Context) {
 	})); err != nil || len(all) == 0 {
 		return
 	}
-	expires := cdp.TimeSinceEpoch(time.Now().Add(24 * time.Hour))
+	expires := cdp.TimeSinceEpoch(time.Now().Add(12 * time.Hour))
 	_ = chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		for _, c := range all {
 			if c.Expires > 0 {
