@@ -135,6 +135,8 @@ var App = &cli.App{
 // arguments passed to it as the command name (mirroring os.Args convention) and strips it off before
 // parsing, so it must be prepended here to avoid losing the 1st real positional arg (ex: profile name).
 func runSubcommand(cmd *cli.Command, ctx *cli.Context) error {
+	child := cli.NewContext(ctx.App, nil, ctx)
+	child.Command = cmd
 	return cmd.Run(ctx, append([]string{cmd.Name}, ctx.Args().Slice()...)...)
 }
 
