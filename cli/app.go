@@ -160,7 +160,7 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
-	cntx, cancelFunc := context.WithCancel(context.Background())
+	cntx, cancelFunc := context.WithCancel(ctx.Context)
 	defer cancelFunc()
 
 	if !ctx.Args().Present() && len(profile) < 1 {

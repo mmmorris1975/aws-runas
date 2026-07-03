@@ -35,7 +35,7 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	cntx, cancelFunc := context.WithCancel(context.Background())
+	cntx, cancelFunc := context.WithCancel(ctx.Context)
 	defer cancelFunc()
 
 	c, err := clientFactory.Get(cntx, cfg)
