@@ -37,9 +37,17 @@ func (c *baseIamClient) Identity() (*identity.Identity, error) {
 	return c.ident.Identity()
 }
 
+func (c *baseIamClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
+	return c.ident.IdentityWithContext(ctx)
+}
+
 // Roles is the implementation of the IdentityClient interface for retrieving IAM role information for IAM users.
 func (c *baseIamClient) Roles() (*identity.Roles, error) {
 	return c.ident.Roles()
+}
+
+func (c *baseIamClient) RolesWithContext(ctx context.Context) (*identity.Roles, error) {
+	return c.ident.RolesWithContext(ctx)
 }
 
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a

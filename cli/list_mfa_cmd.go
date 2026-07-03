@@ -79,7 +79,7 @@ func getIdentity(ctx context.Context, cfg *config.AwsConfig) (*identity.Identity
 		return nil, err
 	}
 
-	return c.Identity()
+	return c.IdentityWithContext(ctx)
 }
 
 // mfa command-specific, but use a distinct function so it's testable with a mock iam.ListMFADevicesAPIClient.

@@ -147,6 +147,10 @@ type mockSamlClient struct {
 }
 
 func (c *mockSamlClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *mockSamlClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	if c.sendError {
 		return nil, errors.New("error: Identity()")
 	}
@@ -158,7 +162,11 @@ func (c *mockSamlClient) Identity() (*identity.Identity, error) {
 	}, nil
 }
 
-func (c *mockSamlClient) Roles(...string) (*identity.Roles, error) {
+func (c *mockSamlClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *mockSamlClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.sendError {
 		return nil, errors.New("error: Roles()")
 	}

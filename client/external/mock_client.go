@@ -37,6 +37,10 @@ func NewMockClient(url string) (*mockClient, error) {
 
 // Identity returns an empty identity.
 func (m *mockClient) Identity() (*identity.Identity, error) {
+	return m.IdentityWithContext(context.Background())
+}
+
+func (m *mockClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return new(identity.Identity), nil
 }
 
@@ -52,10 +56,14 @@ func (m *mockClient) AuthenticateWithContext(context.Context) error {
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (m *mockClient) Roles(...string) (*identity.Roles, error) {
+func (m *mockClient) Roles(roles ...string) (*identity.Roles, error) {
+	return m.RolesWithContext(context.Background(), roles...)
+}
+
+func (m *mockClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if m.saml == nil || len(*m.saml) < 1 {
 		var err error
-		m.saml, err = m.SamlAssertion()
+		m.saml, err = m.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

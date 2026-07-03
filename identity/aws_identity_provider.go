@@ -57,7 +57,11 @@ func (p *awsIdentityProvider) WithLogger(l shared.Logger) *awsIdentityProvider {
 
 // Identity retrieves the Identity information for the AWS IAM user.
 func (p *awsIdentityProvider) Identity() (*Identity, error) {
-	out, err := p.stsClient.GetCallerIdentity(context.Background(), new(sts.GetCallerIdentityInput))
+	return p.IdentityWithContext(context.Background())
+}
+
+func (p *awsIdentityProvider) IdentityWithContext(ctx context.Context) (*Identity, error) {
+	out, err := p.stsClient.GetCallerIdentity(ctx, new(sts.GetCallerIdentityInput))
 	if err != nil {
 		p.logger.Errorf("error calling GetCallerIdentity: %v", err)
 		return nil, err
@@ -84,6 +88,10 @@ func (p *awsIdentityProvider) Identity() (*Identity, error) {
 // This method will check the inline and attached IAM policies for the user, and any groups the user is a member of.
 // It will return all roles the user is allowed to assume, even those specifying wildcards in the ARN fields.
 func (p *awsIdentityProvider) Roles(user ...string) (*Roles, error) {
+	return p.RolesWithContext(context.Background(), user...)
+}
+
+func (p *awsIdentityProvider) RolesWithContext(ctx context.Context, user ...string) (*Roles, error) {
 	if len(user) < 1 || len(user[0]) < 1 {
 		id, err := p.Identity()
 		if err != nil {

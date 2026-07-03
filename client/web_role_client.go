@@ -91,10 +91,18 @@ func (c *webRoleClient) Identity() (*identity.Identity, error) {
 	return c.webClient.Identity()
 }
 
+func (c *webRoleClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
+	return c.webClient.IdentityWithContext(ctx)
+}
+
 // Roles is the implementation of the IdentityClient interface for retrieving IAM role information from the external IdP
 // Web Identity providers are not role aware, so this method will always return an error for this client type.
 func (c *webRoleClient) Roles() (*identity.Roles, error) {
 	return c.webClient.Roles()
+}
+
+func (c *webRoleClient) RolesWithContext(ctx context.Context) (*identity.Roles, error) {
+	return c.webClient.RolesWithContext(ctx)
 }
 
 // Credentials is the implementation of the CredentialClient interface, and calls CredentialsWithContext with a

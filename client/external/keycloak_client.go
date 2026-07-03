@@ -76,26 +76,34 @@ func (c *keycloakClient) AuthenticateWithContext(ctx context.Context) error {
 
 // Identity returns the identity information for the user.
 func (c *keycloakClient) Identity() (*identity.Identity, error) {
-	return c.identity(keycloakIdentityProvider), nil
+	return c.IdentityWithContext(context.Background())
 }
 
-// IdentityToken calls IdentityTokenWithContext with a background context.
-func (c *keycloakClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
-	return c.IdentityTokenWithContext(context.Background())
+func (c *keycloakClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
+	return c.identity(keycloakIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *keycloakClient) Roles(...string) (*identity.Roles, error) {
+func (c *keycloakClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *keycloakClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return c.roles()
+}
+
+// IdentityToken calls IdentityTokenWithContext with a background context.
+func (c *keycloakClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
+	return c.IdentityTokenWithContext(context.Background())
 }
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Keycloak. This method will automatically prompt for

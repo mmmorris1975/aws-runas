@@ -65,18 +65,26 @@ func (c *samlRoleClient) Identity() (*identity.Identity, error) {
 	return c.samlClient.Identity()
 }
 
+func (c *samlRoleClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
+	return c.samlClient.IdentityWithContext(ctx)
+}
+
 // Roles is the implementation of the IdentityClient interface for retrieving IAM role information from the external IdP.
 func (c *samlRoleClient) Roles() (*identity.Roles, error) {
-	roles, err := c.samlClient.Roles()
+	return c.RolesWithContext(context.Background())
+}
+
+func (c *samlRoleClient) RolesWithContext(ctx context.Context) (*identity.Roles, error) {
+	roles, err := c.samlClient.RolesWithContext(ctx)
 	if err != nil {
 		var saml *credentials.SamlAssertion
-		saml, err = c.samlClient.SamlAssertion()
+		saml, err = c.samlClient.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		c.roleProvider.SamlAssertion(saml)
-		roles, err = c.samlClient.Roles()
+		roles, err = c.samlClient.RolesWithContext(ctx)
 	}
 	return roles, err
 }

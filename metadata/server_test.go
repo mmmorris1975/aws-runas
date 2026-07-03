@@ -928,10 +928,18 @@ func (m *mockConfigResolver) Credentials(string) (*config.AwsCredentials, error)
 type mockAwsClient bool
 
 func (m *mockAwsClient) Identity() (*identity.Identity, error) {
+	return m.IdentityWithContext(context.Background())
+}
+
+func (m *mockAwsClient) IdentityWithContext(context.Context) (*identity.Identity, error) {
 	return new(identity.Identity), nil
 }
 
 func (m *mockAwsClient) Roles() (*identity.Roles, error) {
+	return m.RolesWithContext(context.Background())
+}
+
+func (m *mockAwsClient) RolesWithContext(context.Context) (*identity.Roles, error) {
 	return new(identity.Roles), nil
 }
 

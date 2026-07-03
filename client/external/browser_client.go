@@ -60,6 +60,10 @@ func NewBrowserClient(url string) (*browserClient, error) {
 }
 
 func (c *browserClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *browserClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	if c.baseClient == nil {
 		return nil, errNilClient
 	}

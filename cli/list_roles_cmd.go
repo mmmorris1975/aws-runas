@@ -49,13 +49,13 @@ var rolesCmd = &cli.Command{
 			return err
 		}
 
-		roles, err := c.Roles()
+		roles, err := c.RolesWithContext(ctx.Context)
 		if err != nil {
 			return err
 		}
 
 		// Moved identity call after roles so that username is populated from SAML assertion if available
-		id, err := c.Identity()
+		id, err := c.IdentityWithContext(ctx.Context)
 		if err != nil {
 			return err
 		}

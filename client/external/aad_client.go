@@ -139,15 +139,23 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 }
 
 func (c *aadClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *aadClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return c.identity(aadIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *aadClient) Roles(...string) (*identity.Roles, error) {
+func (c *aadClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *aadClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

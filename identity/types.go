@@ -33,8 +33,10 @@ type Roles []string
 type Provider interface {
 	// Identity will return the Identity information for a user.
 	Identity() (*Identity, error)
+	IdentityWithContext(ctx context.Context) (*Identity, error)
 	// Roles returns the list of Roles the provided user is allowed to use.
 	Roles(user ...string) (*Roles, error)
+	RolesWithContext(ctx context.Context, user ...string) (*Roles, error)
 }
 
 // StsApi is a stub interface used for mocking the GetCallerIdentity AWS API call.
