@@ -115,7 +115,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		// an error here means we might need to (re-)authenticate
 		if strings.Contains(err.Error(), "status 200") {
 			u := fmt.Sprintf("%s?%s", authUrl, authzQS.Encode())
-			if err = c.formAuth(u); err != nil {
+			if err = c.formAuth(ctx, u); err != nil {
 				return nil, err
 			}
 			return c.IdentityTokenWithContext(ctx)
@@ -150,7 +150,7 @@ func (c *keycloakClient) SamlAssertionWithContext(ctx context.Context) (*credent
 	}
 
 	if c.saml == nil || len(*c.saml) < 1 {
-		if err := c.formAuth(c.authUrl.String()); err != nil {
+		if err := c.formAuth(ctx, c.authUrl.String()); err != nil {
 			return nil, err
 		}
 		return c.SamlAssertionWithContext(ctx)
@@ -170,19 +170,19 @@ func (c *keycloakClient) auth(ctx context.Context) error {
 	return err
 }
 
-func (c *keycloakClient) formAuth(authUrl string) error {
+func (c *keycloakClient) formAuth(ctx context.Context, authUrl string) error {
 	if err := c.gatherCredentials(); err != nil {
 		return err
 	}
 
-	submitUrl, creds, err := c.parseForm(authUrl)
+	submitUrl, creds, err := c.parseForm(ctx, authUrl)
 	if err != nil {
 		return err
 	}
 
 	var req *httpRequest
 	var res *http.Response
-	req, err = newHttpRequest(context.Background(), http.MethodPost, submitUrl.String())
+	req, err = newHttpRequest(ctx, http.MethodPost, submitUrl.String())
 	if err != nil {
 		return err
 	}
@@ -207,8 +207,8 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 	return c.handle200(body)
 }
 
-func (c *keycloakClient) parseForm(authUrl string) (*url.URL, url.Values, error) {
-	req, err := newHttpRequest(context.Background(), http.MethodGet, authUrl)
+func (c *keycloakClient) parseForm(ctx context.Context, authUrl string) (*url.URL, url.Values, error) {
+	req, err := newHttpRequest(ctx, http.MethodGet, authUrl)
 	if err != nil {
 		return nil, url.Values{}, err
 	}

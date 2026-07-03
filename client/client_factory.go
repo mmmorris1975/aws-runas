@@ -178,7 +178,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		if len(cfg.RoleSessionName) < 2 {
 			ctx, cancelFunc := context.WithCancel(context.Background())
 			defer cancelFunc()
-			
+
 			_, err = baseCl.CredentialsWithContext(ctx)
 			if err != nil {
 				return nil, err

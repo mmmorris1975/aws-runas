@@ -318,7 +318,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 		}
 	}
 
-	return c.exchangeToken(sessionToken)
+	return c.exchangeToken(ctx, sessionToken)
 }
 
 //nolint:gocognit // won't simplify
@@ -494,13 +494,13 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 	return "", errors.New("unexpected code MFA response")
 }
 
-func (c *oneloginClient) exchangeToken(st string) error {
+func (c *oneloginClient) exchangeToken(ctx context.Context, st string) error {
 	// ref: https://developers.onelogin.com/api-docs/1/login-page/create-session-via-token
 	u := fmt.Sprintf("%s://%s/session_via_api_token", c.authUrl.Scheme, c.authUrl.Host)
 	body := url.Values{}
 	body.Set("session_token", st)
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u, strings.NewReader(body.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, strings.NewReader(body.Encode()))
 	if err != nil {
 		return err
 	}

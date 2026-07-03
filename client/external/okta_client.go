@@ -121,7 +121,7 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
 		}
-		return c.IdentityToken()
+		return c.IdentityTokenWithContext(ctx)
 	}
 
 	if vals.Get("state") != authzQS.Get("state") {
