@@ -33,6 +33,7 @@ func main() {
 	defer stop()
 
 	if err := cli.App.RunContext(ctx, os.Args); err != nil {
+		stop()
 		log.Fatal(err)
 	}
 }
