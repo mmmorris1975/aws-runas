@@ -79,6 +79,18 @@ func (f *verboseFlag) TakesValue() bool {
 	return false
 }
 
+func (f *verboseFlag) IsVisible() bool {
+	return !f.Hidden
+}
+
+func (f *verboseFlag) GetDefaultText() string {
+	return f.DefaultText
+}
+
+func (f *verboseFlag) GetEnvVars() []string {
+	return nil
+}
+
 func (f *verboseFlag) GetValue() string {
 	if f.Value != nil {
 		return f.Value.String()
