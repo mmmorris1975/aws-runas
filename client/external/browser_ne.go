@@ -67,7 +67,7 @@ func (c *browserNEClient) Authenticate() error {
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
 //
 //nolint:funlen
-func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
+func (c *browserNEClient) AuthenticateWithContext(ctx context.Context) error {
 	var err error
 	var samlassertion credentials.SamlAssertion
 	c.Logger.Debugf("Starting a browser to authenticate with the New Experience flow...")
@@ -175,7 +175,7 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	// Wait here until we get a notification to shutdown the server.
 	// This happens when we get the SAML response and process it.
 	<-shutdown
-	_ = httpserver.Shutdown(context.Background())
+	_ = httpserver.Shutdown(ctx)
 	sr, err := c.saml.Decode()
 	if err != nil {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
@@ -195,7 +195,7 @@ func (c *browserNEClient) Roles(roles ...string) (*identity.Roles, error) {
 func (c *browserNEClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

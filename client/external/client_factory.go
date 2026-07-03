@@ -34,7 +34,7 @@ const (
 	browserProvider   = "browser"
 	// Alias for browser provider to select new experience login flows.
 	browserNEProvider            = "browserne"
-	browserNewExperienceProvider = "browserNewExperience"
+	browserNewExperienceProvider = "browsernewexperience"
 )
 
 var errUnknownProvider = errors.New("unable to determine client provider type")
