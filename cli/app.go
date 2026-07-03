@@ -110,32 +110,23 @@ var App = &cli.App{
 		// WARNING - this requires special handling of ctx.Args() in the target command's Action()
 		//           method if you want to see any command-line positional args
 		if ctx.Bool(mfaFlag.Name) {
-			return runSubcommand(mfaCmd, ctx)
+			return mfaCmd.Run(ctx)
 		}
 
 		if ctx.Bool(rolesFlag.Name) {
-			return runSubcommand(rolesCmd, ctx)
+			return rolesCmd.Run(ctx)
 		}
 
 		if ctx.Bool(updateFlag.Name) {
-			return runSubcommand(updateCmd, ctx)
+			return updateCmd.Run(ctx)
 		}
 
 		if ctx.Bool(diagFlag.Name) {
-			return runSubcommand(diagCmd, ctx)
+			return diagCmd.Run(ctx)
 		}
 
 		return execCmd(ctx)
 	},
-}
-
-// runSubcommand invokes a subcommand's Run() method with the positional args from ctx, for use when
-// a shortcut flag (e.g. -l, -m, -u, -D) is dispatching directly to a subcommand's Action outside of
-// the cli library's normal subcommand parsing flow. Command.Run() treats the 1st element of the
-// arguments passed to it as the command name (mirroring os.Args convention) and strips it off before
-// parsing, so it must be prepended here to avoid losing the 1st real positional arg (ex: profile name).
-func runSubcommand(cmd *cli.Command, ctx *cli.Context) error {
-	return cmd.Run(ctx, append([]string{cmd.Name}, ctx.Args().Slice()...)...)
 }
 
 //nolint:gochecknoinits // kinda need this here
