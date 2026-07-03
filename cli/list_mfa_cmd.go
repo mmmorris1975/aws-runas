@@ -52,7 +52,7 @@ var mfaCmd = &cli.Command{
 			return err
 		}
 
-		s, err := awsconfig.LoadDefaultConfig(context.Background(),
+		s, err := awsconfig.LoadDefaultConfig(ctx.Context,
 			awsconfig.WithLogger(logFunc),
 			awsconfig.WithRegion(cfg.Region),
 			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
@@ -60,7 +60,7 @@ var mfaCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		return listMfa(iam.NewFromConfig(s), id)
+		return listMfa(ctx.Context, iam.NewFromConfig(s), id)
 	},
 }
 
@@ -83,9 +83,9 @@ func getIdentity(ctx context.Context, cfg *config.AwsConfig) (*identity.Identity
 }
 
 // mfa command-specific, but use a distinct function so it's testable with a mock iam.ListMFADevicesAPIClient.
-func listMfa(i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
+func listMfa(ctx context.Context, i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
 	if id.IdentityType == "user" {
-		res, err := i.ListMFADevices(context.Background(), new(iam.ListMFADevicesInput))
+		res, err := i.ListMFADevices(ctx, new(iam.ListMFADevicesInput))
 		if err != nil {
 			return err
 		}

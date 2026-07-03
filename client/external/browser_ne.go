@@ -52,6 +52,10 @@ func NewBrowserNEClient(url string) (*browserNEClient, error) {
 }
 
 func (c *browserNEClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *browserNEClient) IdentityWithContext(context.Context) (*identity.Identity, error) {
 	return c.identity(browserNEProvider), nil
 }
 
@@ -184,7 +188,11 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *browserNEClient) Roles(...string) (*identity.Roles, error) {
+func (c *browserNEClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *browserNEClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
 		c.saml, err = c.SamlAssertion()

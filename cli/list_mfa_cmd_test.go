@@ -71,18 +71,18 @@ func TestListMfaCmd_getIdentity(t *testing.T) {
 
 func TestListMfaCmd_listMfa(t *testing.T) {
 	t.Run("user", func(t *testing.T) {
-		_ = listMfa(new(mockIam), &identity.Identity{IdentityType: "user"})
+		_ = listMfa(t.Context(), new(mockIam), &identity.Identity{IdentityType: "user"})
 	})
 
 	t.Run("not user", func(t *testing.T) {
-		if err := listMfa(nil, &identity.Identity{IdentityType: "notuser"}); err != nil {
+		if err := listMfa(t.Context(), nil, &identity.Identity{IdentityType: "notuser"}); err != nil {
 			t.Error(err)
 		}
 	})
 
 	t.Run("bad", func(t *testing.T) {
 		var c mockIam = true
-		if err := listMfa(&c, &identity.Identity{IdentityType: "user"}); err == nil {
+		if err := listMfa(t.Context(), &c, &identity.Identity{IdentityType: "user"}); err == nil {
 			t.Error(err)
 		}
 	})
