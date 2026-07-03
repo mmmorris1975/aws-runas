@@ -523,7 +523,7 @@ func (c *aadClient) handleCodeMfa(ctx context.Context, mfaUrl string, mfaReq aad
 		}
 
 		c.MfaTokenCode = ""
-		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+		if err = waitOrCancel(ctx, wait); err != nil {
 			return nil, err
 		}
 		fmt.Print(".")
@@ -556,7 +556,7 @@ func (c *aadClient) handlePushMfa(ctx context.Context, mfaUrl string, mfaReq aad
 			return res, nil
 		}
 
-		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+		if err = waitOrCancel(ctx, wait); err != nil {
 			return nil, err
 		}
 		fmt.Print(".")
