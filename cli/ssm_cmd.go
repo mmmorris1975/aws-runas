@@ -63,8 +63,11 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		refreshCreds(c)
 	}
 
+	cntx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	var creds *credentials.Credentials
-	creds, err = c.Credentials()
+	creds, err = c.CredentialsWithContext(cntx)
 	if err != nil {
 		return "", nil, err
 	}

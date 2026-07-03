@@ -469,10 +469,8 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 	case "FAILURE":
 		return "", errors.New("failed to complete multi-factor authentication")
 	default:
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-time.After(1 * time.Second):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return "", err
 		}
 		return c.fetchDuoCookie(ctx, host, sid, txid)
 	}
@@ -543,7 +541,7 @@ func (c *oktaClient) handleMfa(ctx context.Context, stateToken string, factor *o
 func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) (*oktaAuthnResponse, error) {
 	var err error
 
-	fmt.Print("Waiting for Push MFA ")
+	fmt.Println("Waiting for Push MFA confirmation...")
 
 	for strings.EqualFold(res.Status, "MFA_CHALLENGE") && strings.EqualFold(res.FactorResult, "WAITING") {
 		var nextUrl string
@@ -553,10 +551,8 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 
 		body, _ := json.Marshal(oktaMfaResponse{Token: res.StateToken})
 
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(1250 * time.Millisecond):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return nil, err
 		}
 		fmt.Print(".")
 

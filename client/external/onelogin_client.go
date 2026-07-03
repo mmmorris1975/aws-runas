@@ -437,11 +437,10 @@ func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *one
 		}
 
 		req.DoNotNotify = true
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-time.After(1250 * time.Millisecond):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return "", err
 		}
+		fmt.Print(".")
 	}
 }
 

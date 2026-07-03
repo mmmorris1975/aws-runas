@@ -14,7 +14,14 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/client"
@@ -23,11 +30,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/metadata"
 	"github.com/mmmorris1975/simple-logger/logger"
 	"github.com/urfave/cli/v2"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 var (
@@ -176,8 +178,11 @@ func execCmd(ctx *cli.Context) error {
 	// do a single-shot credential fetch since there's a number of situations below where we'll use
 	// them.  We get the added benefit of having any external IdP authentication handled before
 	// possibly heading down the path of starting the ecs credential endpoint
+	cntx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	var creds *credentials.Credentials
-	creds, err = c.Credentials()
+	creds, err = c.CredentialsWithContext(cntx)
 	if err != nil {
 		return err
 	}

@@ -427,7 +427,7 @@ func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*h
 
 	switch c.MfaType {
 	case MfaTypePush:
-		fmt.Print("Waiting for Push MFA ")
+		fmt.Println("Waiting for Push MFA confirmation...")
 		mfaRes, err = c.handlePushMfa(ctx, authRes.UrlEndAuth, mfaReq, wait)
 	case MfaTypeCode:
 		mfaRes, err = c.handleCodeMfa(ctx, authRes.UrlEndAuth, mfaReq, wait)
@@ -523,11 +523,10 @@ func (c *aadClient) handleCodeMfa(ctx context.Context, mfaUrl string, mfaReq aad
 		}
 
 		c.MfaTokenCode = ""
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(wait):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return nil, err
 		}
+		fmt.Print(".")
 	}
 }
 
@@ -557,10 +556,8 @@ func (c *aadClient) handlePushMfa(ctx context.Context, mfaUrl string, mfaReq aad
 			return res, nil
 		}
 
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		case <-time.After(wait):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return nil, err
 		}
 		fmt.Print(".")
 	}

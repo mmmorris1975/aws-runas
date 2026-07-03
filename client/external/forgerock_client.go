@@ -253,13 +253,12 @@ func (c *forgerockClient) authMfaPush(ctx context.Context, u string) error {
 		return err
 	}
 
-	fmt.Println("Waiting for Push MFA confirmation")
+	fmt.Println("Waiting for Push MFA confirmation...")
 	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-time.After(1250 * time.Millisecond):
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return err
 		}
+		fmt.Print(".")
 
 		req, err := frAuthReq(ctx, u, bytes.NewReader(body))
 		if err != nil {
