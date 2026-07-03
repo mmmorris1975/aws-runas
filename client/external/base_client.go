@@ -218,7 +218,7 @@ func (c *baseClient) pkceAuthzRequest(pkceChallenge string) url.Values {
 	return qs
 }
 
-func (c *baseClient) oauthAuthorize(ep string, data url.Values, followRedirect bool) (url.Values, error) {
+func (c *baseClient) oauthAuthorize(ctx context.Context, ep string, data url.Values, followRedirect bool) (url.Values, error) {
 	// make sure we use an appropriate http.Client based on the value of followRedirect.
 	httpClient := c.httpClient
 	if followRedirect {
@@ -242,7 +242,7 @@ func (c *baseClient) oauthAuthorize(ep string, data url.Values, followRedirect b
 	u.RawQuery = data.Encode()
 
 	var req *http.Request
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodGet, u.String(), http.NoBody)
+	req, err = http.NewRequestWithContext(ctx, http.MethodGet, u.String(), http.NoBody)
 	if err != nil {
 		return url.Values{}, err
 	}
@@ -276,7 +276,7 @@ func (c *baseClient) oauthAuthorize(ep string, data url.Values, followRedirect b
 	return redir.Query(), nil
 }
 
-func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) {
+func (c *baseClient) oauthToken(ctx context.Context, ep, code, verifier string) (*oauthToken, error) {
 	data := url.Values{}
 	data.Set("client_id", c.ClientId)
 	data.Set("code", code)
@@ -285,7 +285,7 @@ func (c *baseClient) oauthToken(ep, code, verifier string) (*oauthToken, error) 
 	data.Set("redirect_uri", c.RedirectUri)
 	sb := bytes.NewBufferString(data.Encode())
 
-	req, err := newHttpRequest(context.Background(), http.MethodPost, ep)
+	req, err := newHttpRequest(ctx, http.MethodPost, ep)
 	if err != nil {
 		return nil, err
 	}

@@ -161,7 +161,7 @@ func (c *aadClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 }
 
 // todo - this is unverified.
-func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *aadClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	oauthUrlBase := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0", c.tenantId)
 
 	pkce, err := newPkceCode()
@@ -171,7 +171,7 @@ func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.Oidc
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
 	var vals url.Values
-	vals, err = c.oauthAuthorize(fmt.Sprintf("%s/authorize", oauthUrlBase), authzQS, false)
+	vals, err = c.oauthAuthorize(ctx, fmt.Sprintf("%s/authorize", oauthUrlBase), authzQS, false)
 	if err != nil {
 		// reauth?
 		return nil, err
@@ -181,7 +181,7 @@ func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.Oidc
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/token", oauthUrlBase), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/token", oauthUrlBase), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}

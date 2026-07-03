@@ -111,7 +111,7 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 	}
 
 	var vals url.Values
-	vals, err = c.oauthAuthorize(fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
+	vals, err = c.oauthAuthorize(ctx, fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +128,7 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/v1/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/v1/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}

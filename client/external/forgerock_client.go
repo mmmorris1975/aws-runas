@@ -110,14 +110,14 @@ func (c *forgerockClient) IdentityToken() (*credentials.OidcIdentityToken, error
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Forgerock.  The Authenticate() (or AuthenticateWithContext())
 // methods must be called before using this method, otherwise an error will be returned.
-func (c *forgerockClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *forgerockClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	pkce, err := newPkceCode()
 	if err != nil {
 		return nil, err
 	}
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
-	vals, err := c.oauthAuthorize(fmt.Sprintf("%s/authorize", c.authUrl.String()), authzQS, false)
+	vals, err := c.oauthAuthorize(ctx, fmt.Sprintf("%s/authorize", c.authUrl.String()), authzQS, false)
 	if err != nil {
 		return nil, err
 	}
@@ -126,7 +126,7 @@ func (c *forgerockClient) IdentityTokenWithContext(context.Context) (*credential
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/access_token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/access_token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}

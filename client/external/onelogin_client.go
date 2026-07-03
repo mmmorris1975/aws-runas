@@ -113,7 +113,7 @@ func (c *oneloginClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	}
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
-	vals, err := c.oauthAuthorize(fmt.Sprintf("%s/auth", c.authUrl.String()), authzQS, true)
+	vals, err := c.oauthAuthorize(ctx, fmt.Sprintf("%s/auth", c.authUrl.String()), authzQS, true)
 	if err != nil {
 		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
@@ -125,7 +125,7 @@ func (c *oneloginClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}

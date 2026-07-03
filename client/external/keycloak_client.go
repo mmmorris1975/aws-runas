@@ -110,7 +110,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 	authUrl := fmt.Sprintf("%s/protocol/openid-connect/auth", c.authUrl.String())
 
-	vals, err := c.oauthAuthorize(authUrl, authzQS, false)
+	vals, err := c.oauthAuthorize(ctx, authUrl, authzQS, false)
 	if err != nil {
 		// an error here means we might need to (re-)authenticate
 		if strings.Contains(err.Error(), "status 200") {
@@ -127,7 +127,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/protocol/openid-connect/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/protocol/openid-connect/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}

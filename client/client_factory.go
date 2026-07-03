@@ -176,7 +176,10 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
 		// means we should have valid AWS credentials loaded (we don't need the value here)
 		if len(cfg.RoleSessionName) < 2 {
-			_, err = baseCl.Credentials()
+			ctx, cancelFunc := context.WithCancel(context.Background())
+			defer cancelFunc()
+			
+			_, err = baseCl.CredentialsWithContext(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -261,7 +264,10 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
 		// means we should have valid AWS credentials loaded (we don't need the value here)
 		if len(cfg.RoleSessionName) < 2 {
-			_, err = baseCl.Credentials()
+			ctx, cancelFunc := context.WithCancel(context.Background())
+			defer cancelFunc()
+
+			_, err = baseCl.CredentialsWithContext(ctx)
 			if err != nil {
 				return nil, err
 			}
