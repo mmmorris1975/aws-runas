@@ -174,8 +174,14 @@ func (c *browserNEClient) AuthenticateWithContext(ctx context.Context) error {
 	}
 	// Wait here until we get a notification to shutdown the server.
 	// This happens when we get the SAML response and process it.
-	<-shutdown
-	_ = httpserver.Shutdown(ctx)
+	select {
+	case <-shutdown:
+		_ = httpserver.Shutdown(ctx)
+	case <-ctx.Done():
+		_ = httpserver.Close()
+		return ctx.Err()
+	}
+
 	sr, err := c.saml.Decode()
 	if err != nil {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
@@ -209,8 +215,8 @@ func (c *browserNEClient) IdentityToken() (*credentials.OidcIdentityToken, error
 }
 
 // IdentityTokenWithContext returns an empty OidcIdentityToken type.
-func (c *browserNEClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
-	_ = c.Authenticate()
+func (c *browserNEClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
+	_ = c.AuthenticateWithContext(ctx)
 	return new(credentials.OidcIdentityToken), nil
 }
 
