@@ -295,7 +295,7 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		}
 
 		// fetch credentials after switching profile to see if we should re-auth while we have their attention
-		if _, err = s.awsClient.CredentialsWithContext(context.Background()); err != nil {
+		if _, err = s.awsClient.CredentialsWithContext(r.Context()); err != nil {
 			s.handleAuthError(err, w)
 			return
 		}
@@ -358,7 +358,7 @@ func (s *metadataCredentialService) ec2CredHandler(w http.ResponseWriter, r *htt
 	if len(p[len(p)-1]) < 1 {
 		_, _ = w.Write([]byte(s.awsConfig.ProfileName))
 	} else {
-		creds, err := s.awsClient.CredentialsWithContext(context.Background())
+		creds, err := s.awsClient.CredentialsWithContext(r.Context())
 		if err != nil {
 			s.handleAuthError(err, w)
 			return
@@ -415,7 +415,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 		}
 	}
 
-	creds, err = cl.CredentialsWithContext(context.Background())
+	creds, err = cl.CredentialsWithContext(r.Context())
 	if err != nil {
 		s.handleAuthError(err, w)
 		return
@@ -497,7 +497,7 @@ func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	if _, err = s.awsClient.CredentialsWithContext(context.Background()); err != nil {
+	if _, err = s.awsClient.CredentialsWithContext(r.Context()); err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
@@ -525,7 +525,7 @@ func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	if _, err = s.awsClient.CredentialsWithContext(context.Background()); err != nil {
+	if _, err = s.awsClient.CredentialsWithContext(r.Context()); err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
 		return
