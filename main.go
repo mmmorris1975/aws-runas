@@ -34,6 +34,6 @@ func main() {
 
 	if err := cli.App.RunContext(ctx, os.Args); err != nil {
 		stop()
-		log.Fatal(err)
+		log.Fatal(err) //nolint:gocritic // behavior is correct, linter dislikes log.Fatal with a defer anywhere around it
 	}
 }
