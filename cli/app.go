@@ -137,7 +137,7 @@ var App = &cli.App{
 func runSubcommand(cmd *cli.Command, ctx *cli.Context) error {
 	child := cli.NewContext(ctx.App, nil, ctx)
 	child.Command = cmd
-	return cmd.Run(ctx, append([]string{cmd.Name}, ctx.Args().Slice()...)...)
+	return cmd.Run(child, append([]string{cmd.Name}, ctx.Args().Slice()...)...)
 }
 
 //nolint:gochecknoinits // kinda need this here
