@@ -20,7 +20,7 @@ import (
 
 func TestClientFactory_Get(t *testing.T) {
 	t.Run("nil config", func(t *testing.T) {
-		if _, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(nil); err == nil {
+		if _, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), nil); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
@@ -31,14 +31,14 @@ func TestClientFactory_Get(t *testing.T) {
 			WebIdentityUrl: "http://localhost/",
 		}
 
-		if _, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg); err == nil {
+		if _, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})
 
 	t.Run("arn profile", func(t *testing.T) {
 		cfg := &config.AwsConfig{ProfileName: "arn:aws:iam::01234567890:role/Admin"}
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Error("error")
 		}
@@ -60,7 +60,7 @@ func TestClientFactory_Get_Saml(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -81,7 +81,7 @@ func TestClientFactory_Get_Saml(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -103,7 +103,7 @@ func TestClientFactory_Get_Saml(t *testing.T) {
 		}
 
 		// will return empty credentials, and no error
-		c, err := NewClientFactory(&r, DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(&r, DefaultOptions).Get(t.Context(), cfg)
 
 		if err != nil {
 			t.Fatal(err)
@@ -123,7 +123,7 @@ func TestClientFactory_Get_Web(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -144,7 +144,7 @@ func TestClientFactory_Get_Web(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -166,7 +166,7 @@ func TestClientFactory_Get_Web(t *testing.T) {
 		}
 
 		// will return empty credentials, and no error
-		c, err := NewClientFactory(&r, DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(&r, DefaultOptions).Get(t.Context(), cfg)
 
 		if err != nil {
 			t.Fatal(err)
@@ -186,7 +186,7 @@ func TestClientFactory_Get_IamRole(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -207,7 +207,7 @@ func TestClientFactory_Get_IamRole(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+		c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -229,7 +229,7 @@ func TestClientFactory_Get_IamSession(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(cfg)
+	c, err := NewClientFactory(new(mockResolver), DefaultOptions).Get(t.Context(), cfg)
 	if err != nil {
 		t.Fatal(err)
 	}

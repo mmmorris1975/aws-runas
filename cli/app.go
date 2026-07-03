@@ -160,13 +160,16 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
+	cntx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	if !ctx.Args().Present() && len(profile) < 1 {
 		log.Errorln("nothing to do!")
 		cli.ShowAppHelpAndExit(ctx, 1)
 	}
 
 	var c client.AwsClient
-	c, err = clientFactory.Get(cfg)
+	c, err = clientFactory.Get(cntx, cfg)
 	if err != nil {
 		return err
 	}
@@ -178,9 +181,6 @@ func execCmd(ctx *cli.Context) error {
 	// do a single-shot credential fetch since there's a number of situations below where we'll use
 	// them.  We get the added benefit of having any external IdP authentication handled before
 	// possibly heading down the path of starting the ecs credential endpoint
-	cntx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
-
 	var creds *credentials.Credentials
 	creds, err = c.CredentialsWithContext(cntx)
 	if err != nil {

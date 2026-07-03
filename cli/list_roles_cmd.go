@@ -44,7 +44,7 @@ var rolesCmd = &cli.Command{
 			return errors.New("detected Web Identity profile, only IAM and SAML profiles support role enumeration")
 		}
 
-		c, err := clientFactory.Get(cfg)
+		c, err := clientFactory.Get(ctx.Context, cfg)
 		if err != nil {
 			return err
 		}

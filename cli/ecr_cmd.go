@@ -35,7 +35,10 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	c, err := clientFactory.Get(cfg)
+	cntx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
+	c, err := clientFactory.Get(cntx, cfg)
 	if err != nil {
 		return "", nil, err
 	}
@@ -43,9 +46,6 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 	if ctx.Bool(refreshFlag.Name) {
 		refreshCreds(c)
 	}
-
-	cntx, cancelFunc := context.WithCancel(context.Background())
-	defer cancelFunc()
 
 	var creds *credentials.Credentials
 	creds, err = c.CredentialsWithContext(cntx)

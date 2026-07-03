@@ -287,7 +287,7 @@ func (s *metadataCredentialService) profileHandler(w http.ResponseWriter, r *htt
 		profile := strings.TrimSpace(string(body))
 
 		// Do this unconditionally so we can get any potential changes in the config or credentials files
-		s.awsConfig, s.awsClient, err = s.getConfigAndClient(profile)
+		s.awsConfig, s.awsClient, err = s.getConfigAndClient(r.Context(), profile)
 		if err != nil {
 			// this could be an auth error trying to initialize a saml or oidc client
 			s.handleAuthError(err, w)
@@ -385,7 +385,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 
 	cl := s.awsClient
 	if cl == nil {
-		cl, err = s.clientFactory.Get(s.awsConfig)
+		cl, err = s.clientFactory.Get(r.Context(), s.awsConfig)
 		if err != nil {
 			s.handleAuthError(err, w)
 			return
@@ -401,7 +401,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 		profile := parts[len(parts)-1]
 
 		var cfg *config.AwsConfig
-		cfg, cl, err = s.getConfigAndClient(profile)
+		cfg, cl, err = s.getConfigAndClient(r.Context(), profile)
 		if err != nil {
 			logger.Errorf("Client fetch: %v", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -490,7 +490,7 @@ func (s *metadataCredentialService) authHandler(w http.ResponseWriter, r *http.R
 	creds.WebIdentityPassword = pass
 
 	s.clientOptions.CommandCredentials = creds
-	s.awsClient, err = s.clientFactory.Get(s.awsConfig)
+	s.awsClient, err = s.clientFactory.Get(r.Context(), s.awsConfig)
 	if err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -518,7 +518,7 @@ func (s *metadataCredentialService) mfaHandler(w http.ResponseWriter, r *http.Re
 	}
 
 	s.awsConfig.MfaCode = r.Form.Get("mfa")
-	s.awsClient, err = s.clientFactory.Get(s.awsConfig)
+	s.awsClient, err = s.clientFactory.Get(r.Context(), s.awsConfig)
 	if err != nil {
 		s.options.Logger.Errorf("%v", err)
 		http.Error(w, err.Error(), http.StatusUnauthorized)
@@ -566,7 +566,7 @@ func (s *metadataCredentialService) customProfileHandler(w http.ResponseWriter, 
 		}
 
 		var cl client.AwsClient
-		cl, err = s.clientFactory.Get(s.awsConfig)
+		cl, err = s.clientFactory.Get(r.Context(), s.awsConfig)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Invalid Configuration: %v", err), http.StatusBadRequest)
 			return
@@ -652,7 +652,7 @@ func (s *metadataCredentialService) buildConfig(v url.Values) (*config.AwsConfig
 	return newCfg, newCred, nil
 }
 
-func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
+func (s *metadataCredentialService) getConfigAndClient(ctx context.Context, profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
 	cfg, err = s.configResolver.Config(profile)
 	if err != nil {
 		return nil, nil, err
@@ -667,7 +667,7 @@ func (s *metadataCredentialService) getConfigAndClient(profile string) (cfg *con
 		return cfg, s.awsClient, nil
 	}
 
-	cl, err = s.clientFactory.Get(cfg)
+	cl, err = s.clientFactory.Get(ctx, cfg)
 	if err != nil {
 		return cfg, nil, err
 	}

@@ -234,8 +234,11 @@ func (c *oneloginClient) apiAccessToken() error {
 	u := fmt.Sprintf("%s/auth/oauth2/v2/token", c.apiBaseUrl)
 	body := strings.NewReader(`{"grant_type": "client_credentials"}`)
 
+	ctx, cancelFunc := context.WithCancel(context.Background())
+	defer cancelFunc()
+
 	var req *http.Request
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, u, body)
+	req, err = http.NewRequestWithContext(ctx, http.MethodPost, u, body)
 	if err != nil {
 		return err
 	}

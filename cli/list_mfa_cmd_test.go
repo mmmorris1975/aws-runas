@@ -64,7 +64,7 @@ func TestListMfaCmd_getIdentity(t *testing.T) {
 		SamlProvider: "mock",
 	}
 
-	if _, err := getIdentity(cfg); err != nil {
+	if _, err := getIdentity(t.Context(), cfg); err != nil {
 		t.Error(err)
 	}
 }

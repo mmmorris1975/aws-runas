@@ -388,7 +388,7 @@ func TestMetadataCredentialService_refreshHandler(t *testing.T) {
 
 	t.Run("good", func(t *testing.T) {
 		cfg, _ := mcs.configResolver.Config("mock")
-		c, _ := mcs.clientFactory.Get(cfg)
+		c, _ := mcs.clientFactory.Get(t.Context(), cfg)
 		mcs.awsClient = c
 
 		rec := httptest.NewRecorder()

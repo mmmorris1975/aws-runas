@@ -47,7 +47,7 @@ var mfaCmd = &cli.Command{
 		}
 
 		// we know identity will be an IAM principal here
-		id, err := getIdentity(cfg)
+		id, err := getIdentity(ctx.Context, cfg)
 		if err != nil {
 			return err
 		}
@@ -73,8 +73,8 @@ func getSharedProfile(cfg *config.AwsConfig) string {
 }
 
 // mfa command-specific? really just to wrap multiple error paths to a single return value.
-func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
-	c, err := clientFactory.Get(cfg)
+func getIdentity(ctx context.Context, cfg *config.AwsConfig) (*identity.Identity, error) {
+	c, err := clientFactory.Get(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
