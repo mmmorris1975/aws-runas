@@ -216,7 +216,10 @@ func (c *browserNEClient) IdentityToken() (*credentials.OidcIdentityToken, error
 
 // IdentityTokenWithContext returns an empty OidcIdentityToken type.
 func (c *browserNEClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
-	_ = c.AuthenticateWithContext(ctx)
+	if err := c.AuthenticateWithContext(ctx); err != nil {
+		return nil, err
+	}
+
 	return new(credentials.OidcIdentityToken), nil
 }
 
