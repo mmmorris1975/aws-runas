@@ -82,15 +82,23 @@ func (c *oneloginClient) AuthenticateWithContext(ctx context.Context) error {
 
 // Identity returns the identity information for the user.
 func (c *oneloginClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *oneloginClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return c.identity(oneloginIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *oneloginClient) Roles(...string) (*identity.Roles, error) {
+func (c *oneloginClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *oneloginClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -113,7 +121,7 @@ func (c *oneloginClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	}
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
-	vals, err := c.oauthAuthorize(fmt.Sprintf("%s/auth", c.authUrl.String()), authzQS, true)
+	vals, err := c.oauthAuthorize(ctx, fmt.Sprintf("%s/auth", c.authUrl.String()), authzQS, true)
 	if err != nil {
 		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
@@ -125,7 +133,7 @@ func (c *oneloginClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}
@@ -234,8 +242,11 @@ func (c *oneloginClient) apiAccessToken() error {
 	u := fmt.Sprintf("%s/auth/oauth2/v2/token", c.apiBaseUrl)
 	body := strings.NewReader(`{"grant_type": "client_credentials"}`)
 
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancelFunc()
+
 	var req *http.Request
-	req, err = http.NewRequestWithContext(context.Background(), http.MethodPost, u, body)
+	req, err = http.NewRequestWithContext(ctx, http.MethodPost, u, body)
 	if err != nil {
 		return err
 	}
@@ -318,7 +329,7 @@ func (c *oneloginClient) auth(ctx context.Context) error {
 		}
 	}
 
-	return c.exchangeToken(sessionToken)
+	return c.exchangeToken(ctx, sessionToken)
 }
 
 //nolint:gocognit // won't simplify
@@ -410,34 +421,38 @@ func (c *oneloginClient) activeMfaFactors(ctx context.Context, userId int) ([]*o
 
 func (c *oneloginClient) handlePushMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
 	req.DeviceId = factor.Id
+	fmt.Println("Waiting for Push MFA confirmation...")
 
-	r, err := c.apiPostReq(ctx, url, req)
-	if err != nil {
-		return "", err
-	}
+	for {
+		r, err := c.apiPostReq(ctx, url, req)
+		if err != nil {
+			return "", err
+		}
 
-	body, err := verifier.send(r)
-	if err != nil {
-		return "", err
-	}
+		body, err := verifier.send(r)
+		if err != nil {
+			return "", err
+		}
 
-	result, err := verifier.parse(body)
-	if err != nil {
-		return "", err
-	}
+		result, err := verifier.parse(body)
+		if err != nil {
+			return "", err
+		}
 
-	if result.token != "" {
-		return result.token, nil
-	}
+		if result.token != "" {
+			return result.token, nil
+		}
 
-	if result.pending {
-		fmt.Println("Waiting for Push MFA confirmation...")
-		time.Sleep(1250 * time.Millisecond)
+		if !result.pending {
+			return "", errors.New("unexpected push MFA response")
+		}
+
 		req.DoNotNotify = true
-		return c.handlePushMfa(ctx, url, req, factor, verifier)
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return "", err
+		}
+		fmt.Print(".")
 	}
-
-	return "", errors.New("unexpected push MFA response")
 }
 
 func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *oneloginVerifyFactorRequest, factor *oneloginMfaFactor, verifier mfaVerifier) (string, error) {
@@ -490,13 +505,13 @@ func (c *oneloginClient) handleCodeMfa(ctx context.Context, url string, req *one
 	return "", errors.New("unexpected code MFA response")
 }
 
-func (c *oneloginClient) exchangeToken(st string) error {
+func (c *oneloginClient) exchangeToken(ctx context.Context, st string) error {
 	// ref: https://developers.onelogin.com/api-docs/1/login-page/create-session-via-token
 	u := fmt.Sprintf("%s://%s/session_via_api_token", c.authUrl.Scheme, c.authUrl.Host)
 	body := url.Values{}
 	body.Set("session_token", st)
 
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodPost, u, strings.NewReader(body.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, u, strings.NewReader(body.Encode()))
 	if err != nil {
 		return err
 	}

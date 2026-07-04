@@ -14,9 +14,13 @@
 package main
 
 import (
-	"github.com/mmmorris1975/aws-runas/cli"
+	"context"
 	"log"
 	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/mmmorris1975/aws-runas/cli"
 )
 
 // Version is managed at compile-time.
@@ -24,7 +28,12 @@ var Version = "0.0.0"
 
 func main() {
 	cli.App.Version = Version
-	if err := cli.App.Run(os.Args); err != nil {
-		log.Fatal(err)
+
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	if err := cli.App.RunContext(ctx, os.Args); err != nil {
+		stop()
+		log.Fatal(err) //nolint:gocritic // behavior is correct, linter dislikes log.Fatal with a defer anywhere around it
 	}
 }

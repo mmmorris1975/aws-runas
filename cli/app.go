@@ -14,7 +14,14 @@
 package cli
 
 import (
+	"context"
 	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/client"
@@ -23,11 +30,6 @@ import (
 	"github.com/mmmorris1975/aws-runas/metadata"
 	"github.com/mmmorris1975/simple-logger/logger"
 	"github.com/urfave/cli/v2"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"runtime"
-	"strings"
 )
 
 var (
@@ -147,13 +149,16 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
+	cntx, cancelFunc := context.WithCancel(ctx.Context)
+	defer cancelFunc()
+
 	if !ctx.Args().Present() && len(profile) < 1 {
 		log.Errorln("nothing to do!")
 		cli.ShowAppHelpAndExit(ctx, 1)
 	}
 
 	var c client.AwsClient
-	c, err = clientFactory.Get(cfg)
+	c, err = clientFactory.Get(cntx, cfg)
 	if err != nil {
 		return err
 	}
@@ -166,7 +171,7 @@ func execCmd(ctx *cli.Context) error {
 	// them.  We get the added benefit of having any external IdP authentication handled before
 	// possibly heading down the path of starting the ecs credential endpoint
 	var creds *credentials.Credentials
-	creds, err = c.Credentials()
+	creds, err = c.CredentialsWithContext(cntx)
 	if err != nil {
 		return err
 	}

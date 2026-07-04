@@ -57,7 +57,11 @@ type mockIdent struct {
 	sendError bool
 }
 
-func (m *mockIdent) Roles(...string) (*identity.Roles, error) {
+func (m *mockIdent) Roles(roles ...string) (*identity.Roles, error) {
+	return m.RolesWithContext(context.Background(), roles...)
+}
+
+func (m *mockIdent) RolesWithContext(ctx context.Context, r ...string) (*identity.Roles, error) {
 	if m.sendError {
 		return nil, errors.New("error: Roles()")
 	}
@@ -67,6 +71,10 @@ func (m *mockIdent) Roles(...string) (*identity.Roles, error) {
 }
 
 func (m *mockIdent) Identity() (*identity.Identity, error) {
+	return m.IdentityWithContext(context.Background())
+}
+
+func (m *mockIdent) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	if m.sendError {
 		return nil, errors.New("error: Identity()")
 	}

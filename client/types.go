@@ -51,7 +51,9 @@ type CredentialClient interface {
 // or identities managed by an external identity source.
 type IdentityClient interface {
 	Identity() (*identity.Identity, error)
+	IdentityWithContext(ctx context.Context) (*identity.Identity, error)
 	Roles() (*identity.Roles, error)
+	RolesWithContext(ctx context.Context) (*identity.Roles, error)
 }
 
 // AwsClient is a super-interface which combines the functions of the CredentialClient and IdentityClient to provide a

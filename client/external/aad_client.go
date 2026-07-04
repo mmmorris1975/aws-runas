@@ -104,7 +104,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		// response (triggering the error), try submitting the result before returning an error.
 		c.Logger.Debugf("parseResponseNoClose() err: %v, attempting to directly submit response", err)
 		_, _ = reader.Seek(0, io.SeekStart)
-		_, err = c.submitResponse(res.Request.URL, io.NopCloser(reader))
+		_, err = c.submitResponse(ctx, res.Request.URL, io.NopCloser(reader))
 		return err
 	}
 
@@ -134,20 +134,28 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// The OIDC ID token probably isn't sufficient for use with the IdentityToken* methods, since
 	// there aren't any useful claims in the token, afaict just basic profile info.
 	// However, this should be sufficient to say authentication is complete, if successful.
-	_, err = c.submitResponse(res.Request.URL, res.Body)
+	_, err = c.submitResponse(ctx, res.Request.URL, res.Body)
 	return err
 }
 
 func (c *aadClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *aadClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return c.identity(aadIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *aadClient) Roles(...string) (*identity.Roles, error) {
+func (c *aadClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *aadClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -161,7 +169,7 @@ func (c *aadClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
 }
 
 // todo - this is unverified.
-func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *aadClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	oauthUrlBase := fmt.Sprintf("https://login.microsoftonline.com/%s/oauth2/v2.0", c.tenantId)
 
 	pkce, err := newPkceCode()
@@ -171,7 +179,7 @@ func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.Oidc
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
 	var vals url.Values
-	vals, err = c.oauthAuthorize(fmt.Sprintf("%s/authorize", oauthUrlBase), authzQS, false)
+	vals, err = c.oauthAuthorize(ctx, fmt.Sprintf("%s/authorize", oauthUrlBase), authzQS, false)
 	if err != nil {
 		// reauth?
 		return nil, err
@@ -181,7 +189,7 @@ func (c *aadClient) IdentityTokenWithContext(context.Context) (*credentials.Oidc
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/token", oauthUrlBase), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/token", oauthUrlBase), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}
@@ -240,7 +248,7 @@ func (c *aadClient) parseAppId() error {
 	return nil
 }
 
-func (c *aadClient) submitResponse(u *url.URL, r io.ReadCloser) (*http.Response, error) {
+func (c *aadClient) submitResponse(ctx context.Context, u *url.URL, r io.ReadCloser) (*http.Response, error) {
 	defer r.Close()
 
 	doc, err := goquery.NewDocumentFromReader(r)
@@ -281,7 +289,7 @@ func (c *aadClient) submitResponse(u *url.URL, r io.ReadCloser) (*http.Response,
 		vals.Set(name, val)
 	})
 
-	req, _ := newHttpRequest(context.Background(), http.MethodPost, submitUrl.String())
+	req, _ := newHttpRequest(ctx, http.MethodPost, submitUrl.String())
 	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
@@ -304,7 +312,7 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 
 	// a bold assumption that everything down this path is not nil
 	if u := authRes.CredentialTypeResult.Credentials.FederationRedirectUrl; len(u) > 0 {
-		res, err = c.doFederatedAuth(u)
+		res, err = c.doFederatedAuth(ctx, u)
 		if err != nil {
 			return err
 		}
@@ -337,7 +345,7 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 	return c.checkMfa(ctx, authRes)
 }
 
-func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err error) {
+func (c *aadClient) doFederatedAuth(ctx context.Context, fedUrl string) (res *http.Response, err error) {
 	cfg := AuthenticationClientConfig{
 		CredentialInputProvider: c.CredentialInputProvider,
 		MfaTokenProvider:        c.MfaTokenProvider,
@@ -354,17 +362,17 @@ func (c *aadClient) doFederatedAuth(fedUrl string) (res *http.Response, err erro
 
 	// federation url must be one of the aws-runas supported external clients
 	sc := MustGetSamlClient("", fedUrl, cfg)
-	if err = sc.Authenticate(); err != nil {
+	if err = sc.AuthenticateWithContext(ctx); err != nil {
 		return nil, err
 	}
 
-	req, _ := newHttpRequest(context.Background(), http.MethodGet, fedUrl)
+	req, _ := newHttpRequest(ctx, http.MethodGet, fedUrl)
 	res, err = checkResponseError(c.httpClient.Do(req.Request))
 	if err != nil {
 		return nil, err
 	}
 
-	return c.submitResponse(res.Request.URL, res.Body)
+	return c.submitResponse(ctx, res.Request.URL, res.Body)
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
@@ -382,7 +390,7 @@ func (c *aadClient) checkMfa(ctx context.Context, authRes *aadAuthResponse) erro
 
 		return parseResponse(res.Body, authRes)
 	} else if len(authRes.UserProofs) > 0 {
-		res, err = c.handleMfa(authRes)
+		res, err = c.handleMfa(ctx, authRes)
 		if err != nil {
 			return err
 		}
@@ -393,7 +401,7 @@ func (c *aadClient) checkMfa(ctx context.Context, authRes *aadAuthResponse) erro
 	return nil
 }
 
-func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) {
+func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*http.Response, error) {
 	factor, err := c.findFactor(authRes.UserProofs)
 	if err != nil {
 		return nil, err
@@ -407,7 +415,7 @@ func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) 
 	}
 
 	mfaRes := new(aadMfaResponse)
-	if err = c.submitJson(authRes.UrlBeginAuth, mfaReq, mfaRes); err != nil {
+	if err = c.submitJson(ctx, authRes.UrlBeginAuth, mfaReq, mfaRes); err != nil {
 		return nil, err
 	}
 
@@ -427,10 +435,10 @@ func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) 
 
 	switch c.MfaType {
 	case MfaTypePush:
-		fmt.Print("Waiting for Push MFA ")
-		mfaRes, err = c.handlePushMfa(authRes.UrlEndAuth, mfaReq, wait)
+		fmt.Println("Waiting for Push MFA confirmation...")
+		mfaRes, err = c.handlePushMfa(ctx, authRes.UrlEndAuth, mfaReq, wait)
 	case MfaTypeCode:
-		mfaRes, err = c.handleCodeMfa(authRes.UrlEndAuth, mfaReq, wait)
+		mfaRes, err = c.handleCodeMfa(ctx, authRes.UrlEndAuth, mfaReq, wait)
 	}
 
 	if err != nil {
@@ -446,7 +454,7 @@ func (c *aadClient) handleMfa(authRes *aadAuthResponse) (*http.Response, error) 
 	vals.Set("request", mfaRes.Ctx)
 	vals.Set("login", c.Username)
 
-	req, _ := newHttpRequest(context.Background(), http.MethodPost, authRes.LoginUrl(nil).String())
+	req, _ := newHttpRequest(ctx, http.MethodPost, authRes.LoginUrl(nil).String())
 	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
 }
 
@@ -505,53 +513,67 @@ func (c *aadClient) findFactor(mfaCfg []aadUserProof) (aadUserProof, error) {
 	return factors[0], nil
 }
 
-func (c *aadClient) handleCodeMfa(mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
-	if len(c.MfaTokenCode) < 1 {
-		if c.MfaTokenProvider != nil {
-			t, err := c.MfaTokenProvider()
-			if err != nil {
-				return nil, err
-			}
-			c.MfaTokenCode = t
-		} else {
-			return nil, errMfaNotConfigured
+func (c *aadClient) handleCodeMfa(ctx context.Context, mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
+	for {
+		if err := c.ensureMfaTokenCode(); err != nil {
+			return nil, err
 		}
-	}
 
-	mfaReq.AdditionalAuthData = c.MfaTokenCode
+		mfaReq.AdditionalAuthData = c.MfaTokenCode
 
-	res, err := c.sendMfaReply(mfaUrl, mfaReq)
-	if err != nil {
-		return nil, err
-	}
+		res, err := c.sendMfaReply(ctx, mfaUrl, mfaReq)
+		if err != nil {
+			return nil, err
+		}
 
-	if res.Retry {
+		if !res.Retry {
+			return res, nil
+		}
+
 		c.MfaTokenCode = ""
-		time.Sleep(wait)
-		return c.handleCodeMfa(mfaUrl, mfaReq, wait)
-	}
-
-	return res, nil
-}
-
-func (c *aadClient) handlePushMfa(mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
-	res, err := c.sendMfaReply(mfaUrl, mfaReq)
-	if err != nil {
-		return nil, err
-	}
-
-	if res.Retry {
-		time.Sleep(wait)
+		if err = waitOrCancel(ctx, wait); err != nil {
+			return nil, err
+		}
 		fmt.Print(".")
-		return c.handlePushMfa(mfaUrl, mfaReq, wait)
 	}
-
-	return res, nil
 }
 
-func (c *aadClient) sendMfaReply(mfaUrl string, mfaReq aadMfaRequest) (*aadMfaResponse, error) {
+func (c *aadClient) ensureMfaTokenCode() error {
+	if len(c.MfaTokenCode) > 0 {
+		return nil
+	}
+	if c.MfaTokenProvider == nil {
+		return errMfaNotConfigured
+	}
+	t, err := c.MfaTokenProvider()
+	if err != nil {
+		return err
+	}
+	c.MfaTokenCode = t
+	return nil
+}
+
+func (c *aadClient) handlePushMfa(ctx context.Context, mfaUrl string, mfaReq aadMfaRequest, wait time.Duration) (*aadMfaResponse, error) {
+	for {
+		res, err := c.sendMfaReply(ctx, mfaUrl, mfaReq)
+		if err != nil {
+			return nil, err
+		}
+
+		if !res.Retry {
+			return res, nil
+		}
+
+		if err = waitOrCancel(ctx, wait); err != nil {
+			return nil, err
+		}
+		fmt.Print(".")
+	}
+}
+
+func (c *aadClient) sendMfaReply(ctx context.Context, mfaUrl string, mfaReq aadMfaRequest) (*aadMfaResponse, error) {
 	mfaRes := new(aadMfaResponse)
-	if err := c.submitJson(mfaUrl, mfaReq, mfaRes); err != nil {
+	if err := c.submitJson(ctx, mfaUrl, mfaReq, mfaRes); err != nil {
 		return nil, err
 	}
 
@@ -564,13 +586,13 @@ func (c *aadClient) sendMfaReply(mfaUrl string, mfaReq aadMfaRequest) (*aadMfaRe
 	return mfaRes, nil
 }
 
-func (c *aadClient) submitJson(submitUrl string, inData any, outData any) error {
+func (c *aadClient) submitJson(ctx context.Context, submitUrl string, inData any, outData any) error {
 	mfaJson, err := json.Marshal(inData)
 	if err != nil {
 		return err
 	}
 
-	req, _ := newHttpRequest(context.Background(), http.MethodPost, submitUrl)
+	req, _ := newHttpRequest(ctx, http.MethodPost, submitUrl)
 	req.withContentType(contentTypeJson).withBody(bytes.NewReader(mfaJson))
 
 	var res *http.Response

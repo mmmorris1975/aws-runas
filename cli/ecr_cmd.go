@@ -14,6 +14,8 @@
 package cli
 
 import (
+	"context"
+
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/credentials"
@@ -33,7 +35,10 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	c, err := clientFactory.Get(cfg)
+	cntx, cancelFunc := context.WithCancel(ctx.Context)
+	defer cancelFunc()
+
+	c, err := clientFactory.Get(cntx, cfg)
 	if err != nil {
 		return "", nil, err
 	}
@@ -43,7 +48,7 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 	}
 
 	var creds *credentials.Credentials
-	creds, err = c.Credentials()
+	creds, err = c.CredentialsWithContext(cntx)
 	if err != nil {
 		return "", nil, err
 	}

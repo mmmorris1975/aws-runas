@@ -20,13 +20,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/mmmorris1975/aws-runas/identity"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/mmmorris1975/aws-runas/identity"
 )
 
 const (
@@ -85,15 +86,23 @@ func (c *forgerockClient) AuthenticateWithContext(ctx context.Context) error {
 
 // Identity returns the identity information for the user.
 func (c *forgerockClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *forgerockClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return c.identity(forgerockIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *forgerockClient) Roles(...string) (*identity.Roles, error) {
+func (c *forgerockClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *forgerockClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -109,14 +118,14 @@ func (c *forgerockClient) IdentityToken() (*credentials.OidcIdentityToken, error
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Forgerock.  The Authenticate() (or AuthenticateWithContext())
 // methods must be called before using this method, otherwise an error will be returned.
-func (c *forgerockClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
+func (c *forgerockClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
 	pkce, err := newPkceCode()
 	if err != nil {
 		return nil, err
 	}
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 
-	vals, err := c.oauthAuthorize(fmt.Sprintf("%s/authorize", c.authUrl.String()), authzQS, false)
+	vals, err := c.oauthAuthorize(ctx, fmt.Sprintf("%s/authorize", c.authUrl.String()), authzQS, false)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +134,7 @@ func (c *forgerockClient) IdentityTokenWithContext(context.Context) (*credential
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/access_token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/access_token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}
@@ -252,9 +261,12 @@ func (c *forgerockClient) authMfaPush(ctx context.Context, u string) error {
 		return err
 	}
 
-	fmt.Println("Waiting for Push MFA confirmation")
+	fmt.Println("Waiting for Push MFA confirmation...")
 	for {
-		time.Sleep(1250 * time.Millisecond)
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return err
+		}
+		fmt.Print(".")
 
 		req, err := frAuthReq(ctx, u, bytes.NewReader(body))
 		if err != nil {

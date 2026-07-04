@@ -47,12 +47,12 @@ var mfaCmd = &cli.Command{
 		}
 
 		// we know identity will be an IAM principal here
-		id, err := getIdentity(cfg)
+		id, err := getIdentity(ctx.Context, cfg)
 		if err != nil {
 			return err
 		}
 
-		s, err := awsconfig.LoadDefaultConfig(context.Background(),
+		s, err := awsconfig.LoadDefaultConfig(ctx.Context,
 			awsconfig.WithLogger(logFunc),
 			awsconfig.WithRegion(cfg.Region),
 			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
@@ -60,7 +60,7 @@ var mfaCmd = &cli.Command{
 		if err != nil {
 			return err
 		}
-		return listMfa(iam.NewFromConfig(s), id)
+		return listMfa(ctx.Context, iam.NewFromConfig(s), id)
 	},
 }
 
@@ -73,19 +73,19 @@ func getSharedProfile(cfg *config.AwsConfig) string {
 }
 
 // mfa command-specific? really just to wrap multiple error paths to a single return value.
-func getIdentity(cfg *config.AwsConfig) (*identity.Identity, error) {
-	c, err := clientFactory.Get(cfg)
+func getIdentity(ctx context.Context, cfg *config.AwsConfig) (*identity.Identity, error) {
+	c, err := clientFactory.Get(ctx, cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	return c.Identity()
+	return c.IdentityWithContext(ctx)
 }
 
 // mfa command-specific, but use a distinct function so it's testable with a mock iam.ListMFADevicesAPIClient.
-func listMfa(i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
+func listMfa(ctx context.Context, i iam.ListMFADevicesAPIClient, id *identity.Identity) error {
 	if id.IdentityType == "user" {
-		res, err := i.ListMFADevices(context.Background(), new(iam.ListMFADevicesInput))
+		res, err := i.ListMFADevices(ctx, new(iam.ListMFADevicesInput))
 		if err != nil {
 			return err
 		}

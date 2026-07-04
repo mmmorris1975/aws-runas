@@ -388,7 +388,7 @@ func TestMetadataCredentialService_refreshHandler(t *testing.T) {
 
 	t.Run("good", func(t *testing.T) {
 		cfg, _ := mcs.configResolver.Config("mock")
-		c, _ := mcs.clientFactory.Get(cfg)
+		c, _ := mcs.clientFactory.Get(t.Context(), cfg)
 		mcs.awsClient = c
 
 		rec := httptest.NewRecorder()
@@ -928,10 +928,18 @@ func (m *mockConfigResolver) Credentials(string) (*config.AwsCredentials, error)
 type mockAwsClient bool
 
 func (m *mockAwsClient) Identity() (*identity.Identity, error) {
+	return m.IdentityWithContext(context.Background())
+}
+
+func (m *mockAwsClient) IdentityWithContext(context.Context) (*identity.Identity, error) {
 	return new(identity.Identity), nil
 }
 
 func (m *mockAwsClient) Roles() (*identity.Roles, error) {
+	return m.RolesWithContext(context.Background())
+}
+
+func (m *mockAwsClient) RolesWithContext(context.Context) (*identity.Roles, error) {
 	return new(identity.Roles), nil
 }
 

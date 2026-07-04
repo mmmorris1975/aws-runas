@@ -26,6 +26,10 @@ import (
 type mockAwsClient bool
 
 func (c *mockAwsClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *mockAwsClient) IdentityWithContext(context.Context) (*identity.Identity, error) {
 	if *c {
 		return nil, errors.New("err")
 	}
@@ -33,6 +37,10 @@ func (c *mockAwsClient) Identity() (*identity.Identity, error) {
 }
 
 func (c *mockAwsClient) Roles() (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background())
+}
+
+func (c *mockAwsClient) RolesWithContext(context.Context) (*identity.Roles, error) {
 	if *c {
 		return nil, errors.New("err")
 	}

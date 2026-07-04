@@ -156,6 +156,10 @@ type mockWebClient struct {
 }
 
 func (c *mockWebClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *mockWebClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	if c.sendError {
 		return nil, errors.New("error: Identity()")
 	}
@@ -167,7 +171,11 @@ func (c *mockWebClient) Identity() (*identity.Identity, error) {
 	}, nil
 }
 
-func (c *mockWebClient) Roles(...string) (*identity.Roles, error) {
+func (c *mockWebClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *mockWebClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.sendError {
 		return nil, errors.New("error: Roles()")
 	}

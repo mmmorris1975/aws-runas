@@ -57,7 +57,7 @@ func NewClientFactory(res config.Resolver, opts *Options) *Factory {
 // If neither of those is set, it will check the value of the RoleArn config attribute, and if set, will return an
 // Assume Role client using IAM credentials. If non of the above situations apply, a client to fetch Session Token
 // credentials using IAM credentials will be returned.
-func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
+func (f *Factory) Get(ctx context.Context, cfg *config.AwsConfig) (AwsClient, error) {
 	if cfg == nil {
 		return nil, errors.New("invalid configuration")
 	}
@@ -101,7 +101,7 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.samlClient(cfg, creds, opts...)
+		return f.samlClient(ctx, cfg, creds, opts...)
 	}
 
 	if len(cfg.WebIdentityUrl) > 0 {
@@ -112,18 +112,18 @@ func (f *Factory) Get(cfg *config.AwsConfig) (AwsClient, error) {
 		}
 		creds.MergeIn(f.options.CommandCredentials)
 
-		return f.webClient(cfg, creds, opts...)
+		return f.webClient(ctx, cfg, creds, opts...)
 	}
 
 	if len(cfg.RoleArn) > 0 {
-		return f.roleClient(cfg, opts...)
+		return f.roleClient(ctx, cfg, opts...)
 	}
 
-	return f.sessionClient(cfg, opts...)
+	return f.sessionClient(ctx, cfg, opts...)
 }
 
 //nolint:funlen
-func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
+func (f *Factory) samlClient(ctx context.Context, cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring SAML client")
 
@@ -152,7 +152,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 
 	// unset opts.Profile, since there's nothing we need it for in the config/credentials files past here
 	opts = append(opts, awsconfig.WithSharedConfigProfile(""))
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -176,7 +176,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
 		// means we should have valid AWS credentials loaded (we don't need the value here)
 		if len(cfg.RoleSessionName) < 2 {
-			_, err = baseCl.Credentials()
+			_, err = baseCl.CredentialsWithContext(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -207,7 +207,7 @@ func (f *Factory) samlClient(cfg *config.AwsConfig, creds *config.AwsCredentials
 }
 
 //nolint:funlen
-func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
+func (f *Factory) webClient(ctx context.Context, cfg *config.AwsConfig, creds *config.AwsCredentials, opts ...func(*awsconfig.LoadOptions) error) (AwsClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Web Identity client")
 
@@ -237,7 +237,7 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 
 	// unset opts.Profile, since there's nothing we need it for in the config/credentials files past here
 	opts = append(opts, awsconfig.WithSharedConfigProfile(""))
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -261,7 +261,7 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 		// sts.GetCallerIdentity() to find the user name associated with the SAML client, which
 		// means we should have valid AWS credentials loaded (we don't need the value here)
 		if len(cfg.RoleSessionName) < 2 {
-			_, err = baseCl.Credentials()
+			_, err = baseCl.CredentialsWithContext(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -291,7 +291,7 @@ func (f *Factory) webClient(cfg *config.AwsConfig, creds *config.AwsCredentials,
 	return cl, nil
 }
 
-func (f *Factory) roleClient(cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*assumeRoleClient, error) {
+func (f *Factory) roleClient(ctx context.Context, cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*assumeRoleClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Assume Role client")
 
@@ -318,7 +318,7 @@ func (f *Factory) roleClient(cfg *config.AwsConfig, opts ...func(*awsconfig.Load
 		opts = append(opts, awsconfig.WithSharedConfigProfile(cfg.SrcProfile))
 	}
 
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -330,7 +330,7 @@ func (f *Factory) roleClient(cfg *config.AwsConfig, opts ...func(*awsconfig.Load
 
 		// configure role client to use session credentials to fetch role credentials and identity
 		var sc *sessionTokenClient
-		sc, err = f.sessionClient(cfg, opts...)
+		sc, err = f.sessionClient(ctx, cfg, opts...)
 		if err != nil {
 			return nil, err
 		}
@@ -344,7 +344,7 @@ func (f *Factory) roleClient(cfg *config.AwsConfig, opts ...func(*awsconfig.Load
 	return NewAssumeRoleClient(awsCfg, roleCfg), nil
 }
 
-func (f *Factory) sessionClient(cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*sessionTokenClient, error) {
+func (f *Factory) sessionClient(ctx context.Context, cfg *config.AwsConfig, opts ...func(*awsconfig.LoadOptions) error) (*sessionTokenClient, error) {
 	logger := f.options.Logger
 	logger.Debugf("configuring Session Token client")
 
@@ -365,7 +365,7 @@ func (f *Factory) sessionClient(cfg *config.AwsConfig, opts ...func(*awsconfig.L
 		sesCfg.Cache = cache.NewFileCredentialCache(cacheFile)
 	}
 
-	awsCfg, err := awsconfig.LoadDefaultConfig(context.Background(), opts...)
+	awsCfg, err := awsconfig.LoadDefaultConfig(ctx, opts...)
 	if err != nil {
 		return nil, err
 	}

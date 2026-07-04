@@ -60,6 +60,10 @@ func NewBrowserClient(url string) (*browserClient, error) {
 }
 
 func (c *browserClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *browserClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	if c.baseClient == nil {
 		return nil, errNilClient
 	}
@@ -72,7 +76,7 @@ func (c *browserClient) Authenticate() error {
 }
 
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
-func (c *browserClient) AuthenticateWithContext(context.Context) error {
+func (c *browserClient) AuthenticateWithContext(ctx context.Context) error {
 	if c.baseClient == nil || c.Logger == nil {
 		return errNilClient
 	}
@@ -101,7 +105,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 
 	c.Logger.Debugf("Starting a browser to authenticate...")
 
-	taskCtx, cancel, err := c.startBrowser(profileDir, execPath)
+	taskCtx, cancel, err := c.startBrowser(ctx, profileDir, execPath)
 	if err != nil {
 		return err
 	}
@@ -148,7 +152,7 @@ func (c *browserClient) AuthenticateWithContext(context.Context) error {
 
 // startBrowser cleans up any stale Chrome state, spawns Chrome via chromedp's ExecAllocator,
 // and returns a task context. Chrome is closed when cancel is called.
-func (c *browserClient) startBrowser(profileDir, execPath string) (context.Context, context.CancelFunc, error) {
+func (c *browserClient) startBrowser(ctx context.Context, profileDir, execPath string) (context.Context, context.CancelFunc, error) {
 	if err := os.MkdirAll(profileDir, 0700); err != nil {
 		return nil, nil, fmt.Errorf("create browser profile dir: %w", err)
 	}
@@ -173,7 +177,7 @@ func (c *browserClient) startBrowser(profileDir, execPath string) (context.Conte
 		chromedp.NoDefaultBrowserCheck,
 	)
 
-	allocCtx, allocCancel := chromedp.NewExecAllocator(context.Background(), opts...)
+	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
 	taskCtx, _ := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	cancel := func() {
 		pid := chromePIDFromLock(profileDir)
@@ -197,7 +201,7 @@ func (c *browserClient) startBrowser(profileDir, execPath string) (context.Conte
 	return taskCtx, cancel, nil
 }
 
-// persistSessionCookies converts session cookies (Expires == -1) to persistent cookies with a 24-hour
+// persistSessionCookies converts session cookies (Expires == -1) to persistent cookies with a 12-hour
 // expiry so they survive the graceful browser shutdown. Without this, Chrome's normal exit clears
 // all session cookies, forcing MFA and KMSI prompts on every invocation.
 func persistSessionCookies(ctx context.Context) {
@@ -209,7 +213,7 @@ func persistSessionCookies(ctx context.Context) {
 	})); err != nil || len(all) == 0 {
 		return
 	}
-	expires := cdp.TimeSinceEpoch(time.Now().Add(24 * time.Hour))
+	expires := cdp.TimeSinceEpoch(time.Now().Add(12 * time.Hour))
 	_ = chromedp.Run(ctx, chromedp.ActionFunc(func(ctx context.Context) error {
 		for _, c := range all {
 			if c.Expires > 0 {
@@ -326,10 +330,14 @@ func (c *browserClient) targetListener(ev any, once *sync.Once) {
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *browserClient) Roles(...string) (*identity.Roles, error) {
+func (c *browserClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *browserClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}

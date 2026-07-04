@@ -76,26 +76,34 @@ func (c *keycloakClient) AuthenticateWithContext(ctx context.Context) error {
 
 // Identity returns the identity information for the user.
 func (c *keycloakClient) Identity() (*identity.Identity, error) {
-	return c.identity(keycloakIdentityProvider), nil
+	return c.IdentityWithContext(context.Background())
 }
 
-// IdentityToken calls IdentityTokenWithContext with a background context.
-func (c *keycloakClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
-	return c.IdentityTokenWithContext(context.Background())
+func (c *keycloakClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
+	return c.identity(keycloakIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *keycloakClient) Roles(...string) (*identity.Roles, error) {
+func (c *keycloakClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *keycloakClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	return c.roles()
+}
+
+// IdentityToken calls IdentityTokenWithContext with a background context.
+func (c *keycloakClient) IdentityToken() (*credentials.OidcIdentityToken, error) {
+	return c.IdentityTokenWithContext(context.Background())
 }
 
 // IdentityTokenWithContext retrieves the OIDC Identity Token from Keycloak. This method will automatically prompt for
@@ -110,12 +118,12 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 	authzQS := c.pkceAuthzRequest(pkce.Challenge())
 	authUrl := fmt.Sprintf("%s/protocol/openid-connect/auth", c.authUrl.String())
 
-	vals, err := c.oauthAuthorize(authUrl, authzQS, false)
+	vals, err := c.oauthAuthorize(ctx, authUrl, authzQS, false)
 	if err != nil {
 		// an error here means we might need to (re-)authenticate
 		if strings.Contains(err.Error(), "status 200") {
 			u := fmt.Sprintf("%s?%s", authUrl, authzQS.Encode())
-			if err = c.formAuth(u); err != nil {
+			if err = c.formAuth(ctx, u); err != nil {
 				return nil, err
 			}
 			return c.IdentityTokenWithContext(ctx)
@@ -127,7 +135,7 @@ func (c *keycloakClient) IdentityTokenWithContext(ctx context.Context) (*credent
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/protocol/openid-connect/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/protocol/openid-connect/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +158,7 @@ func (c *keycloakClient) SamlAssertionWithContext(ctx context.Context) (*credent
 	}
 
 	if c.saml == nil || len(*c.saml) < 1 {
-		if err := c.formAuth(c.authUrl.String()); err != nil {
+		if err := c.formAuth(ctx, c.authUrl.String()); err != nil {
 			return nil, err
 		}
 		return c.SamlAssertionWithContext(ctx)
@@ -170,19 +178,19 @@ func (c *keycloakClient) auth(ctx context.Context) error {
 	return err
 }
 
-func (c *keycloakClient) formAuth(authUrl string) error {
+func (c *keycloakClient) formAuth(ctx context.Context, authUrl string) error {
 	if err := c.gatherCredentials(); err != nil {
 		return err
 	}
 
-	submitUrl, creds, err := c.parseForm(authUrl)
+	submitUrl, creds, err := c.parseForm(ctx, authUrl)
 	if err != nil {
 		return err
 	}
 
 	var req *httpRequest
 	var res *http.Response
-	req, err = newHttpRequest(context.Background(), http.MethodPost, submitUrl.String())
+	req, err = newHttpRequest(ctx, http.MethodPost, submitUrl.String())
 	if err != nil {
 		return err
 	}
@@ -207,8 +215,8 @@ func (c *keycloakClient) formAuth(authUrl string) error {
 	return c.handle200(body)
 }
 
-func (c *keycloakClient) parseForm(authUrl string) (*url.URL, url.Values, error) {
-	req, err := newHttpRequest(context.Background(), http.MethodGet, authUrl)
+func (c *keycloakClient) parseForm(ctx context.Context, authUrl string) (*url.URL, url.Values, error) {
+	req, err := newHttpRequest(ctx, http.MethodGet, authUrl)
 	if err != nil {
 		return nil, url.Values{}, err
 	}

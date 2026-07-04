@@ -44,18 +44,18 @@ var rolesCmd = &cli.Command{
 			return errors.New("detected Web Identity profile, only IAM and SAML profiles support role enumeration")
 		}
 
-		c, err := clientFactory.Get(cfg)
+		c, err := clientFactory.Get(ctx.Context, cfg)
 		if err != nil {
 			return err
 		}
 
-		roles, err := c.Roles()
+		roles, err := c.RolesWithContext(ctx.Context)
 		if err != nil {
 			return err
 		}
 
 		// Moved identity call after roles so that username is populated from SAML assertion if available
-		id, err := c.Identity()
+		id, err := c.IdentityWithContext(ctx.Context)
 		if err != nil {
 			return err
 		}

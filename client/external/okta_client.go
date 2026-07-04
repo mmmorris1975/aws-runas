@@ -75,15 +75,23 @@ func (c *oktaClient) AuthenticateWithContext(ctx context.Context) error {
 
 // Identity returns the identity information for the user.
 func (c *oktaClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *oktaClient) IdentityWithContext(ctx context.Context) (*identity.Identity, error) {
 	return c.identity(oktaIdentityProvider), nil
 }
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *oktaClient) Roles(...string) (*identity.Roles, error) {
+func (c *oktaClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *oktaClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -111,7 +119,7 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 	}
 
 	var vals url.Values
-	vals, err = c.oauthAuthorize(fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
+	vals, err = c.oauthAuthorize(ctx, fmt.Sprintf("%s/v1/authorize", c.authUrl.String()), authzQS, false)
 	if err != nil {
 		return nil, err
 	}
@@ -121,14 +129,14 @@ func (c *oktaClient) IdentityTokenWithContext(ctx context.Context) (*credentials
 		if err = c.AuthenticateWithContext(ctx); err != nil {
 			return nil, err
 		}
-		return c.IdentityToken()
+		return c.IdentityTokenWithContext(ctx)
 	}
 
 	if vals.Get("state") != authzQS.Get("state") {
 		return nil, errOauthStateMismatch
 	}
 
-	token, err := c.oauthToken(fmt.Sprintf("%s/v1/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
+	token, err := c.oauthToken(ctx, fmt.Sprintf("%s/v1/token", c.authUrl.String()), vals.Get("code"), pkce.Verifier())
 	if err != nil {
 		return nil, err
 	}
@@ -463,17 +471,16 @@ func (c *oktaClient) fetchDuoCookie(ctx context.Context, host, sid, txid string)
 		return "", err
 	}
 
-OUTER:
-	for {
-		switch result.Response.Result {
-		case "SUCCESS":
-			break OUTER
-		case "FAILURE":
-			return "", errors.New("failed to complete multi-factor authentication")
-		default:
-			time.Sleep(1 * time.Second)
-			return c.fetchDuoCookie(ctx, host, sid, txid)
+	switch result.Response.Result {
+	case "SUCCESS":
+		// fall through to cookie retrieval
+	case "FAILURE":
+		return "", errors.New("failed to complete multi-factor authentication")
+	default:
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return "", err
 		}
+		return c.fetchDuoCookie(ctx, host, sid, txid)
 	}
 
 	if len(result.Response.Sid) > 0 {
@@ -542,7 +549,7 @@ func (c *oktaClient) handleMfa(ctx context.Context, stateToken string, factor *o
 func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) (*oktaAuthnResponse, error) {
 	var err error
 
-	fmt.Print("Waiting for Push MFA ")
+	fmt.Println("Waiting for Push MFA confirmation...")
 
 	for strings.EqualFold(res.Status, "MFA_CHALLENGE") && strings.EqualFold(res.FactorResult, "WAITING") {
 		var nextUrl string
@@ -552,7 +559,9 @@ func (c *oktaClient) handlePushMfa(ctx context.Context, res *oktaAuthnResponse) 
 
 		body, _ := json.Marshal(oktaMfaResponse{Token: res.StateToken})
 
-		time.Sleep(1250 * time.Millisecond)
+		if err = waitOrCancel(ctx, 1250*time.Millisecond); err != nil {
+			return nil, err
+		}
 		fmt.Print(".")
 
 		var r *http.Response

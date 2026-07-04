@@ -52,6 +52,10 @@ func NewBrowserNEClient(url string) (*browserNEClient, error) {
 }
 
 func (c *browserNEClient) Identity() (*identity.Identity, error) {
+	return c.IdentityWithContext(context.Background())
+}
+
+func (c *browserNEClient) IdentityWithContext(context.Context) (*identity.Identity, error) {
 	return c.identity(browserNEProvider), nil
 }
 
@@ -63,7 +67,7 @@ func (c *browserNEClient) Authenticate() error {
 // AuthenticateWithContext uses Chromedp to open a browser for the authentication process.
 //
 //nolint:funlen
-func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
+func (c *browserNEClient) AuthenticateWithContext(ctx context.Context) error {
 	var err error
 	var samlassertion credentials.SamlAssertion
 	c.Logger.Debugf("Starting a browser to authenticate with the New Experience flow...")
@@ -170,8 +174,14 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 	}
 	// Wait here until we get a notification to shutdown the server.
 	// This happens when we get the SAML response and process it.
-	<-shutdown
-	_ = httpserver.Shutdown(context.Background())
+	select {
+	case <-shutdown:
+		_ = httpserver.Shutdown(ctx)
+	case <-ctx.Done():
+		_ = httpserver.Close()
+		return ctx.Err()
+	}
+
 	sr, err := c.saml.Decode()
 	if err != nil {
 		c.Logger.Errorf("Error decoding SAML response: %v", err)
@@ -184,10 +194,14 @@ func (c *browserNEClient) AuthenticateWithContext(context.Context) error {
 
 // Roles retrieves the available roles for the user.  Attempting to call this method
 // against an Oauth/OIDC client will return an error.
-func (c *browserNEClient) Roles(...string) (*identity.Roles, error) {
+func (c *browserNEClient) Roles(roles ...string) (*identity.Roles, error) {
+	return c.RolesWithContext(context.Background(), roles...)
+}
+
+func (c *browserNEClient) RolesWithContext(ctx context.Context, roles ...string) (*identity.Roles, error) {
 	if c.saml == nil || len(*c.saml) < 1 {
 		var err error
-		c.saml, err = c.SamlAssertion()
+		c.saml, err = c.SamlAssertionWithContext(ctx)
 		if err != nil {
 			return nil, err
 		}
@@ -201,8 +215,11 @@ func (c *browserNEClient) IdentityToken() (*credentials.OidcIdentityToken, error
 }
 
 // IdentityTokenWithContext returns an empty OidcIdentityToken type.
-func (c *browserNEClient) IdentityTokenWithContext(context.Context) (*credentials.OidcIdentityToken, error) {
-	_ = c.Authenticate()
+func (c *browserNEClient) IdentityTokenWithContext(ctx context.Context) (*credentials.OidcIdentityToken, error) {
+	if err := c.AuthenticateWithContext(ctx); err != nil {
+		return nil, err
+	}
+
 	return new(credentials.OidcIdentityToken), nil
 }
 
