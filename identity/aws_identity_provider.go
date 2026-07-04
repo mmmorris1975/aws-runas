@@ -138,7 +138,7 @@ func (p *awsIdentityProvider) roles(ctx context.Context, user string, ch chan<- 
 		out, e := pg.NextPage(ctx)
 		if e != nil {
 			err = e
-			continue
+			break
 		}
 
 		for _, g := range out.Groups {
@@ -167,7 +167,7 @@ func (p *awsIdentityProvider) getInlineUserRoles(ctx context.Context, user strin
 		out, e := pg.NextPage(ctx)
 		if e != nil {
 			err = e
-			continue
+			break
 		}
 
 		for _, pol := range out.PolicyNames {
@@ -198,7 +198,7 @@ func (p *awsIdentityProvider) getAttachedUserRoles(ctx context.Context, user str
 		out, e := pg.NextPage(ctx)
 		if e != nil {
 			err = e
-			continue
+			break
 		}
 
 		for _, pol := range out.AttachedPolicies {
@@ -222,7 +222,7 @@ func (p *awsIdentityProvider) getInlineGroupRoles(ctx context.Context, group str
 		out, e := pg.NextPage(ctx)
 		if e != nil {
 			err = e
-			continue
+			break
 		}
 
 		for _, pol := range out.PolicyNames {
@@ -253,7 +253,7 @@ func (p *awsIdentityProvider) getAttachedGroupRoles(ctx context.Context, group s
 		out, e := pg.NextPage(ctx)
 		if e != nil {
 			err = e
-			continue
+			break
 		}
 
 		for _, pol := range out.AttachedPolicies {
