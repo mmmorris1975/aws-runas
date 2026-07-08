@@ -109,22 +109,23 @@ var App = &cli.Command{
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {
 		// these are now broken out to distinct subcommands, flags are provided for compatibility
-		// WARNING - this requires special handling of ctx.Args() in the target command's Action()
-		//           method if you want to see any command-line positional args
+		// WARNING - Command.Run() treats the 1st element of its argument slice as the program/command
+		//           name and discards it (mirroring os.Args semantics), so a dummy value must be
+		//           prepended here or the real 1st positional arg (the profile name) gets dropped
 		if cmd.Bool(mfaFlag.Name) {
-			return mfaCmd.Run(ctx, cmd.Args().Slice())
+			return mfaCmd.Run(ctx, append([]string{mfaCmd.Name}, cmd.Args().Slice()...))
 		}
 
 		if cmd.Bool(rolesFlag.Name) {
-			return rolesCmd.Run(ctx, cmd.Args().Slice())
+			return rolesCmd.Run(ctx, append([]string{rolesCmd.Name}, cmd.Args().Slice()...))
 		}
 
 		if cmd.Bool(updateFlag.Name) {
-			return updateCmd.Run(ctx, cmd.Args().Slice())
+			return updateCmd.Run(ctx, append([]string{updateCmd.Name}, cmd.Args().Slice()...))
 		}
 
 		if cmd.Bool(diagFlag.Name) {
-			return diagCmd.Run(ctx, cmd.Args().Slice())
+			return diagCmd.Run(ctx, append([]string{diagCmd.Name}, cmd.Args().Slice()...))
 		}
 
 		return execCmd(ctx, cmd)
