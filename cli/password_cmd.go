@@ -14,11 +14,13 @@
 package cli
 
 import (
+	"context"
 	"errors"
+	"os"
+
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"github.com/urfave/cli/v2"
-	"os"
+	"github.com/urfave/cli/v3"
 )
 
 const passwordDesc = `Manage the password for the external identity provider (SAML or OIDC) in the .aws/credentials
@@ -32,10 +34,10 @@ var passwordCmd = &cli.Command{
 	Usage:        "Set or update the stored password for an external identity provider",
 	ArgsUsage:    "profile_name",
 	Description:  passwordDesc,
-	BashComplete: bashCompleteProfile,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
-		_, cfg, err := resolveConfig(ctx, 1)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		_, cfg, err := resolveConfig(cmd, 1)
 		if err != nil {
 			return err
 		}

@@ -14,13 +14,14 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"slices"
 	"strings"
 
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var rolesCmd = &cli.Command{
@@ -28,10 +29,10 @@ var rolesCmd = &cli.Command{
 	Usage:     rolesFlag.Usage,
 	ArgsUsage: "[profile_name]",
 
-	BashComplete: bashCompleteProfile,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
-		_, cfg, err := resolveConfig(ctx, 1)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		_, cfg, err := resolveConfig(cmd, 1)
 		if err != nil {
 			return err
 		}
@@ -44,18 +45,18 @@ var rolesCmd = &cli.Command{
 			return errors.New("detected Web Identity profile, only IAM and SAML profiles support role enumeration")
 		}
 
-		c, err := clientFactory.Get(ctx.Context, cfg)
+		c, err := clientFactory.Get(ctx, cfg)
 		if err != nil {
 			return err
 		}
 
-		roles, err := c.RolesWithContext(ctx.Context)
+		roles, err := c.RolesWithContext(ctx)
 		if err != nil {
 			return err
 		}
 
 		// Moved identity call after roles so that username is populated from SAML assertion if available
-		id, err := c.IdentityWithContext(ctx.Context)
+		id, err := c.IdentityWithContext(ctx)
 		if err != nil {
 			return err
 		}

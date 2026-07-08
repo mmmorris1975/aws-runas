@@ -14,18 +14,20 @@
 package cli
 
 import (
+	"context"
 	"errors"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/kevinburke/ssh_config"
 	"github.com/mmmorris1975/ssm-session-client/ssmclient"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"golang.org/x/crypto/ssh"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
 )
 
 const ssmSshDesc = `Create an SSH over SSM session with the specified 'target_spec' using configuration from
@@ -51,16 +53,16 @@ var ec2InstanceConnectFlag = &cli.BoolFlag{
 }
 
 var ssmSshCmd = &cli.Command{
-	Name:         "ssh",
-	Usage:        "Start an SSH over SSM session",
-	ArgsUsage:    "profile_name target_spec",
-	Description:  ssmSshDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "ssh",
+	Usage:         "Start an SSH over SSM session",
+	ArgsUsage:     "profile_name target_spec",
+	Description:   ssmSshDesc,
+	ShellComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ec2InstanceConnectFlag, ssmUsePluginFlag},
 
-	Action: func(ctx *cli.Context) error {
-		target, c, err := doSsmSetup(ctx, 2)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		target, c, err := doSsmSetup(ctx, cmd, 2)
 		if err != nil {
 			return err
 		}
@@ -72,7 +74,7 @@ var ssmSshCmd = &cli.Command{
 			return err
 		}
 
-		if ctx.Bool(ec2InstanceConnectFlag.Name) {
+		if cmd.Bool(ec2InstanceConnectFlag.Name) {
 			var pubKey string
 			if pubKey, err = getPubKey(host); err != nil {
 				return err
@@ -85,12 +87,12 @@ var ssmSshCmd = &cli.Command{
 				SSHPublicKey:   &pubKey,
 			}
 
-			if _, err = ec2ic.SendSSHPublicKey(ctx.Context, pubkeyIn); err != nil {
+			if _, err = ec2ic.SendSSHPublicKey(ctx, pubkeyIn); err != nil {
 				return err
 			}
 		}
 
-		if ctx.Bool(ssmUsePluginFlag.Name) {
+		if cmd.Bool(ssmUsePluginFlag.Name) {
 			params := map[string][]string{
 				"portNumber": {port},
 			}

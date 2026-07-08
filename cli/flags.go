@@ -18,7 +18,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 
 	"github.com/mmmorris1975/aws-runas/credentials"
 )
@@ -62,7 +62,7 @@ var sessionDurationFlag = &cli.DurationFlag{
 	Name:        "duration",
 	Aliases:     []string{"d"},
 	Usage:       "duration of the retrieved session token",
-	EnvVars:     []string{"SESSION_TOKEN_DURATION"},
+	Sources:     cli.EnvVars("SESSION_TOKEN_DURATION"),
 	DefaultText: fmt.Sprintf("%d hours", int64(credentials.SessionTokenDurationDefault.Hours())),
 	Destination: &cmdlineCfg.SessionTokenDuration,
 }
@@ -71,7 +71,7 @@ var roleDurationFlag = &cli.DurationFlag{
 	Name:        "role-duration",
 	Aliases:     []string{"a"},
 	Usage:       "duration of the assume role credentials",
-	EnvVars:     []string{"CREDENTIALS_DURATION"},
+	Sources:     cli.EnvVars("CREDENTIALS_DURATION"),
 	DefaultText: fmt.Sprintf("%d hours", int64(credentials.AssumeRoleDurationDefault.Hours())),
 	Destination: &cmdlineCfg.CredentialsDuration,
 }
@@ -80,7 +80,7 @@ var mfaCodeFlag = &cli.StringFlag{
 	Name:        "otp",
 	Aliases:     []string{"o"},
 	Usage:       "MFA token code",
-	EnvVars:     []string{"MFA_CODE"},
+	Sources:     cli.EnvVars("MFA_CODE"),
 	Destination: &cmdlineCfg.MfaCode,
 }
 
@@ -88,7 +88,7 @@ var mfaSerialFlag = &cli.StringFlag{
 	Name:        "mfa-serial",
 	Aliases:     []string{"M"},
 	Usage:       "serial number (or AWS ARN) of MFA device needed to assume role",
-	EnvVars:     []string{"MFA_SERIAL"},
+	Sources:     cli.EnvVars("MFA_SERIAL"),
 	Destination: &cmdlineCfg.MfaSerial,
 }
 
@@ -96,7 +96,7 @@ var mfaTypeFlag = &cli.StringFlag{
 	Name:        "mfa-type",
 	Aliases:     []string{"t"},
 	Usage:       "use specific MFA type instead of provider auto-detection logic",
-	EnvVars:     []string{"MFA_TYPE"},
+	Sources:     cli.EnvVars("MFA_TYPE"),
 	Destination: &cmdlineCfg.MfaType,
 }
 
@@ -104,7 +104,7 @@ var externalIdFlag = &cli.StringFlag{
 	Name:        "external-id",
 	Aliases:     []string{"X"},
 	Usage:       "external ID to use with Assume Role",
-	EnvVars:     []string{"EXTERNAL_ID"},
+	Sources:     cli.EnvVars("EXTERNAL_ID"),
 	Destination: &cmdlineCfg.ExternalId,
 }
 
@@ -112,7 +112,7 @@ var jumpRoleFlag = &cli.StringFlag{
 	Name:        "jump-role",
 	Aliases:     []string{"J"},
 	Usage:       "ARN of the 'jump role' to use with SAML or Web Identity integration",
-	EnvVars:     []string{"JUMP_ROLE_ARN"},
+	Sources:     cli.EnvVars("JUMP_ROLE_ARN"),
 	Destination: &cmdlineCfg.JumpRoleArn,
 }
 
@@ -120,7 +120,7 @@ var samlUrlFlag = &cli.StringFlag{
 	Name:        "saml-url",
 	Aliases:     []string{"S"},
 	Usage:       "URL of the SAML authentication endpoint",
-	EnvVars:     []string{"SAML_AUTH_URL"},
+	Sources:     cli.EnvVars("SAML_AUTH_URL"),
 	Destination: &cmdlineCfg.SamlUrl,
 }
 
@@ -128,7 +128,7 @@ var samlEntityIdFlag = &cli.StringFlag{
 	Name:        "saml-entityid",
 	Aliases:     []string{"I"},
 	Usage:       "Entity ID of the SAML authentication endpoint",
-	EnvVars:     []string{"SAML_ENTITY_ID"},
+	Sources:     cli.EnvVars("SAML_ENTITY_ID"),
 	Destination: &cmdlineCfg.SamlEntityId,
 }
 
@@ -136,7 +136,7 @@ var oidcUrlFlag = &cli.StringFlag{
 	Name:        "web-url",
 	Aliases:     []string{"W"},
 	Usage:       "URL of the Web Identity (OIDC) authentication endpoint",
-	EnvVars:     []string{"WEB_AUTH_URL"},
+	Sources:     cli.EnvVars("WEB_AUTH_URL"),
 	Destination: &cmdlineCfg.WebIdentityUrl,
 }
 
@@ -144,7 +144,7 @@ var oidcRedirectFlag = &cli.StringFlag{
 	Name:        "web-redirect",
 	Aliases:     []string{"T"},
 	Usage:       "Web Identity (OIDC) redirect URI",
-	EnvVars:     []string{"WEB_REDIRECT_URI"},
+	Sources:     cli.EnvVars("WEB_REDIRECT_URI"),
 	Destination: &cmdlineCfg.WebIdentityRedirectUri,
 }
 
@@ -152,7 +152,7 @@ var oidcClientIdFlag = &cli.StringFlag{
 	Name:        "web-client",
 	Aliases:     []string{"C"},
 	Usage:       "Web Identity (OIDC) client ID",
-	EnvVars:     []string{"WEB_CLIENT_ID"},
+	Sources:     cli.EnvVars("WEB_CLIENT_ID"),
 	Destination: &cmdlineCfg.WebIdentityClientId,
 }
 
@@ -162,7 +162,7 @@ var usernameFlag = &cli.StringFlag{
 	Name:    "username",
 	Aliases: []string{"U"},
 	Usage:   "username for SAML or Web Identity (OIDC) authentication",
-	EnvVars: []string{"RUNAS_USERNAME", "SAML_USERNAME", "WEB_USERNAME"},
+	Sources: cli.EnvVars("RUNAS_USERNAME", "SAML_USERNAME", "WEB_USERNAME"),
 }
 
 // Does not have a Destination, set in the App's Before attribute for both SAML and OIDC
@@ -171,7 +171,7 @@ var passwordFlag = &cli.StringFlag{
 	Name:    "password",
 	Aliases: []string{"P"},
 	Usage:   "password for SAML or Web Identity (OIDC) authentication",
-	EnvVars: []string{"RUNAS_PASSWORD", "SAML_PASSWORD", "WEB_PASSWORD"},
+	Sources: cli.EnvVars("RUNAS_PASSWORD", "SAML_PASSWORD", "WEB_PASSWORD"),
 }
 
 // Does not have a Destination, set in the App's Before attribute for both SAML and OIDC
@@ -180,7 +180,7 @@ var providerFlag = &cli.StringFlag{
 	Name:    "provider",
 	Aliases: []string{"R"},
 	Usage:   "name of the SAML or Web Identity (OIDC) provider to use",
-	EnvVars: []string{"RUNAS_PROVIDER", "SAML_PROVIDER", "WEB_PROVIDER"},
+	Sources: cli.EnvVars("RUNAS_PROVIDER", "SAML_PROVIDER", "WEB_PROVIDER"),
 }
 
 /*
@@ -190,7 +190,7 @@ var fmtFlag = &cli.StringFlag{
 	Name:        "output",
 	Aliases:     []string{"O"},
 	Usage:       "credential output format, valid values: env or json",
-	EnvVars:     []string{"RUNAS_OUTPUT_FORMAT"},
+	Sources:     cli.EnvVars("RUNAS_OUTPUT_FORMAT"),
 	Value:       "env",
 	Destination: nil,
 }
@@ -199,7 +199,7 @@ var envFlag = &cli.BoolFlag{
 	Name:        "env",
 	Aliases:     []string{"E"},
 	Usage:       "pass credentials to program as environment variables",
-	EnvVars:     []string{"RUNAS_ENV_CREDENTIALS"},
+	Sources:     cli.EnvVars("RUNAS_ENV_CREDENTIALS"),
 	Destination: nil,
 }
 
@@ -207,7 +207,7 @@ var sessionFlag = &cli.BoolFlag{
 	Name:        "session",
 	Aliases:     []string{"s"},
 	Usage:       "use session token credentials instead of role credentials",
-	EnvVars:     []string{"RUNAS_SESSION_CREDENTIALS"},
+	Sources:     cli.EnvVars("RUNAS_SESSION_CREDENTIALS"),
 	Destination: nil,
 }
 
@@ -236,5 +236,5 @@ var writeCredsFlag = &cli.BoolFlag{
 	Name:    "write-credentials",
 	Aliases: []string{"c"},
 	Usage:   "write credentials to the AWS credentials file in addition to the cache",
-	EnvVars: []string{"RUNAS_WRITE_CREDENTIALS"},
+	Sources: cli.EnvVars("RUNAS_WRITE_CREDENTIALS"),
 }

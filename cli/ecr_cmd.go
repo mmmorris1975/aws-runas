@@ -19,23 +19,23 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var ecrCmd = &cli.Command{
-	Name:        "ecr",
-	Usage:       "Shortcuts for working with ECR",
-	ArgsUsage:   "",
-	Subcommands: []*cli.Command{ecrLoginCmd},
+	Name:      "ecr",
+	Usage:     "Shortcuts for working with ECR",
+	ArgsUsage: "",
+	Commands:  []*cli.Command{ecrLoginCmd},
 }
 
-func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, error) {
-	profile, cfg, err := resolveConfig(ctx, expectedArgs)
+func doEcrSetup(ctx context.Context, cmd *cli.Command, expectedArgs int) (string, client.AwsClient, error) {
+	profile, cfg, err := resolveConfig(cmd, expectedArgs)
 	if err != nil {
 		return "", nil, err
 	}
 
-	cntx, cancelFunc := context.WithCancel(ctx.Context)
+	cntx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
 	c, err := clientFactory.Get(cntx, cfg)
@@ -43,7 +43,7 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	if ctx.Bool(refreshFlag.Name) {
+	if cmd.Bool(refreshFlag.Name) {
 		refreshCreds(c)
 	}
 
@@ -53,11 +53,11 @@ func doEcrSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	if ctx.Bool(expFlag.Name) {
+	if cmd.Bool(expFlag.Name) {
 		printCredExpiration(creds)
 	}
 
-	if ctx.Bool(whoamiFlag.Name) {
+	if cmd.Bool(whoamiFlag.Name) {
 		if err = printCredIdentity(sts.NewFromConfig(c.ConfigProvider())); err != nil {
 			return "", nil, err
 		}

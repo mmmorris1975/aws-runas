@@ -17,12 +17,14 @@ import (
 	"context"
 	"errors"
 	"fmt"
+
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/iam"
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/identity"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var mfaCmd = &cli.Command{
@@ -30,10 +32,10 @@ var mfaCmd = &cli.Command{
 	Usage:     mfaFlag.Usage,
 	ArgsUsage: "[profile_name]",
 
-	BashComplete: bashCompleteProfile,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
-		_, cfg, err := resolveConfig(ctx, 1)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		_, cfg, err := resolveConfig(cmd, 1)
 		if err != nil {
 			return err
 		}
@@ -47,20 +49,26 @@ var mfaCmd = &cli.Command{
 		}
 
 		// we know identity will be an IAM principal here
-		id, err := getIdentity(ctx.Context, cfg)
+		id, err := getIdentity(ctx, cfg)
 		if err != nil {
 			return err
 		}
 
-		s, err := awsconfig.LoadDefaultConfig(ctx.Context,
+		loadOpts := []func(*awsconfig.LoadOptions) error{
 			awsconfig.WithLogger(logFunc),
 			awsconfig.WithRegion(cfg.Region),
 			awsconfig.WithSharedConfigProfile(getSharedProfile(cfg)),
-		)
+		}
+
+		if opts.TraceAwsCalls() {
+			loadOpts = append(loadOpts, awsconfig.WithClientLogMode(aws.LogRequestWithBody|aws.LogResponseWithBody))
+		}
+
+		s, err := awsconfig.LoadDefaultConfig(ctx, loadOpts...)
 		if err != nil {
 			return err
 		}
-		return listMfa(ctx.Context, iam.NewFromConfig(s), id)
+		return listMfa(ctx, iam.NewFromConfig(s), id)
 	},
 }
 

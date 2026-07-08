@@ -21,7 +21,7 @@ require (
 	github.com/mmmorris1975/simple-logger v0.5.1
 	github.com/mmmorris1975/ssm-session-client v0.500.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
-	github.com/urfave/cli/v2 v2.19.3 // any v2 past this has a panic bug with tab completion on long options
+	github.com/urfave/cli/v3 v3.10.1
 	golang.org/x/crypto v0.53.0
 	golang.org/x/net v0.56.0
 	golang.org/x/sys v0.46.0

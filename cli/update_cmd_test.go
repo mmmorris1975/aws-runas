@@ -14,14 +14,14 @@
 package cli
 
 import (
-	"flag"
-	"github.com/urfave/cli/v2"
+	"context"
 	"testing"
 )
 
 func TestUpdateCmd_Action(t *testing.T) {
-	ctx := cli.NewContext(App, new(flag.FlagSet), nil)
-	if err := updateCmd.Run(ctx); err != nil {
+	// invoke via the App's -u shortcut flag so updateCmd inherits App as its parent
+	// command (and thus App.Metadata/Version), mirroring how it's wired in real usage.
+	if err := App.Run(context.Background(), []string{"mycmd", "-u"}); err != nil {
 		t.Error(err)
 	}
 }

@@ -14,21 +14,20 @@
 package cli
 
 import (
-	"flag"
-	"github.com/mmmorris1975/aws-runas/config"
-	"github.com/urfave/cli/v2"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mmmorris1975/aws-runas/config"
 )
 
 func TestDiagnoseCmd_Action(t *testing.T) {
 	configResolver = new(mockConfigResolver)
-	ctx := cli.NewContext(App, new(flag.FlagSet), nil)
 
-	if err := diagCmd.Run(ctx); err != nil {
+	if err := diagCmd.Run(context.Background(), []string{}); err != nil {
 		t.Error(err)
 	}
 }

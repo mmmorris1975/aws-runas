@@ -16,14 +16,13 @@ package cli
 import (
 	"context"
 	"errors"
-	"flag"
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/aws/smithy-go/logging"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/simple-logger/logger"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"os"
 	"path/filepath"
 	"strings"
@@ -119,15 +118,23 @@ func Test_logFunc(t *testing.T) {
 }
 
 func TestHelpers_saveStsCredentials(t *testing.T) {
-	// helper to create a cli.Context with the write-credentials flag set (or not)
-	newCtx := func(t *testing.T, writeFlag bool) *cli.Context {
+	// helper to create a cli.Command with the write-credentials flag set (or not)
+	newCmd := func(t *testing.T, writeFlag bool) *cli.Command {
 		t.Helper()
-		fs := flag.NewFlagSet(t.Name(), flag.ContinueOnError)
-		fs.Bool(writeCredsFlag.Name, false, "")
+		args := []string{t.Name()}
 		if writeFlag {
-			_ = fs.Set(writeCredsFlag.Name, "true")
+			args = append(args, "--"+writeCredsFlag.Name)
 		}
-		return cli.NewContext(App, fs, nil)
+
+		cmd := &cli.Command{
+			Name:   t.Name(),
+			Flags:  []cli.Flag{writeCredsFlag},
+			Action: func(context.Context, *cli.Command) error { return nil },
+		}
+		if err := cmd.Run(context.Background(), args); err != nil {
+			t.Fatalf("failed to set up test command: %v", err)
+		}
+		return cmd
 	}
 
 	t.Run("flag not set", func(t *testing.T) {
@@ -136,9 +143,9 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
 		defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
 
-		ctx := newCtx(t, false)
+		cmd := newCmd(t, false)
 		cred := &credentials.Credentials{AccessKeyId: "AK", SecretAccessKey: "SK"}
-		saveStsCredentials(ctx, "myprofile", cred)
+		saveStsCredentials(cmd, "myprofile", cred)
 
 		// file should not exist since flag was not set
 		if _, err := os.Stat(tf); err == nil {
@@ -151,9 +158,9 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
 		defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
 
-		ctx := newCtx(t, true)
+		cmd := newCmd(t, true)
 		cred := &credentials.Credentials{AccessKeyId: "AK", SecretAccessKey: "SK"}
-		saveStsCredentials(ctx, "", cred)
+		saveStsCredentials(cmd, "", cred)
 
 		if _, err := os.Stat(tf); err == nil {
 			t.Error("credentials file should not have been created with empty profile")
@@ -165,9 +172,9 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		os.Setenv("AWS_SHARED_CREDENTIALS_FILE", tf)
 		defer os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
 
-		ctx := newCtx(t, true)
+		cmd := newCmd(t, true)
 		cred := &credentials.Credentials{AccessKeyId: "testAK", SecretAccessKey: "testSK", Token: "testToken"}
-		saveStsCredentials(ctx, "myprofile", cred)
+		saveStsCredentials(cmd, "myprofile", cred)
 
 		f, err := os.ReadFile(tf)
 		if err != nil {
@@ -201,11 +208,11 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		log.SetLevel(logger.WARN)
 		defer func() { log = origLog }()
 
-		ctx := newCtx(t, true)
+		cmd := newCmd(t, true)
 		cred := &credentials.Credentials{AccessKeyId: "AK", SecretAccessKey: "SK"}
 
 		// Should not panic
-		saveStsCredentials(ctx, "badpath", cred)
+		saveStsCredentials(cmd, "badpath", cred)
 
 		if !strings.Contains(sb.String(), "error writing credentials to file") {
 			t.Errorf("expected warning log message, got: %s", sb.String())
@@ -223,8 +230,8 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		log.SetLevel(logger.WARN)
 		defer func() { log = origLog }()
 
-		ctx := newCtx(t, true)
-		saveStsCredentials(ctx, "myprofile", nil)
+		cmd := newCmd(t, true)
+		saveStsCredentials(cmd, "myprofile", nil)
 
 		if !strings.Contains(sb.String(), "error writing credentials to file") {
 			t.Errorf("expected warning log for nil creds, got: %s", sb.String())
@@ -242,9 +249,9 @@ func TestHelpers_saveStsCredentials(t *testing.T) {
 		log.SetLevel(logger.INFO)
 		defer func() { log = origLog }()
 
-		ctx := newCtx(t, true)
+		cmd := newCmd(t, true)
 		cred := &credentials.Credentials{AccessKeyId: "AK", SecretAccessKey: "SK"}
-		saveStsCredentials(ctx, "logtest", cred)
+		saveStsCredentials(cmd, "logtest", cred)
 
 		if !strings.Contains(sb.String(), "Credentials written to AWS credentials file under profile: logtest-awsrunas") {
 			t.Errorf("expected info log message, got: %s", sb.String())

@@ -14,10 +14,12 @@
 package cli
 
 import (
-	"github.com/mmmorris1975/aws-runas/config"
+	"context"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/config"
 )
 
 func TestServeECSCmd_Action(t *testing.T) {
@@ -27,7 +29,7 @@ func TestServeECSCmd_Action(t *testing.T) {
 		go func() {
 			_ = os.Unsetenv("AWS_PROFILE")
 			cmdlineCreds = new(config.AwsCredentials)
-			errCh <- App.Run([]string{"mycmd", "-v", "serve", "ecs"})
+			errCh <- App.Run(context.Background(), []string{"mycmd", "-v", "serve", "ecs"})
 		}()
 
 		select {
@@ -44,7 +46,7 @@ func TestServeECSCmd_Action(t *testing.T) {
 			defer os.Unsetenv("AWS_CONTAINER_CREDENTIALS_FULL_URI")
 
 			cmdlineCreds = new(config.AwsCredentials)
-			errCh <- App.Run([]string{"mycmd", "-v", "-v", "serve", "ecs"})
+			errCh <- App.Run(context.Background(), []string{"mycmd", "-v", "-v", "serve", "ecs"})
 		}()
 
 		select {

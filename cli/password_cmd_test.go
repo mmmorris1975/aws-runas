@@ -14,12 +14,12 @@
 package cli
 
 import (
-	"flag"
-	"github.com/mmmorris1975/aws-runas/config"
-	"github.com/urfave/cli/v2"
+	"context"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/mmmorris1975/aws-runas/config"
 )
 
 func TestPasswordCmd_Action(t *testing.T) {
@@ -34,8 +34,7 @@ func TestPasswordCmd_Action(t *testing.T) {
 			os.Unsetenv("AWS_SHARED_CREDENTIALS_FILE")
 		}()
 
-		ctx := cli.NewContext(App, new(flag.FlagSet), nil)
-		if err := passwordCmd.Run(ctx); err != nil {
+		if err := passwordCmd.Run(context.Background(), []string{}); err != nil {
 			t.Error(err)
 		}
 	})
@@ -44,8 +43,7 @@ func TestPasswordCmd_Action(t *testing.T) {
 		_ = os.Setenv("AWS_PROFILE", "iam")
 		defer os.Unsetenv("AWS_PROFILE")
 
-		ctx := cli.NewContext(App, new(flag.FlagSet), nil)
-		if err := passwordCmd.Run(ctx); err == nil {
+		if err := passwordCmd.Run(context.Background(), []string{}); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})

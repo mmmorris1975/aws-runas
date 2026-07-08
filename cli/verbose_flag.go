@@ -16,7 +16,7 @@ package cli
 import (
 	"flag"
 	"fmt"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"strconv"
 )
 
@@ -79,12 +79,26 @@ func (f *verboseFlag) TakesValue() bool {
 	return false
 }
 
+// IsBoolFlag tells the cli parser that this flag does not consume the next command line argument
+// as its value; required so that repeated -v flags are counted instead of swallowing the next arg.
+func (f *verboseFlag) IsBoolFlag() bool {
+	return true
+}
+
 func (f *verboseFlag) IsVisible() bool {
 	return !f.Hidden
 }
 
 func (f *verboseFlag) GetDefaultText() string {
 	return f.DefaultText
+}
+
+func (f *verboseFlag) IsDefaultVisible() bool {
+	return true
+}
+
+func (f *verboseFlag) TypeName() string {
+	return "bool"
 }
 
 func (f *verboseFlag) GetEnvVars() []string {
@@ -96,6 +110,25 @@ func (f *verboseFlag) GetValue() string {
 		return f.Value.String()
 	}
 	return ""
+}
+
+func (f *verboseFlag) Get() any {
+	if f.Value != nil {
+		return f.Value.Get()
+	}
+	return nil
+}
+
+func (f *verboseFlag) Set(_ string, val string) error {
+	return f.Value.Set(val)
+}
+
+func (f *verboseFlag) PreParse() error {
+	return nil
+}
+
+func (f *verboseFlag) PostParse() error {
+	return nil
 }
 
 type boolSlice struct {

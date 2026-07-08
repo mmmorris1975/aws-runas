@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/aws/arn"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/smithy-go/logging"
@@ -89,6 +90,10 @@ func (f *Factory) Get(ctx context.Context, cfg *config.AwsConfig) (AwsClient, er
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
 		awsconfig.WithLogConfigurationWarnings(true),
+	}
+
+	if f.options.TraceAwsCalls() {
+		opts = append(opts, awsconfig.WithClientLogMode(aws.LogRequestWithBody|aws.LogResponseWithBody))
 	}
 
 	f.options.Logger.Debugf("CLIENT CONFIG: %+v", cfg)

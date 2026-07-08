@@ -25,7 +25,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/identity"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"os"
 	"os/signal"
 	"slices"
@@ -40,8 +40,8 @@ import (
 // returns the name of the profile discovered via the command line or env vars, and the
 // resolved AwsConfig object for the discovered profile (or source profile, if requested).
 // Error will be returned for a failure of configuration resolution.
-func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfig, error) {
-	profile := checkProfileArgs(ctx, expectedArgs)
+func resolveConfig(cmd *cli.Command, expectedArgs int) (string, *config.AwsConfig, error) {
+	profile := checkProfileArgs(cmd, expectedArgs)
 
 	// profile might possibly be omitted from the command line as well, in which case, we'll check the
 	// environment for the standard AWS env vars for profile values
@@ -59,7 +59,7 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 	}
 
 	// return config for source profile, if any
-	if ctx.Bool(sessionFlag.Name) && cfg.SourceProfile() != nil {
+	if cmd.Bool(sessionFlag.Name) && cfg.SourceProfile() != nil {
 		jr := cfg.JumpRoleArn
 		cfg = cfg.SourceProfile()
 
@@ -78,14 +78,14 @@ func resolveConfig(ctx *cli.Context, expectedArgs int) (string, *config.AwsConfi
 	return profile, cfg, nil
 }
 
-func checkProfileArgs(ctx *cli.Context, expectedArgs int) string {
+func checkProfileArgs(cmd *cli.Command, expectedArgs int) string {
 	// if we got here via a top-level flag, ctx.Args() could be empty, must check 1 level up via
 	// ctx.Lineage() for the value
 	var profile string
-	if ctx.NArg() >= expectedArgs {
-		profile = ctx.Args().First()
-	} else if ctx.NArg() == 0 && len(ctx.Lineage()) > 2 {
-		next := ctx.Lineage()[1]
+	if cmd.NArg() >= expectedArgs {
+		profile = cmd.Args().First()
+	} else if cmd.NArg() == 0 && len(cmd.Lineage()) > 2 {
+		next := cmd.Lineage()[1]
 		if next.NArg() >= expectedArgs {
 			profile = next.Args().First()
 
@@ -93,7 +93,7 @@ func checkProfileArgs(ctx *cli.Context, expectedArgs int) string {
 			// possible that someone names a profile the same as the subcommand name, but we'll go
 			// on the assumption that what really happened is that the profile is coming in via an
 			// environment variable, and we should return and allow the env var to be used
-			if profile == ctx.Command.Name {
+			if profile == cmd.Name {
 				return ""
 			}
 		}
@@ -188,8 +188,8 @@ func printCredIdentity(api identity.StsApi) error {
 	return nil
 }
 
-func bashCompleteProfile(ctx *cli.Context) {
-	if ctx.NArg() > 0 {
+func bashCompleteProfile(ctx context.Context, cmd *cli.Command) {
+	if cmd.NArg() > 0 {
 		return
 	}
 
@@ -225,8 +225,8 @@ var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ..
 	}
 }
 
-func saveStsCredentials(ctx *cli.Context, profile string, creds *credentials.Credentials) {
-	if ctx.Bool(writeCredsFlag.Name) && len(profile) > 0 {
+func saveStsCredentials(cmd *cli.Command, profile string, creds *credentials.Credentials) {
+	if cmd.Bool(writeCredsFlag.Name) && len(profile) > 0 {
 		if werr := config.DefaultIniLoader.SaveStsCredentials(profile, creds); werr != nil {
 			log.Warningf("error writing credentials to file: %v", werr)
 			return

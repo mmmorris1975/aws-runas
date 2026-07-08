@@ -14,10 +14,12 @@
 package cli
 
 import (
-	"github.com/mmmorris1975/aws-runas/config"
+	"context"
 	"os"
 	"testing"
 	"time"
+
+	"github.com/mmmorris1975/aws-runas/config"
 )
 
 func TestServeEC2Cmd_Action(t *testing.T) {
@@ -27,7 +29,7 @@ func TestServeEC2Cmd_Action(t *testing.T) {
 		go func() {
 			_ = os.Unsetenv("AWS_PROFILE")
 			cmdlineCreds = new(config.AwsCredentials)
-			errCh <- App.Run([]string{"mycmd", "-v", "serve", "ec2", "--port", "0"})
+			errCh <- App.Run(context.Background(), []string{"mycmd", "-v", "serve", "ec2", "--port", "0"})
 		}()
 
 		select {
@@ -44,7 +46,7 @@ func TestServeEC2Cmd_Action(t *testing.T) {
 			defer os.Unsetenv("AWS_EC2_METADATA_SERVICE_ENDPOINT")
 
 			cmdlineCreds = new(config.AwsCredentials)
-			errCh <- App.Run([]string{"mycmd", "-v", "-v", "serve", "ec2"})
+			errCh <- App.Run(context.Background(), []string{"mycmd", "-v", "-v", "serve", "ec2"})
 		}()
 
 		select {

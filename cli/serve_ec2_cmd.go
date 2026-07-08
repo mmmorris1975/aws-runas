@@ -14,11 +14,13 @@
 package cli
 
 import (
+	"context"
 	"fmt"
-	"github.com/mmmorris1975/aws-runas/metadata"
-	"github.com/urfave/cli/v2"
 	"net/url"
 	"os"
+
+	"github.com/mmmorris1975/aws-runas/metadata"
+	"github.com/urfave/cli/v3"
 )
 
 var ec2CmdDesc = `Start a local web server which mimics the credential retrieval abilities of the EC2 instance
@@ -33,16 +35,16 @@ AWS_EC2_METADATA_SERVICE_ENDPOINT environment variable to this service's address
 calling programs know the location of the endpoint.`
 
 var ec2Cmd = &cli.Command{
-	Name:         "ec2",
-	Usage:        "Run a mock EC2 metadata (IMDS) service to provide role credentials",
-	ArgsUsage:    "[profile_name]",
-	Description:  ec2CmdDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "ec2",
+	Usage:         "Run a mock EC2 metadata (IMDS) service to provide role credentials",
+	ArgsUsage:     "[profile_name]",
+	Description:   ec2CmdDesc,
+	ShellComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ec2PortFlag, headlessFlag},
 
-	Action: func(ctx *cli.Context) error {
-		profile, _, err := resolveConfig(ctx, 0)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		profile, _, err := resolveConfig(cmd, 0)
 		if err != nil {
 			return err
 		}
@@ -59,7 +61,7 @@ var ec2Cmd = &cli.Command{
 		}
 
 		if len(addr) < 1 {
-			port := ctx.Int(ec2PortFlag.Name)
+			port := cmd.Int(ec2PortFlag.Name)
 			if port < 0 {
 				addr = fmt.Sprintf("%s:80", metadata.DefaultEc2ImdsAddr)
 			} else {
@@ -72,7 +74,7 @@ var ec2Cmd = &cli.Command{
 			Profile:     profile,
 			Logger:      log,
 			AwsLogLevel: opts.AwsLogLevel,
-			Headless:    ctx.Bool(headlessFlag.Name),
+			Headless:    cmd.Bool(headlessFlag.Name),
 		}
 
 		mcs, err := metadata.NewMetadataCredentialService(addr, in)

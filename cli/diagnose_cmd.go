@@ -19,7 +19,7 @@ import (
 	"fmt"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/mmmorris1975/aws-runas/config"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"gopkg.in/ini.v1"
 	"math"
 	"net"
@@ -39,11 +39,11 @@ var diagCmd = &cli.Command{
 	ArgsUsage:   "[profile_name]",
 	Description: diagDesc,
 
-	BashComplete: bashCompleteProfile,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
 		log.Debug("Diagnostics")
-		_, cfg, err := resolveConfig(ctx, 1)
+		_, cfg, err := resolveConfig(cmd, 1)
 		if err != nil {
 			return err
 		}

@@ -14,12 +14,14 @@
 package cli
 
 import (
-	"github.com/mmmorris1975/aws-runas/metadata"
-	"github.com/urfave/cli/v2"
+	"context"
 	"net"
 	"net/url"
 	"os"
 	"strconv"
+
+	"github.com/mmmorris1975/aws-runas/metadata"
+	"github.com/urfave/cli/v3"
 )
 
 var ecsCmdDesc = `Start a local web server which mimics the credential retrieval abilities of the ECS container
@@ -32,16 +34,16 @@ You will need to set the AWS_CONTAINER_CREDENTIALS_FULL_URI environment variable
 service's address and port so calling programs know the location of the endpoint.`
 
 var ecsCmd = &cli.Command{
-	Name:         "ecs",
-	Usage:        "Run a mock ECS credential endpoint to provide role credentials",
-	ArgsUsage:    "[profile_name]",
-	Description:  ecsCmdDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "ecs",
+	Usage:         "Run a mock ECS credential endpoint to provide role credentials",
+	ArgsUsage:     "[profile_name]",
+	Description:   ecsCmdDesc,
+	ShellComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ecsPortFlag, headlessFlag},
 
-	Action: func(ctx *cli.Context) error {
-		profile, _, err := resolveConfig(ctx, 0)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		profile, _, err := resolveConfig(cmd, 0)
 		if err != nil {
 			return err
 		}
@@ -63,7 +65,7 @@ var ecsCmd = &cli.Command{
 		}
 
 		if len(addr) < 1 {
-			addr = net.JoinHostPort("127.0.0.1", strconv.Itoa(int(ctx.Uint(ecsPortFlag.Name))))
+			addr = net.JoinHostPort("127.0.0.1", strconv.Itoa(int(cmd.Uint(ecsPortFlag.Name))))
 		}
 		log.Debugf("setting ECS credential endpoint HOST=%s, PATH=%s", addr, path)
 
@@ -72,7 +74,7 @@ var ecsCmd = &cli.Command{
 			Profile:     profile,
 			Logger:      log,
 			AwsLogLevel: opts.AwsLogLevel,
-			Headless:    ctx.Bool(headlessFlag.Name),
+			Headless:    cmd.Bool(headlessFlag.Name),
 		}
 
 		mcs, err := metadata.NewMetadataCredentialService(addr, in)
