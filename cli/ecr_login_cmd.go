@@ -36,10 +36,10 @@ as AWS account numbers only, and the endpoint name will be generated using the
 region found for the profile; or a full ECR endpoint name can be specified.`
 
 var ecrLoginCmd = &cli.Command{
-	Name:         "login",
-	Usage:        "Perform 'docker login' to an ECR endpoint",
-	ArgsUsage:    "profile_name [ECR endpoint ...]",
-	Description:  ecrLoginDesc,
+	Name:          "login",
+	Usage:         "Perform 'docker login' to an ECR endpoint",
+	ArgsUsage:     "profile_name [ECR endpoint ...]",
+	Description:   ecrLoginDesc,
 	ShellComplete: bashCompleteProfile,
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {

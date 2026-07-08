@@ -29,11 +29,11 @@ can be shared across multiple profiles.  The password is obfuscated (not encrypt
 storing the plaintext value in the file.`
 
 var passwordCmd = &cli.Command{
-	Name:         "password",
-	Aliases:      []string{"passwd", "pw"},
-	Usage:        "Set or update the stored password for an external identity provider",
-	ArgsUsage:    "profile_name",
-	Description:  passwordDesc,
+	Name:          "password",
+	Aliases:       []string{"passwd", "pw"},
+	Usage:         "Set or update the stored password for an external identity provider",
+	ArgsUsage:     "profile_name",
+	Description:   passwordDesc,
 	ShellComplete: bashCompleteProfile,
 
 	Action: func(ctx context.Context, cmd *cli.Command) error {

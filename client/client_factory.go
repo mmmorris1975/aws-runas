@@ -72,21 +72,8 @@ func (f *Factory) Get(ctx context.Context, cfg *config.AwsConfig) (AwsClient, er
 		cfg.ProfileName = ""
 	}
 
-	var logFunc logging.LoggerFunc = func(c logging.Classification, fmt string, v ...any) {
-		if f.options.Logger != nil {
-			switch c {
-			case logging.Warn:
-				f.options.Logger.Warningf(fmt, v)
-			case logging.Debug:
-				f.options.Logger.Debugf(fmt, v)
-			default:
-				f.options.Logger.Infof(fmt, v)
-			}
-		}
-	}
-
 	opts := []func(*awsconfig.LoadOptions) error{
-		awsconfig.WithLogger(logFunc),
+		awsconfig.WithLogger(logging.LoggerFunc(f.awsLogFunc)),
 		awsconfig.WithRegion(cfg.Region),
 		awsconfig.WithSharedConfigProfile(cfg.ProfileName),
 		awsconfig.WithLogConfigurationWarnings(true),
@@ -99,25 +86,11 @@ func (f *Factory) Get(ctx context.Context, cfg *config.AwsConfig) (AwsClient, er
 	f.options.Logger.Debugf("CLIENT CONFIG: %+v", cfg)
 
 	if len(cfg.SamlUrl) > 0 {
-		creds, err := f.resolver.Credentials(cfg.SamlUrl)
-		if err != nil {
-			// non-fatal error, just set empty creds
-			creds = new(config.AwsCredentials)
-		}
-		creds.MergeIn(f.options.CommandCredentials)
-
-		return f.samlClient(ctx, cfg, creds, opts...)
+		return f.samlClient(ctx, cfg, f.resolveCredentials(cfg.SamlUrl), opts...)
 	}
 
 	if len(cfg.WebIdentityUrl) > 0 {
-		creds, err := f.resolver.Credentials(cfg.WebIdentityUrl)
-		if err != nil {
-			// non-fatal error, just set empty creds
-			creds = new(config.AwsCredentials)
-		}
-		creds.MergeIn(f.options.CommandCredentials)
-
-		return f.webClient(ctx, cfg, creds, opts...)
+		return f.webClient(ctx, cfg, f.resolveCredentials(cfg.WebIdentityUrl), opts...)
 	}
 
 	if len(cfg.RoleArn) > 0 {
@@ -125,6 +98,35 @@ func (f *Factory) Get(ctx context.Context, cfg *config.AwsConfig) (AwsClient, er
 	}
 
 	return f.sessionClient(ctx, cfg, opts...)
+}
+
+// resolveCredentials looks up credentials for the given identity provider url, falling back to an empty
+// credential set if the lookup fails since a valid credential lookup is not required for all client types.
+func (f *Factory) resolveCredentials(url string) *config.AwsCredentials {
+	creds, err := f.resolver.Credentials(url)
+	if err != nil {
+		// non-fatal error, just set empty creds
+		creds = new(config.AwsCredentials)
+	}
+	creds.MergeIn(f.options.CommandCredentials)
+
+	return creds
+}
+
+// awsLogFunc adapts the configured Logger to the aws-sdk-go-v2 logging.LoggerFunc signature.
+func (f *Factory) awsLogFunc(c logging.Classification, format string, v ...any) {
+	if f.options.Logger == nil {
+		return
+	}
+
+	switch c {
+	case logging.Warn:
+		f.options.Logger.Warningf(format, v)
+	case logging.Debug:
+		f.options.Logger.Debugf(format, v)
+	default:
+		f.options.Logger.Infof(format, v)
+	}
 }
 
 //nolint:funlen
