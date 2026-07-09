@@ -54,7 +54,7 @@ var ssmForwardCmd = &cli.Command{
 		parts := strings.Split(target, `:`)
 		target = strings.Join(parts[:len(parts)-1], `:`)
 		rp := parts[len(parts)-1]
-		lp := strconv.Itoa(cmd.Int(ssmFwdPortFlag.Name))
+		lp := strconv.Itoa(int(cmd.Uint(ssmFwdPortFlag.Name)))
 
 		ec2Id, err := ssmclient.ResolveTarget(target, c.ConfigProvider())
 		if err != nil {
@@ -79,7 +79,7 @@ var ssmForwardCmd = &cli.Command{
 		in := &ssmclient.PortForwardingInput{
 			Target:     ec2Id,
 			RemotePort: rpi,
-			LocalPort:  cmd.Int(ssmFwdPortFlag.Name),
+			LocalPort:  int(cmd.Uint(ssmFwdPortFlag.Name)),
 		}
 		return ssmclient.PortPluginSession(c.ConfigProvider(), in)
 	},

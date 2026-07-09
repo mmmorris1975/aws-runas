@@ -44,10 +44,11 @@ var (
 
 // App is the struct used to manage the configuration and behavior for the cli handling library.
 var App = &cli.Command{
-	Usage:     "Create an environment for interacting with the AWS API using an assumed role",
-	UsageText: fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
-	Commands:  []*cli.Command{listCmd, serveCmd, ssmCmd, ecrCmd, passwordCmd, diagCmd, updateCmd},
-	Flags:     append(configFlags, append(otherFlags, shortcutFlags...)...),
+	Usage:        "Create an environment for interacting with the AWS API using an assumed role",
+	UsageText:    fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
+	Commands:     []*cli.Command{listCmd, serveCmd, ssmCmd, ecrCmd, passwordCmd, diagCmd, updateCmd},
+	Flags:        append(configFlags, append(otherFlags, shortcutFlags...)...),
+	StopOnNthArg: func() *int { n := 1; return &n }(),
 
 	UseShortOptionHandling: true,
 	EnableShellCompletion:  true,
@@ -76,13 +77,12 @@ var App = &cli.Command{
 	Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 		opts.Logger = log
 
-		if verbose, ok := cmd.Value(vFlag.Name).([]bool); ok {
-			if len(verbose) > 0 {
-				log.SetLevel(logger.DEBUG)
+		verboseCount := cmd.Count(vFlag.Name)
+		if verboseCount > 0 {
+			log.SetLevel(logger.DEBUG)
 
-				if len(verbose) > 1 {
-					opts.AwsLogLevel = logging.Debug
-				}
+			if verboseCount > 1 {
+				opts.AwsLogLevel = logging.Debug
 			}
 		}
 
