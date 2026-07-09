@@ -28,7 +28,7 @@ var otherFlags = []cli.Flag{envFlag, fmtFlag, sessionFlag, refreshFlag, expFlag,
 var configFlags = []cli.Flag{sessionDurationFlag, roleDurationFlag, mfaCodeFlag, mfaSerialFlag, mfaTypeFlag, externalIdFlag,
 	jumpRoleFlag, samlUrlFlag, samlEntityIdFlag, oidcUrlFlag, oidcRedirectFlag, oidcClientIdFlag, usernameFlag, passwordFlag, providerFlag}
 
-// verbose flag
+// verbose flag.
 var vFlag = &cli.BoolFlag{
 	Name:        "verbose",
 	Aliases:     []string{"v"},

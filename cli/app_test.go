@@ -14,11 +14,15 @@
 package cli
 
 import (
-	"github.com/mmmorris1975/aws-runas/config"
-	"github.com/mmmorris1975/aws-runas/credentials"
+	"context"
 	"os"
+	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/mmmorris1975/aws-runas/config"
+	"github.com/mmmorris1975/aws-runas/credentials"
+	"github.com/urfave/cli/v3"
 )
 
 func TestApp_buildEnv(t *testing.T) {
@@ -145,6 +149,31 @@ func TestApp_guessNArgs(t *testing.T) {
 			t.Error("NArgs mismatch")
 		}
 	})
+}
+
+func TestApp_StopOnNthArgPreservesWrappedCommandFlags(t *testing.T) {
+	cmd := &cli.Command{
+		Name:         t.Name(),
+		StopOnNthArg: App.StopOnNthArg,
+		Flags:        []cli.Flag{&cli.StringFlag{Name: "output"}},
+		Action: func(_ context.Context, c *cli.Command) error {
+			if got := c.String("output"); got != "text" {
+				t.Errorf("root flag value = %q, want 'text'", got)
+			}
+
+			wantArgs := []string{"profile", "aws", "--output", "json"}
+			if gotArgs := c.Args().Slice(); !reflect.DeepEqual(gotArgs, wantArgs) {
+				t.Errorf("args = %v, want %v", gotArgs, wantArgs)
+			}
+
+			return nil
+		},
+	}
+
+	args := []string{t.Name(), "--output", "text", "profile", "aws", "--output", "json"}
+	if err := cmd.Run(context.Background(), args); err != nil {
+		t.Error(err)
+	}
 }
 
 func ExampleApp_printCreds_profile() {
