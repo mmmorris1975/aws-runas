@@ -17,7 +17,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"net/http"
 	"strings"
 	"time"
@@ -29,10 +29,11 @@ var updateCmd = &cli.Command{
 	ArgsUsage: " ",
 	Hidden:    true,
 
-	Action: func(ctx *cli.Context) error {
-		if u, ok := ctx.App.Metadata["url"]; ok {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		root := cmd.Root()
+		if u, ok := root.Metadata["url"]; ok {
 			ghUrl := fmt.Sprintf("%s/releases/latest", u)
-			return versionCheck(ghUrl, ctx.App.Version)
+			return versionCheck(ghUrl, root.Version)
 		}
 		return errors.New("missing 'url' metadata attribute")
 	},

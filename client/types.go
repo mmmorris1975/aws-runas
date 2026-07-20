@@ -73,3 +73,8 @@ type Options struct {
 	AwsLogLevel             logging.Classification
 	CommandCredentials      *config.AwsCredentials
 }
+
+// TraceAwsCalls indicates whether AWS SDK client calls should be logged with full request/response bodies.
+func (o *Options) TraceAwsCalls() bool {
+	return o.AwsLogLevel == logging.Debug
+}

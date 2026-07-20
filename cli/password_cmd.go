@@ -14,11 +14,13 @@
 package cli
 
 import (
+	"context"
 	"errors"
+	"os"
+
 	"github.com/mmmorris1975/aws-runas/config"
 	"github.com/mmmorris1975/aws-runas/credentials/helpers"
-	"github.com/urfave/cli/v2"
-	"os"
+	"github.com/urfave/cli/v3"
 )
 
 const passwordDesc = `Manage the password for the external identity provider (SAML or OIDC) in the .aws/credentials
@@ -27,15 +29,15 @@ can be shared across multiple profiles.  The password is obfuscated (not encrypt
 storing the plaintext value in the file.`
 
 var passwordCmd = &cli.Command{
-	Name:         "password",
-	Aliases:      []string{"passwd", "pw"},
-	Usage:        "Set or update the stored password for an external identity provider",
-	ArgsUsage:    "profile_name",
-	Description:  passwordDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "password",
+	Aliases:       []string{"passwd", "pw"},
+	Usage:         "Set or update the stored password for an external identity provider",
+	ArgsUsage:     "profile_name",
+	Description:   passwordDesc,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
-		_, cfg, err := resolveConfig(ctx, 1)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		_, cfg, err := resolveConfig(cmd, 1)
 		if err != nil {
 			return err
 		}

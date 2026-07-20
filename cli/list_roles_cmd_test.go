@@ -14,21 +14,19 @@
 package cli
 
 import (
-	"flag"
-	"github.com/urfave/cli/v2"
+	"context"
 	"os"
 	"testing"
 )
 
 func TestListRolesCmd_Action(t *testing.T) {
 	configResolver = new(mockConfigResolver)
-	ctx := cli.NewContext(App, new(flag.FlagSet), nil)
 
 	t.Run("saml", func(t *testing.T) {
 		_ = os.Setenv("AWS_PROFILE", "saml")
 		defer os.Unsetenv("AWS_PROFILE")
 
-		if err := rolesCmd.Run(ctx); err != nil {
+		if err := rolesCmd.Run(context.Background(), []string{}); err != nil {
 			t.Error(err)
 		}
 	})
@@ -37,7 +35,7 @@ func TestListRolesCmd_Action(t *testing.T) {
 		_ = os.Setenv("AWS_PROFILE", "oidc")
 		defer os.Unsetenv("AWS_PROFILE")
 
-		if err := rolesCmd.Run(ctx); err == nil {
+		if err := rolesCmd.Run(context.Background(), []string{}); err == nil {
 			t.Error("did not receive expected error")
 		}
 	})

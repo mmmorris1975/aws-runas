@@ -29,7 +29,7 @@ import (
 	"github.com/mmmorris1975/aws-runas/credentials"
 	"github.com/mmmorris1975/aws-runas/metadata"
 	"github.com/mmmorris1975/simple-logger/logger"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var (
@@ -43,91 +43,92 @@ var (
 )
 
 // App is the struct used to manage the configuration and behavior for the cli handling library.
-var App = &cli.App{
-	Usage:     "Create an environment for interacting with the AWS API using an assumed role",
-	UsageText: fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
-	Commands:  []*cli.Command{listCmd, serveCmd, ssmCmd, ecrCmd, passwordCmd, diagCmd, updateCmd},
-	Flags:     append(configFlags, append(otherFlags, shortcutFlags...)...),
+var App = &cli.Command{
+	Usage:        "Create an environment for interacting with the AWS API using an assumed role",
+	UsageText:    fmt.Sprintf("%s [global options] [subcommand] profile [arguments...]", filepath.Base(os.Args[0])),
+	Commands:     []*cli.Command{listCmd, serveCmd, ssmCmd, ecrCmd, passwordCmd, diagCmd, updateCmd},
+	Flags:        append(configFlags, append(otherFlags, shortcutFlags...)...),
+	StopOnNthArg: func() *int { n := 1; return &n }(),
 
 	UseShortOptionHandling: true,
-	EnableBashCompletion:   true,
+	EnableShellCompletion:  true,
 
-	BashComplete: func(ctx *cli.Context) {
-		if ctx.Bool(mfaFlag.Name) {
-			mfaCmd.BashComplete(ctx)
+	ShellComplete: func(ctx context.Context, cmd *cli.Command) {
+		if cmd.Bool(mfaFlag.Name) {
+			mfaCmd.ShellComplete(ctx, cmd)
 			return
 		}
 
-		if ctx.Bool(rolesFlag.Name) {
-			rolesCmd.BashComplete(ctx)
+		if cmd.Bool(rolesFlag.Name) {
+			rolesCmd.ShellComplete(ctx, cmd)
 			return
 		}
 
-		if ctx.Bool(diagFlag.Name) {
-			diagCmd.BashComplete(ctx)
+		if cmd.Bool(diagFlag.Name) {
+			diagCmd.ShellComplete(ctx, cmd)
 			return
 		}
 
 		// execute default cli package behavior & profile name completion
-		cli.DefaultAppComplete(ctx)
-		bashCompleteProfile(ctx)
+		cli.DefaultAppComplete(ctx, cmd)
+		bashCompleteProfile(ctx, cmd)
 	},
 
-	Before: func(ctx *cli.Context) error {
+	Before: func(ctx context.Context, cmd *cli.Command) (context.Context, error) {
 		opts.Logger = log
 
-		if verbose, ok := ctx.Value(vFlag.Name).([]bool); ok {
-			if len(verbose) > 0 {
-				log.SetLevel(logger.DEBUG)
+		verboseCount := cmd.Count(vFlag.Name)
+		if verboseCount > 0 {
+			log.SetLevel(logger.DEBUG)
 
-				if len(verbose) > 1 {
-					opts.AwsLogLevel = logging.Debug
-				}
+			if verboseCount > 1 {
+				opts.AwsLogLevel = logging.Debug
 			}
 		}
 
 		// set these flags for both SAML and OIDC properties
-		username := ctx.String(usernameFlag.Name)
-		provider := ctx.String(providerFlag.Name)
+		username := cmd.String(usernameFlag.Name)
+		provider := cmd.String(providerFlag.Name)
 
 		cmdlineCfg.SamlUsername = username
 		cmdlineCfg.SamlProvider = provider
 		cmdlineCfg.WebIdentityUsername = username
 		cmdlineCfg.WebIdentityProvider = provider
 
-		password := ctx.String(passwordFlag.Name)
+		password := cmd.String(passwordFlag.Name)
 		cmdlineCreds.SamlPassword = password
 		cmdlineCreds.WebIdentityPassword = password
 		opts.CommandCredentials = cmdlineCreds
 
-		return nil
+		return ctx, nil
 	},
 
 	Metadata: map[string]any{
 		"url": "https://github.com/mmmorris1975/aws-runas",
 	},
 
-	Action: func(ctx *cli.Context) error {
+	Action: func(ctx context.Context, cmd *cli.Command) error {
 		// these are now broken out to distinct subcommands, flags are provided for compatibility
-		// WARNING - this requires special handling of ctx.Args() in the target command's Action()
-		//           method if you want to see any command-line positional args
-		if ctx.Bool(mfaFlag.Name) {
-			return mfaCmd.Run(ctx)
+		// WARNING - Command.Run() treats the 1st element of its argument slice as the program/command
+		//           name and discards it (mirroring os.Args semantics), so a dummy value must be
+		//           prepended here or the real 1st positional arg (the profile name) gets dropped
+		if cmd.Bool(mfaFlag.Name) {
+			return mfaCmd.Run(ctx, append([]string{mfaCmd.Name}, cmd.Args().Slice()...))
 		}
 
-		if ctx.Bool(rolesFlag.Name) {
-			return rolesCmd.Run(ctx)
+		if cmd.Bool(rolesFlag.Name) {
+			return rolesCmd.Run(ctx, append([]string{rolesCmd.Name}, cmd.Args().Slice()...))
 		}
 
-		if ctx.Bool(updateFlag.Name) {
-			return updateCmd.Run(ctx)
+		if cmd.Bool(updateFlag.Name) {
+			return updateCmd.Run(ctx, append([]string{updateCmd.Name}, cmd.Args().Slice()...))
 		}
 
-		if ctx.Bool(diagFlag.Name) {
-			return diagCmd.Run(ctx)
+		if cmd.Bool(diagFlag.Name) {
+			return diagCmd.Run(ctx, append([]string{diagCmd.Name}, cmd.Args().Slice()...))
 		}
 
-		return execCmd(ctx)
+		return execCmd(ctx, cmd)
 	},
 }
 
@@ -143,18 +144,18 @@ func init() {
 }
 
 //nolint:funlen,gocognit,gocyclo // he's just a long boi ... you should have seen the older versions!
-func execCmd(ctx *cli.Context) error {
-	profile, cfg, err := resolveConfig(ctx, guessNArgs(ctx.NArg()))
+func execCmd(ctx context.Context, cmd *cli.Command) error {
+	profile, cfg, err := resolveConfig(cmd, guessNArgs(cmd.NArg()))
 	if err != nil {
 		return err
 	}
 
-	cntx, cancelFunc := context.WithCancel(ctx.Context)
+	cntx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
-	if !ctx.Args().Present() && len(profile) < 1 {
+	if !cmd.Args().Present() && len(profile) < 1 {
 		log.Errorln("nothing to do!")
-		cli.ShowAppHelpAndExit(ctx, 1)
+		cli.ShowAppHelpAndExit(cmd, 1)
 	}
 
 	var c client.AwsClient
@@ -163,7 +164,7 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
-	if ctx.Bool(refreshFlag.Name) {
+	if cmd.Bool(refreshFlag.Name) {
 		refreshCreds(c)
 	}
 
@@ -176,9 +177,9 @@ func execCmd(ctx *cli.Context) error {
 		return err
 	}
 
-	saveStsCredentials(ctx, profile, creds)
+	saveStsCredentials(cmd, profile, creds)
 
-	if strings.EqualFold(ctx.String(fmtFlag.Name), "json") {
+	if strings.EqualFold(cmd.String(fmtFlag.Name), "json") {
 		// truly a one-shot operation, the credentials_process logic will re-exec the command to refresh credentials
 		// don't handle any other formatting options, or do any thing else, just poop out json formatted credentials
 		// REF: https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-sourcing-external.html
@@ -192,25 +193,25 @@ func execCmd(ctx *cli.Context) error {
 		return nil
 	}
 
-	if ctx.Bool(expFlag.Name) {
+	if cmd.Bool(expFlag.Name) {
 		printCredExpiration(creds)
 	}
 
-	if ctx.Bool(whoamiFlag.Name) {
+	if cmd.Bool(whoamiFlag.Name) {
 		if err = printCredIdentity(sts.NewFromConfig(c.ConfigProvider())); err != nil {
 			return err
 		}
 	}
 
-	cmd := ctx.Args().Slice()
-	if ctx.Args().First() == profile {
-		cmd = ctx.Args().Tail()
+	args := cmd.Args().Slice()
+	if cmd.Args().First() == profile {
+		args = cmd.Args().Tail()
 	}
 
 	env := buildEnv(cfg.Region, creds)
 
-	if len(cmd) > 0 {
-		if ctx.Bool(envFlag.Name) {
+	if len(args) > 0 {
+		if cmd.Bool(envFlag.Name) {
 			// set credentials in environment, don't start ecs endpoint
 			for k, v := range env {
 				_ = os.Setenv(k, v)
@@ -225,7 +226,7 @@ func execCmd(ctx *cli.Context) error {
 			log.Debugf("ECS endpoint ready")
 		}
 
-		wrapped := wrapCmd(cmd)
+		wrapped := wrapCmd(args)
 		c := exec.Command(wrapped[0], wrapped[1:]...) //nolint:gosec // it's sort of the whole reason this tool exists
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout

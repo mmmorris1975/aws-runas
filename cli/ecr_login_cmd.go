@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/docker"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 	"strings"
 )
 
@@ -36,20 +36,20 @@ as AWS account numbers only, and the endpoint name will be generated using the
 region found for the profile; or a full ECR endpoint name can be specified.`
 
 var ecrLoginCmd = &cli.Command{
-	Name:         "login",
-	Usage:        "Perform 'docker login' to an ECR endpoint",
-	ArgsUsage:    "profile_name [ECR endpoint ...]",
-	Description:  ecrLoginDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "login",
+	Usage:         "Perform 'docker login' to an ECR endpoint",
+	ArgsUsage:     "profile_name [ECR endpoint ...]",
+	Description:   ecrLoginDesc,
+	ShellComplete: bashCompleteProfile,
 
-	Action: func(ctx *cli.Context) error {
-		_, c, err := doEcrSetup(ctx, 1)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		_, c, err := doEcrSetup(ctx, cmd, 1)
 		if err != nil {
 			return err
 		}
 
 		var endpoints []string
-		if ctx.NArg() < 2 {
+		if cmd.NArg() < 2 {
 			// if no endpoint is explicitly provided, use the endpoint from the profile's account and region
 			id, err := sts.NewFromConfig(c.ConfigProvider()).GetCallerIdentity(context.Background(), new(sts.GetCallerIdentityInput))
 			if err != nil {
@@ -58,7 +58,7 @@ var ecrLoginCmd = &cli.Command{
 
 			endpoints = append(endpoints, fmt.Sprintf(ecrEndpointFmt, *id.Account, c.ConfigProvider().Region))
 		} else {
-			for _, arg := range ctx.Args().Slice()[1:] {
+			for _, arg := range cmd.Args().Slice()[1:] {
 				// Accept endpoints in the form of the full hostname, or just the account number
 				// Account number will be composed with the region from the resolved configuration to form the full endpoint
 				if strings.HasSuffix(arg, ".amazonaws.com") {

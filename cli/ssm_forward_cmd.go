@@ -14,12 +14,14 @@
 package cli
 
 import (
+	"context"
+	"strconv"
+	"strings"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mmmorris1975/ssm-session-client/ssmclient"
-	"github.com/urfave/cli/v2"
-	"strconv"
-	"strings"
+	"github.com/urfave/cli/v3"
 )
 
 const ssmFwdDesc = `Create an SSM port forwarding session with the specified 'target_spec' using configuration
@@ -31,17 +33,17 @@ given, the port forwarding session will listen on the specified port on the loca
 otherwise a random port is used.`
 
 var ssmForwardCmd = &cli.Command{
-	Name:         "forward",
-	Aliases:      []string{"fwd"},
-	Usage:        "Start an SSM port forwarding session",
-	ArgsUsage:    "profile_name target_spec",
-	Description:  ssmFwdDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "forward",
+	Aliases:       []string{"fwd"},
+	Usage:         "Start an SSM port forwarding session",
+	ArgsUsage:     "profile_name target_spec",
+	Description:   ssmFwdDesc,
+	ShellComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ssmFwdPortFlag, ssmUsePluginFlag},
 
-	Action: func(ctx *cli.Context) error {
-		target, c, err := doSsmSetup(ctx, 2)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		target, c, err := doSsmSetup(ctx, cmd, 2)
 		if err != nil {
 			return err
 		}
@@ -52,14 +54,14 @@ var ssmForwardCmd = &cli.Command{
 		parts := strings.Split(target, `:`)
 		target = strings.Join(parts[:len(parts)-1], `:`)
 		rp := parts[len(parts)-1]
-		lp := strconv.Itoa(ctx.Int(ssmFwdPortFlag.Name))
+		lp := strconv.Itoa(int(cmd.Uint(ssmFwdPortFlag.Name)))
 
 		ec2Id, err := ssmclient.ResolveTarget(target, c.ConfigProvider())
 		if err != nil {
 			return err
 		}
 
-		if ctx.Bool(ssmUsePluginFlag.Name) {
+		if cmd.Bool(ssmUsePluginFlag.Name) {
 			params := map[string][]string{
 				"localPortNumber": {lp},
 				"portNumber":      {rp},
@@ -77,7 +79,7 @@ var ssmForwardCmd = &cli.Command{
 		in := &ssmclient.PortForwardingInput{
 			Target:     ec2Id,
 			RemotePort: rpi,
-			LocalPort:  ctx.Int(ssmFwdPortFlag.Name),
+			LocalPort:  int(cmd.Uint(ssmFwdPortFlag.Name)),
 		}
 		return ssmclient.PortPluginSession(c.ConfigProvider(), in)
 	},

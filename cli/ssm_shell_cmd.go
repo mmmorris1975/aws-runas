@@ -14,11 +14,13 @@
 package cli
 
 import (
+	"context"
+	"os/signal"
+
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/ssm"
 	"github.com/mmmorris1975/ssm-session-client/ssmclient"
-	"github.com/urfave/cli/v2"
-	"os/signal"
+	"github.com/urfave/cli/v3"
 )
 
 const ssmShellDesc = `Create an SSM shell session with the specified 'target_spec' using configuration from the
@@ -27,17 +29,17 @@ which uniquely identifies an EC2 instance, the instance's private IPv4 address, 
 TXT record whose value is EC2 instance ID.`
 
 var ssmShellCmd = &cli.Command{
-	Name:         "shell",
-	Aliases:      []string{"sh"},
-	Usage:        "Start an SSM shell session",
-	ArgsUsage:    "profile_name target_spec",
-	Description:  ssmShellDesc,
-	BashComplete: bashCompleteProfile,
+	Name:          "shell",
+	Aliases:       []string{"sh"},
+	Usage:         "Start an SSM shell session",
+	ArgsUsage:     "profile_name target_spec",
+	Description:   ssmShellDesc,
+	ShellComplete: bashCompleteProfile,
 
 	Flags: []cli.Flag{ssmUsePluginFlag},
 
-	Action: func(ctx *cli.Context) error {
-		target, c, err := doSsmSetup(ctx, 2)
+	Action: func(ctx context.Context, cmd *cli.Command) error {
+		target, c, err := doSsmSetup(ctx, cmd, 2)
 		if err != nil {
 			return err
 		}
@@ -47,7 +49,7 @@ var ssmShellCmd = &cli.Command{
 			return err
 		}
 
-		if ctx.Bool(ssmUsePluginFlag.Name) {
+		if cmd.Bool(ssmUsePluginFlag.Name) {
 			// install signal handler (native client installs its own handler)
 			sigCh := installSignalHandler()
 			defer func() {

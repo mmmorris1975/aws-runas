@@ -24,14 +24,14 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/sts"
 	"github.com/mmmorris1975/aws-runas/client"
 	"github.com/mmmorris1975/aws-runas/credentials"
-	"github.com/urfave/cli/v2"
+	"github.com/urfave/cli/v3"
 )
 
 var ssmCmd = &cli.Command{
-	Name:        "ssm",
-	Usage:       "Helpful shortcuts for working with SSM sessions",
-	ArgsUsage:   " ", // this hides the default '[arguments...]' help text output, since we don't use command args here
-	Subcommands: []*cli.Command{ssmShellCmd, ssmForwardCmd, ssmSshCmd},
+	Name:      "ssm",
+	Usage:     "Helpful shortcuts for working with SSM sessions",
+	ArgsUsage: " ", // this hides the default '[arguments...]' help text output, since we don't use command args here
+	Commands:  []*cli.Command{ssmShellCmd, ssmForwardCmd, ssmSshCmd},
 }
 
 /*
@@ -48,13 +48,13 @@ var ssmUsePluginFlag = &cli.BoolFlag{
 }
 
 //nolint:gocognit
-func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, error) {
-	profile, cfg, err := resolveConfig(ctx, expectedArgs)
+func doSsmSetup(ctx context.Context, cmd *cli.Command, expectedArgs int) (string, client.AwsClient, error) {
+	profile, cfg, err := resolveConfig(cmd, expectedArgs)
 	if err != nil {
 		return "", nil, err
 	}
 
-	cntx, cancelFunc := context.WithCancel(ctx.Context)
+	cntx, cancelFunc := context.WithCancel(ctx)
 	defer cancelFunc()
 
 	c, err := clientFactory.Get(cntx, cfg)
@@ -62,7 +62,7 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	if ctx.Bool(refreshFlag.Name) {
+	if cmd.Bool(refreshFlag.Name) {
 		refreshCreds(c)
 	}
 
@@ -72,23 +72,23 @@ func doSsmSetup(ctx *cli.Context, expectedArgs int) (string, client.AwsClient, e
 		return "", nil, err
 	}
 
-	saveStsCredentials(ctx, profile, creds)
+	saveStsCredentials(cmd, profile, creds)
 
-	if ctx.Bool(expFlag.Name) || ctx.Bool(whoamiFlag.Name) {
-		if ctx.Bool(expFlag.Name) {
+	if cmd.Bool(expFlag.Name) || cmd.Bool(whoamiFlag.Name) {
+		if cmd.Bool(expFlag.Name) {
 			printCredExpiration(creds)
 		}
 
-		if ctx.Bool(whoamiFlag.Name) {
+		if cmd.Bool(whoamiFlag.Name) {
 			if err = printCredIdentity(sts.NewFromConfig(c.ConfigProvider())); err != nil {
 				return "", nil, err
 			}
 		}
 	}
 
-	target := ctx.Args().First()
+	target := cmd.Args().First()
 	if target == profile {
-		target = ctx.Args().Get(1)
+		target = cmd.Args().Get(1)
 	}
 
 	return target, c, nil
