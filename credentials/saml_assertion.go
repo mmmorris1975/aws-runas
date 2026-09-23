@@ -38,7 +38,7 @@ func (s *SamlAssertion) RoleDetails() (*roleDetails, error) {
 	rd.details = make(map[string]string)
 
 	// static regex should never error
-	re := regexp.MustCompile(`>(arn:aws:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws:iam::\d+:(?:role|saml-provider)/.*?)<`)
+	re := regexp.MustCompile(`>(arn:aws[\w-]*:iam::\d+:(?:role|saml-provider)/.*?),(arn:aws[\w-]*:iam::\d+:(?:role|saml-provider)/.*?)<`)
 
 	m := re.FindAllStringSubmatch(saml, -1)
 	for _, r := range m {
