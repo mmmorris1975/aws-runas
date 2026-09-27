@@ -47,6 +47,11 @@ func resolveConfig(cmd *cli.Command, expectedArgs int) (string, *config.AwsConfi
 	// environment for the standard AWS env vars for profile values
 	if len(profile) < 1 {
 		profile = checkProfileEnv()
+	} else {
+		// a profile was explicitly resolved from the command line, so any AWS_PROFILE/AWS_DEFAULT_PROFILE
+		// env vars must be cleared, otherwise they'll leak into (and confuse) the AWS SDK's own config and
+		// credential resolution once we start making AWS API calls
+		unsetProfileEnv()
 	}
 
 	cfg, err := configResolver.Config(profile)
@@ -109,11 +114,15 @@ func checkProfileEnv() string {
 		profile = os.Getenv("AWS_DEFAULT_PROFILE")
 	}
 
-	// explicitly unset AWS profile env vars so they don't get in the way of AWS Session setup
-	_ = os.Unsetenv("AWS_PROFILE")
-	_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
+	unsetProfileEnv()
 
 	return profile
+}
+
+// unsetProfileEnv explicitly unsets the AWS profile env vars so they don't get in the way of AWS Session setup.
+func unsetProfileEnv() {
+	_ = os.Unsetenv("AWS_PROFILE")
+	_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
 }
 
 // configure signal handler to make runas ignore (pass through) the below signals.
