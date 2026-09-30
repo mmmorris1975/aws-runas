@@ -172,7 +172,7 @@ func (c *browserClient) startBrowser(ctx context.Context, profileDir, execPath s
 		chromedp.Flag("profile-directory", "aws-runas"),
 		chromedp.Flag("disable-session-crashed-bubble", true),
 		chromedp.Flag("disable-background-networking", true),
-		chromedp.Flag("no-first-run",true),
+		chromedp.Flag("no-first-run", true),
 		chromedp.Flag("hide-crash-restore-bubble", true),
 		chromedp.Flag("noerrdialogs", true),
 		chromedp.WindowSize(400, 700),

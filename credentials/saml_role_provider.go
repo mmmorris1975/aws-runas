@@ -124,7 +124,7 @@ func (p *samlRoleProvider) getAssumeRoleWithSamlInput() (*sts.AssumeRoleWithSAML
 	}
 	principal := aws.String(prin.RolePrincipal(p.RoleArn))
 	if len(*principal) < 1 {
-		return nil,fmt.Errorf("no SAML principal ARN found for role %s in the SAML assertion", p.RoleArn)
+		return nil, fmt.Errorf("no SAML principal ARN found for role %s in the SAML assertion", p.RoleArn)
 	}
 	in.PrincipalArn = principal
 
