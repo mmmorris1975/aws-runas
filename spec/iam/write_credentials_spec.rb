@@ -12,6 +12,7 @@
 #
 
 require 'spec_helper'
+require 'open3'
 
 # Isolated writable credentials file so tests never touch the read-only testdata mount.
 # The real credentials are copied here before each test group so IAM authentication
@@ -133,16 +134,18 @@ describe 'tests for --write-credentials flag' do
     end
 
     describe '--write-credentials with -O json writes file and outputs JSON' do
+        # Run the command once up front (like the other groups) so the file assertions below don't depend on
+        # rspec's random ordering to have executed it first.
         before(:all) do
             setup_fresh_creds
+            @stdout, _stderr, @status = Open3.capture3({ 'AWS_SHARED_CREDENTIALS_FILE' => $write_creds_file },
+                                                       'build/aws-runas', '--write-credentials', '-O', 'json', 'iam-role')
         end
 
         after(:all) { cleanup_write_creds_test }
 
-        describe command("AWS_SHARED_CREDENTIALS_FILE=#{$write_creds_file} aws-runas --write-credentials -O json iam-role") do
-            its(:exit_status) { should eq 0 }
-            its(:stdout) { should match /\{"AccessKeyId":"ASIA.*","SecretAccessKey":".*"/ }
-        end
+        it('exits 0') { expect(@status.exitstatus).to eq 0 }
+        it('outputs JSON credentials') { expect(@stdout).to match(/\{"AccessKeyId":"ASIA.*","SecretAccessKey":".*"/) }
 
         it_should_behave_like 'write role credentials to file', 'iam-role'
     end
