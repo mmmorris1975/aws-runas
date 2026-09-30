@@ -63,7 +63,9 @@ func findInterfaceByAddress(addr string) (*net.Interface, error) {
 }
 
 func doCommand(cmd []string) error {
-	c := exec.Command(cmd[0], cmd[1:]...) //nolint:gosec
+	// not CommandContext: this also runs from the signal handler during cleanup, when any context would already be
+	// cancelled, and the command must still run to remove the address from the interface.
+	c := exec.Command(cmd[0], cmd[1:]...) //nolint:gosec,noctx
 	c.Stdin = nil
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

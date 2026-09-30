@@ -121,7 +121,9 @@ func execSsmPlugin(cfg aws.Config, in *ssm.StartSessionInput) error {
 	// the empty string after StartSession would normally be where a named profile would be specified, but
 	// that's unnecessary when wrapping with aws-runas, which handles profile and credential stuff for us
 	// session-manager-plugin executable must be found in PATH
-	c := exec.Command("session-manager-plugin", string(outJ), cfg.Region, "StartSession", "", string(inJ), ep.URL) //nolint:gosec
+	// not CommandContext: the root context is cancelled by SIGINT/SIGTERM and would SIGKILL the plugin.  The plugin
+	// handles Ctrl-C itself (forwarding it to the remote session), so it must be left to exit on its own.
+	c := exec.Command("session-manager-plugin", string(outJ), cfg.Region, "StartSession", "", string(inJ), ep.URL) //nolint:gosec,noctx
 	c.Stdin = os.Stdin
 	c.Stdout = os.Stdout
 	c.Stderr = os.Stderr

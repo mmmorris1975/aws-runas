@@ -94,7 +94,7 @@ func (c *Credentials) CredentialsProcess() ([]byte, error) {
 		pc.Expiration = aws.Time(c.Expiration)
 	}
 
-	return json.Marshal(&pc)
+	return json.Marshal(&pc) //nolint:gosec // serializing the credentials is the purpose
 }
 
 // Value returns an aws.Credentials type for programmatic use.

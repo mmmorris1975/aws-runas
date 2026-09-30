@@ -227,7 +227,9 @@ func execCmd(ctx context.Context, cmd *cli.Command) error {
 		}
 
 		wrapped := wrapCmd(args)
-		c := exec.Command(wrapped[0], wrapped[1:]...) //nolint:gosec // it's sort of the whole reason this tool exists
+		// not CommandContext: cntx is cancelled by SIGINT/SIGTERM and would SIGKILL the child.  The child gets the
+		// terminal's signals directly (see installSignalHandler) and is left to shut down on its own.
+		c := exec.Command(wrapped[0], wrapped[1:]...) //nolint:gosec,noctx // it's sort of the whole reason this tool exists
 		c.Stdin = os.Stdin
 		c.Stdout = os.Stdout
 		c.Stderr = os.Stderr

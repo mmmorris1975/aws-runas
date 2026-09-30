@@ -241,15 +241,18 @@ func (c *browserNEClient) SamlAssertionWithContext(ctx context.Context) (*creden
 }
 
 // openBrowser tries to open the URL in a browser.
+//
+// The launcher is started and left alone, so no CommandContext here: some launchers (xdg-open) can end up being the
+// browser process itself, and cancelling a context when the authentication flow ends would kill the user's browser.
 func openBrowser(url string) error {
 	var err error
 	switch runtime.GOOS {
 	case "linux":
-		err = exec.Command("xdg-open", url).Start()
+		err = exec.Command("xdg-open", url).Start() //nolint:noctx
 	case "windows":
-		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		err = exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start() //nolint:noctx
 	case "darwin": // macOS
-		err = exec.Command("open", url).Start()
+		err = exec.Command("open", url).Start() //nolint:noctx
 	default:
 		err = fmt.Errorf("unsupported platform")
 	}

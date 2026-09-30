@@ -425,7 +425,7 @@ func (s *metadataCredentialService) ecsCredHandler(w http.ResponseWriter, r *htt
 	logger.Debugf("ECS CREDS: %s", ecsCreds)
 
 	w.Header().Set("Content-Type", "application/json")
-	_, _ = w.Write(ecsCreds)
+	_, _ = w.Write(ecsCreds) //nolint:gosec // JSON credentials response is the purpose of this endpoint
 }
 
 func (s *metadataCredentialService) refreshHandler(w http.ResponseWriter, r *http.Request) {
@@ -737,7 +737,8 @@ func configureListener(addr string) (net.Listener, error) {
 		}
 
 		var lsnr net.Listener
-		lsnr, err = net.Listen("tcp", addr)
+		// binding is immediate and there's no context to plumb in here, so a Background() ListenConfig would add nothing
+		lsnr, err = net.Listen("tcp", addr) //nolint:noctx
 		if err != nil {
 			return nil, err
 		}
@@ -747,7 +748,7 @@ func configureListener(addr string) (net.Listener, error) {
 		return lsnr, dropPrivileges()
 	}
 
-	return net.Listen("tcp", addr)
+	return net.Listen("tcp", addr) //nolint:noctx // see above
 }
 
 func cleanup(srv *http.Server, lsnr net.Listener) {
