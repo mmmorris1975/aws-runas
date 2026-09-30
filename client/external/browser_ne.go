@@ -72,7 +72,7 @@ func (c *browserNEClient) AuthenticateWithContext(ctx context.Context) error {
 	var samlassertion credentials.SamlAssertion
 	c.Logger.Debugf("Starting a browser to authenticate with the New Experience flow...")
 	// Create a local HTTP listener on a random port.
-	httpListener, listenerClose := createHttpListener()
+	httpListener, listenerClose := createHttpListener(ctx)
 	listenPort := httpListener.Addr().(*net.TCPAddr).Port
 	c.Logger.Debugf("Listening on %s", httpListener.Addr().String())
 	defer listenerClose()
@@ -256,8 +256,8 @@ func openBrowser(url string) error {
 	return err
 }
 
-func createHttpListener() (l net.Listener, close func()) {
-	l, err := net.Listen("tcp", "localhost:0")
+func createHttpListener(ctx context.Context) (l net.Listener, close func()) {
+	l, err := new(net.ListenConfig).Listen(ctx, "tcp", "localhost:0")
 	if err != nil {
 		panic(err)
 	}
