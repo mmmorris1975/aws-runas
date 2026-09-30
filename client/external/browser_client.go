@@ -171,6 +171,8 @@ func (c *browserClient) startBrowser(ctx context.Context, profileDir, execPath s
 		chromedp.UserDataDir(profileDir),
 		chromedp.Flag("profile-directory", "aws-runas"),
 		chromedp.Flag("disable-session-crashed-bubble", true),
+		chromedp.Flag("disable-background-networking", true),
+		chromedp.Flag("no-first-run",true),
 		chromedp.Flag("hide-crash-restore-bubble", true),
 		chromedp.Flag("noerrdialogs", true),
 		chromedp.WindowSize(400, 700),
@@ -304,7 +306,7 @@ func waitForProcessExit(pid int, max time.Duration) {
 func (c *browserClient) targetListener(ev any, once *sync.Once) {
 	switch ev := ev.(type) { //nolint:gocritic
 	case *network.EventRequestWillBeSent:
-		if ev.Request.URL == `https://signin.aws.amazon.com/saml` {
+		if ev.Request.URL == `https://signin.aws.amazon.com/saml` || ev.Request.URL == `https://signin.amazonaws-us-gov.com/saml` {
 			for i, entry := range ev.Request.PostDataEntries {
 				decoded, _ := base64.StdEncoding.DecodeString(entry.Bytes)
 				c.Logger.Debugf("%d - %s\n", i, string(decoded))
