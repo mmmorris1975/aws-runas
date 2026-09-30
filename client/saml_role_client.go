@@ -38,7 +38,6 @@ type SamlRoleClientConfig struct {
 	Cache    credentials.CredentialCacher
 	Duration time.Duration
 	RoleArn  string
-	JumpRoleArn string
 }
 
 // NewSamlRoleClient returns a new SAML aware AwsClient for obtaining identity information from the external IdP, and

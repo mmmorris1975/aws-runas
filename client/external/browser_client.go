@@ -156,11 +156,13 @@ func (c *browserClient) startBrowser(ctx context.Context, profileDir, execPath s
 	if err := os.MkdirAll(profileDir, 0700); err != nil {
 		return nil, nil, fmt.Errorf("create browser profile dir: %w", err)
 	}
+
 	killOrphanedChrome(profileDir)
 	for _, name := range []string{"SingletonLock", "SingletonSocket", "SingletonCookie", "DevToolsActivePort"} {
 		_ = os.Remove(filepath.Join(profileDir, name))
 	}
 	_ = os.RemoveAll(filepath.Join(profileDir, "aws-runas", "Sessions"))
+
 	opts := []chromedp.ExecAllocatorOption{chromedp.DefaultExecAllocatorOptions[0]}
 	if execPath != "" {
 		opts = append(opts, chromedp.ExecPath(execPath))
@@ -178,10 +180,7 @@ func (c *browserClient) startBrowser(ctx context.Context, profileDir, execPath s
 	)
 
 	allocCtx, allocCancel := chromedp.NewExecAllocator(ctx, opts...)
-	taskCtx, _ := chromedp.NewContext(allocCtx, 
-		chromedp.WithLogf(c.Logger.Errorf),
-	//	chromedp.WithDebugf(c.Logger.Debugf),
-	)
+	taskCtx, _ := chromedp.NewContext(allocCtx, chromedp.WithLogf(c.Logger.Errorf))
 	cancel := func() {
 		pid := chromePIDFromLock(profileDir)
 		// chromedp.Cancel runs the proper graceful-shutdown protocol: it closes

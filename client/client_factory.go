@@ -166,7 +166,7 @@ func (f *Factory) samlClient(ctx context.Context, cfg *config.AwsConfig, creds *
 
 	if len(cfg.JumpRoleArn) > 0 {
 		var roleCache credentials.CredentialCacher
-		samlCfg.JumpRoleArn = cfg.JumpRoleArn
+		samlCfg.RoleArn = cfg.JumpRoleArn
 		// return role client configured with saml creds
 		if f.options.EnableCache {
 			samlCfg.Cache = cache.NewFileCredentialCache(cacheFileName(".aws_saml_role", "", cfg.JumpRoleArn))
@@ -196,7 +196,7 @@ func (f *Factory) samlClient(ctx context.Context, cfg *config.AwsConfig, creds *
 				Cache:    roleCache,
 				Duration: credentials.AssumeRoleDurationDefault, // AWS limits chained creds max duration to 1 hr
 			},
-			RoleArn:         cfg.JumpRoleArn,
+			RoleArn:         cfg.RoleArn,
 			RoleSessionName: cfg.RoleSessionName,
 			ExternalId:      cfg.ExternalId,
 		}

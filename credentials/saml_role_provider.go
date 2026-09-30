@@ -16,6 +16,7 @@ package credentials
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
@@ -121,7 +122,11 @@ func (p *samlRoleProvider) getAssumeRoleWithSamlInput() (*sts.AssumeRoleWithSAML
 	if err != nil {
 		return nil, err
 	}
-	in.PrincipalArn = aws.String(prin.RolePrincipal(p.RoleArn))
+	principal := aws.String(prin.RolePrincipal(p.RoleArn))
+	if len(*principal) < 1 {
+		return nil,fmt.Errorf("no SAML principal ARN found for role %s in the SAML assertion", p.RoleArn)
+	}
+	in.PrincipalArn = principal
 
 	return in, nil
 }

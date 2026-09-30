@@ -15,10 +15,9 @@ package credentials
 
 import (
 	"context"
-	"time"
-
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/sts"
+	"time"
 )
 
 const (
@@ -38,7 +37,6 @@ type AssumeRoleProvider struct {
 	*baseStsProvider
 	ExternalId      string
 	RoleArn         string
-	JumpRoleArn     string
 	RoleSessionName string
 }
 

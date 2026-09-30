@@ -653,6 +653,13 @@ func (s *metadataCredentialService) buildConfig(v url.Values) (*config.AwsConfig
 }
 
 func (s *metadataCredentialService) getConfigAndClient(ctx context.Context, profile string) (cfg *config.AwsConfig, cl client.AwsClient, err error) {
+	// we always have an explicit profile name here (whether from startup options, the /profile endpoint, or
+	// the ECS credential path suffix), so any ambient AWS_PROFILE/AWS_DEFAULT_PROFILE env vars must be cleared
+	// before we start making AWS API calls, otherwise they can leak into (and confuse) the AWS SDK's own
+	// config and credential resolution -- mirrors the behavior of the default wrapper command in cli.resolveConfig()
+	_ = os.Unsetenv("AWS_PROFILE")
+	_ = os.Unsetenv("AWS_DEFAULT_PROFILE")
+
 	cfg, err = s.configResolver.Config(profile)
 	if err != nil {
 		return nil, nil, err
