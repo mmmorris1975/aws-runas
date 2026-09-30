@@ -70,6 +70,6 @@ var ecrLoginCmd = &cli.Command{
 		}
 
 		ecr := docker.NewEcrLoginProvider(c.ConfigProvider()).WithLogger(log)
-		return ecr.Login(endpoints...)
+		return ecr.LoginWithContext(ctx, endpoints...)
 	},
 }

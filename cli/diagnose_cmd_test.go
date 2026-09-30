@@ -218,7 +218,7 @@ aws_secret_access_key = secret
 
 func TestDiagnoseCmd_checkTime(t *testing.T) {
 	// not sure what do do after this ... guess we do it for the coverage
-	checkTime()
+	checkTime(context.Background())
 }
 
 func Example_printConfig_no_external() {

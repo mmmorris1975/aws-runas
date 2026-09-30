@@ -152,7 +152,7 @@ func (r *roleDetails) Principals() []string {
 func (r *roleDetails) String() string {
 	sb := new(strings.Builder)
 	for k, v := range r.details {
-		sb.WriteString(fmt.Sprintf("  %s %s\n", k, v))
+		_, _ = fmt.Fprintf(sb, "  %s %s\n", k, v)
 	}
 	return sb.String()
 }

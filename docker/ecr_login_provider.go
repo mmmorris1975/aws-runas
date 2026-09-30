@@ -77,7 +77,7 @@ func (p *ecrLoginProvider) LoginWithContext(ctx context.Context, endpoints ...st
 
 		// since we're not relying on a command shell and just exec()'ing directly, shell escape issues are minimized
 		// for the 'ep' variable (parts[0] is trusted input from the call to AWS)
-		cmd := exec.Command("docker", "login", "--username", parts[0], "--password-stdin", ep) //nolint:gosec
+		cmd := exec.CommandContext(ctx, "docker", "login", "--username", parts[0], "--password-stdin", ep) //nolint:gosec
 		cmd.Stdin = bytes.NewReader([]byte(parts[1]))
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

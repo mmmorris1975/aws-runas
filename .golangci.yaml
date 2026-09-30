@@ -1,71 +1,72 @@
+version: "2"
 run:
   concurrency: 4
-  timeout: 5m
-
 issues:
-  exclude-rules:
-    # Exclude some linters from running on tests files.
-    - path: _test\.go
-      linters:
-        - funlen
-        - gocognit
-        - gocyclo
-        - unused
-
-linters-settings:
-  funlen:
-    lines: 75
-    statements: 50
-  gocognit:
-    min-complexity: 15
-  gocyclo:
-    min-complexity: 15
-  govet:
-    enable:
-      - shadow
-  lll:
-    line-length: 132
-
+  max-same-issues: 0
 linters:
-  disable-all: true
+  default: none
   enable:
-    # These are the default linters
-    - errcheck
-    - gosimple
-    - govet
-    - ineffassign
-    - staticcheck
-    - typecheck
-    - unused
-
-    # These are some of the not enabled by default linters, which we may or may not enable
     - bodyclose
-    #- depguard
-    #- dogsled
-    #- dupl
-    #- exhaustive
+    - errcheck
     - funlen
-    #- gochecknoinits
-    #- goconst
-    - gocritic
     - gocognit
+    - gocritic
     - gocyclo
     - godot
-    - gofmt
-    #- goimports
-    #- gomnd
-    #- goprintffuncname
     - gosec
-    #- interfacer
-    #- lll
-    #- misspell
-    #- nakedret
+    - govet
+    - ineffassign
     - noctx
-    #- nolintlint
-    #- prealloc
-    #- rowserrcheck
-    #- scopelint
-    #- stylecheck
+    - staticcheck
     - unconvert
     - unparam
-    #- whitespace
+    - unused
+  settings:
+    funlen:
+      lines: 75
+      statements: 50
+    gocognit:
+      min-complexity: 15
+    gocyclo:
+      min-complexity: 15
+    govet:
+      enable:
+        - shadow
+    lll:
+      line-length: 132
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      - linters:
+          - funlen
+          - gocognit
+          - gocyclo
+          - unused
+        path: _test\.go
+      # httptest requests and throwaway listeners in the metadata server tests don't need a context
+      - linters:
+          - noctx
+        path: metadata/.*_test\.go
+      # test fixtures use fake tokens/cookies and canned responses
+      - linters:
+          - gosec
+        path: _test\.go
+        text: G101|G117|G124|G705
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
+formatters:
+  enable:
+    - gofmt
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

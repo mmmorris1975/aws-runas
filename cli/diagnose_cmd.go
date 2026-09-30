@@ -56,7 +56,7 @@ var diagCmd = &cli.Command{
 		checkEnv()
 		checkRegion(cfg.Region)
 		checkProfileCfg(cfg)
-		checkTime()
+		checkTime(ctx)
 
 		printConfig(cfg)
 
@@ -214,13 +214,13 @@ func checkCredentialProfile(profile string) bool {
 	return true
 }
 
-func checkTime() {
+func checkTime(ctx context.Context) {
 	// AWS requires that the timestamp in API requests be within 5 minutes of the time at
 	// the service endpoint. Ensure our local clock is within 5 minutes of an NTP source
 	maxDrift := 5 * time.Minute
 	warnDrift := 3 * time.Minute
 
-	nTime, err := ntpTime()
+	nTime, err := ntpTime(ctx)
 	if err != nil {
 		log.Errorf("error checking ntp: %v", err)
 		return
@@ -240,7 +240,7 @@ func checkTime() {
 	}
 }
 
-func ntpTime() (time.Time, error) {
+func ntpTime(ctx context.Context) (time.Time, error) {
 	var t time.Time
 	var err error
 
@@ -252,7 +252,7 @@ func ntpTime() (time.Time, error) {
 			return time.Time{}, fmt.Errorf("retry attempt limit exceeded")
 		}
 
-		t, err = fetchTime(deadlineDuration)
+		t, err = fetchTime(ctx, deadlineDuration)
 		if err != nil {
 			switch e := err.(type) {
 			case *net.OpError:
@@ -274,12 +274,12 @@ func ntpTime() (time.Time, error) {
 }
 
 // REF: https://medium.com/learning-the-go-programming-language/lets-make-an-ntp-client-in-go-287c4b9a969f.
-func fetchTime(deadline time.Duration) (time.Time, error) {
+func fetchTime(ctx context.Context, deadline time.Duration) (time.Time, error) {
 	// epoch times between NTP and Unix time are offset by this much
 	// REF: https://tools.ietf.org/html/rfc5905#section-6 (Figure 4)
 	var ntpUnixOffsetSec uint32 = 2208988800
 
-	c, err := net.Dial("udp", "pool.ntp.org:123")
+	c, err := new(net.Dialer).DialContext(ctx, "udp", "pool.ntp.org:123")
 	if err != nil {
 		return time.Time{}, err
 	}

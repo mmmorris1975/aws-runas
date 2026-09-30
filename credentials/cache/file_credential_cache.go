@@ -94,7 +94,7 @@ func (f *fileCredentialCache) writeFile(creds *credentials.Credentials) error {
 
 	// this should never return an error, all code paths to get here will have valid/serializable 'data'
 	// anything causing an error here is probably a panic-level issue
-	_ = json.NewEncoder(tmp).Encode(creds.StsCredentials())
+	_ = json.NewEncoder(tmp).Encode(creds.StsCredentials()) //nolint:gosec // caching the credentials is the purpose
 
 	// close file before rename to keep Windows file handling happy
 	_ = tmp.Close()

@@ -286,7 +286,7 @@ func aadLoginHandler(w http.ResponseWriter, r *http.Request) {
 		ar.UrlPost = "/kmsi"
 		body, _ := genAuthResponse(ar)
 		buf := bytes.NewBuffer(body)
-		buf.WriteString(fmt.Sprintf("window.location='%s?SAMLRequest=mysamlrequest'", aadMock.URL))
+		_, _ = fmt.Fprintf(buf, "window.location='%s?SAMLRequest=mysamlrequest'", aadMock.URL)
 		_, _ = w.Write(buf.Bytes())
 		return
 	}
