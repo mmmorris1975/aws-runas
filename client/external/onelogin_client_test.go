@@ -576,8 +576,8 @@ func olSamlVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	switch vr := verifyReq; {
-	case vr.DeviceId == "555":
+	switch vr := verifyReq; vr.DeviceId {
+	case "555":
 		// code mfa
 		if vr.OtpToken == "54321" {
 			data, _ := json.Marshal(&oneloginAuthReplyV2{
@@ -593,7 +593,7 @@ func olSamlVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 			Message: "Failed authentication with this factor",
 		})
 		http.Error(w, string(data), http.StatusUnauthorized)
-	case vr.DeviceId == "666":
+	case "666":
 		// push mfa — success on seconds divisible by 6, pending otherwise
 		reply := &oneloginAuthReplyV2{
 			Message: "Authentication pending",
@@ -797,8 +797,8 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	switch vr := verifyReq; {
-	case vr.DeviceId == "555":
+	switch vr := verifyReq; vr.DeviceId {
+	case "555":
 		// code mfa
 		if vr.OtpToken == "54321" {
 			data, _ := json.Marshal(&oneloginAuthReply{
@@ -813,7 +813,7 @@ func olVerifyMfaHandler(w http.ResponseWriter, r *http.Request) {
 			Status: &oneloginApiStatus{Code: http.StatusUnauthorized, Message: "Failed authentication with this factor", Error: true},
 		})
 		http.Error(w, string(data), http.StatusUnauthorized)
-	case vr.DeviceId == "666":
+	case "666":
 		// push mfa — success on seconds divisible by 6, pending otherwise
 		reply := &oneloginAuthReply{
 			Status: &oneloginApiStatus{Code: http.StatusOK, Message: "Authentication pending"},
