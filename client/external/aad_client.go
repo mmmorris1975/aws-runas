@@ -26,6 +26,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -54,7 +55,8 @@ type aadClient struct {
 
 // NewAadClient creates a new AzureAD client. The url parameter is the 'User Access URL' found in the Properties
 // screen of the Azure Enterprise Application which grants access to the AWS role(s).  Should look something like:
-// https://myapps.microsoft.com/signin/<app name>/<app id>?tenantId=<tenant id>
+// https://launcher.myapps.microsoft.com/api/signin/<app id>?tenantId=<tenant id>
+// (the older https://myapps.microsoft.com/signin/<app name>/<app id>?tenantId=<tenant id> form is also accepted)
 // MFA is only supported for users at the organizational level; per-app conditional access policies
 // requiring MFA are not supported.
 func NewAadClient(url string) (*aadClient, error) {
@@ -97,6 +99,8 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		return err
 	}
 	reader := bytes.NewReader(body)
+	baseUrl := res.Request.URL
+	c.Logger.Debugf("aad: initial response from %s%s", baseUrl.Host, baseUrl.Path)
 
 	authRes := new(aadAuthResponse)
 	if err = parseResponseNoClose(reader, authRes); err != nil {
@@ -104,11 +108,17 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		// response (triggering the error), try submitting the result before returning an error.
 		c.Logger.Debugf("parseResponseNoClose() err: %v, attempting to directly submit response", err)
 		_, _ = reader.Seek(0, io.SeekStart)
-		_, err = c.submitResponse(ctx, res.Request.URL, io.NopCloser(reader))
+		_, err = c.submitResponse(ctx, baseUrl, io.NopCloser(reader))
 		return err
 	}
 
-	if err = c.auth(ctx, authRes.LoginUrl(res.Request.URL), authRes); err != nil {
+	res, err = c.auth(ctx, authRes.LoginUrl(baseUrl), authRes)
+	if err != nil {
+		return err
+	}
+
+	found, err := c.captureSaml(res)
+	if err != nil || found {
 		return err
 	}
 
@@ -116,7 +126,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 	// equal 50058 too ... isn't really an error, other than signalling you've reached this KMSI prompt
 	if strings.HasSuffix(authRes.UrlPost, "/kmsi") {
 		c.Logger.Debugf("handling kmsi")
-		kmsiUrl := authRes.LoginUrl(res.Request.URL)
+		kmsiUrl := authRes.LoginUrl(baseUrl)
 
 		kmsiForm := url.Values{}
 		kmsiForm.Set(authRes.FTName, authRes.FT)
@@ -128,6 +138,11 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+	}
+
+	found, err = c.captureSaml(res)
+	if err != nil || found {
+		return err
 	}
 
 	// KMSI or not, I think we end up here. Another JS auto-submit form containing OIDC stuff.
@@ -202,6 +217,14 @@ func (c *aadClient) SamlAssertion() (*credentials.SamlAssertion, error) {
 }
 
 func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.SamlAssertion, error) {
+	return c.samlAssertion(ctx, 0)
+}
+
+// aadMaxAuthAttempts bounds how many times we'll walk the sign-in flow while looking for a SAML response, since
+// the SAML endpoint can ask for a fresh sign-in even after the launcher sign-in succeeded.
+const aadMaxAuthAttempts = 2
+
+func (c *aadClient) samlAssertion(ctx context.Context, attempt int) (*credentials.SamlAssertion, error) {
 	// using c.authUrl directly won't work, you need to fetch that URL, then process the response which
 	// contains the actual URL we need to submit (which is embedded in JS, because why wouldn't it be?).
 	req, _ := newHttpRequest(ctx, http.MethodGet, c.authUrl.String())
@@ -214,21 +237,79 @@ func (c *aadClient) SamlAssertionWithContext(ctx context.Context) (*credentials.
 	defer res.Body.Close()
 
 	data, _ := io.ReadAll(res.Body)
-	match := samlRe.FindSubmatch(data)
-	if len(match) < 2 {
-		// response is probably a login page, so attempt re-auth
-		if err = c.AuthenticateWithContext(ctx); err != nil {
+	if match := samlRe.FindSubmatch(data); len(match) > 1 {
+		c.Logger.Debugf("aad: SAML request url found in script redirect")
+		u, _ := url.Parse(string(match[1]))
+		if err = c.samlRequest(ctx, u); err != nil {
 			return nil, err
 		}
-		return c.SamlAssertionWithContext(ctx)
+		return c.saml, nil
 	}
 
-	u, _ := url.Parse(string(match[1]))
-	if err = c.samlRequest(ctx, u); err != nil {
+	// the launcher may redirect straight to the SAML endpoint, in which case the response is the SAML form post
+	if res.Request.URL.Query().Has("SAMLRequest") {
+		c.Logger.Debugf("aad: followed redirect to SAML endpoint %s%s", res.Request.URL.Host, res.Request.URL.Path)
+		if err = c.handleSamlResponse(bytes.NewReader(data)); err != nil {
+			return nil, err
+		}
+		if c.saml != nil && len(*c.saml) > 0 {
+			return c.saml, nil
+		}
+	}
+
+	c.logSignInPage(res.Request.URL, data)
+	if attempt >= aadMaxAuthAttempts {
+		return nil, errors.New("aad: SAML request not found after authentication")
+	}
+
+	// response is probably a login page, so attempt re-auth
+	c.Logger.Debugf("aad: no SAML response from %s%s, authenticating (attempt %d)", res.Request.URL.Host, res.Request.URL.Path, attempt+1)
+	if err = c.AuthenticateWithContext(ctx); err != nil {
 		return nil, err
 	}
 
-	return c.saml, nil
+	// authentication may have ended with the SAML response already in hand
+	if c.saml != nil && len(*c.saml) > 0 {
+		return c.saml, nil
+	}
+	return c.samlAssertion(ctx, attempt+1)
+}
+
+// captureSaml checks a response for the SAML form post, saving the assertion when found.  The response body is
+// left readable.
+func (c *aadClient) captureSaml(res *http.Response) (bool, error) {
+	data, err := io.ReadAll(res.Body)
+	_ = res.Body.Close()
+	if err != nil {
+		return false, err
+	}
+	res.Body = io.NopCloser(bytes.NewReader(data))
+
+	if !bytes.Contains(data, []byte("SAMLResponse")) {
+		return false, nil
+	}
+
+	if err = c.handleSamlResponse(bytes.NewReader(data)); err != nil {
+		return false, err
+	}
+
+	found := c.saml != nil && len(*c.saml) > 0
+	if found {
+		c.Logger.Debugf("aad: SAML response received from %s%s", res.Request.URL.Host, res.Request.URL.Path)
+	}
+	return found, nil
+}
+
+// logSignInPage logs non-sensitive details of a sign-in page which didn't contain the SAML response.
+func (c *aadClient) logSignInPage(u *url.URL, data []byte) {
+	ar := new(aadAuthResponse)
+	if err := parseResponseNoClose(bytes.NewReader(data), ar); err != nil {
+		c.Logger.Debugf("aad: response from %s%s is not a sign-in page ($Config not found)", u.Host, u.Path)
+		return
+	}
+
+	c.Logger.Debugf("aad: sign-in page from %s%s: error code %q, mfa methods %d, post path %q",
+		u.Host, u.Path, ar.ErrCode, len(ar.UserProofs), ar.LoginUrl(nil).Path)
 }
 
 func (c *aadClient) parseTenantId() error {
@@ -294,7 +375,11 @@ func (c *aadClient) submitResponse(ctx context.Context, u *url.URL, r io.ReadClo
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
-func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuthResponse) error {
+func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuthResponse) (*http.Response, error) {
+	if err := c.gatherCredentials(); err != nil {
+		return nil, err
+	}
+
 	authForm := url.Values{}
 	authForm.Set(authRes.FTName, authRes.FT)
 	authForm.Set("ctx", authRes.Ctx)
@@ -303,46 +388,45 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 	req, _ := newHttpRequest(ctx, http.MethodPost, authUrl.String())
 	res, err := checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	if err = parseResponse(res.Body, authRes); err != nil {
-		return err
+		return nil, err
 	}
 
 	// a bold assumption that everything down this path is not nil
 	if u := authRes.CredentialTypeResult.Credentials.FederationRedirectUrl; len(u) > 0 {
+		c.Logger.Debugf("aad: federated user, authenticating through the external provider")
 		res, err = c.doFederatedAuth(ctx, u)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	} else {
 		// assume anything else means we're an aad-managed account
 		// reset authRes.ErrCode so we capture the correct state of the authentication attempt
+		c.Logger.Debugf("aad: managed user, submitting password")
 		authRes.ErrCode = ""
-
-		if err = c.gatherCredentials(); err != nil {
-			return err
-		}
 		authForm.Set("passwd", c.Password)
 
 		// update existing req with new form values (password)
 		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
 	// test for auth failure. Ideally auth failure for a federated user set 'err' and returned before this,
 	// but we'll be safe and test everything. Code 50126 is bad username/password error
-	if err = parseResponse(res.Body, authRes); err != nil {
-		return err
-	} else if authRes.ErrCode == strconv.Itoa(aadBadUserPassErrCode) {
-		return errors.New("authentication failed")
+	if err = parseResponseRewind(res, authRes); err != nil {
+		return nil, err
+	}
+	if authRes.ErrCode == strconv.Itoa(aadBadUserPassErrCode) {
+		return nil, errors.New("authentication failed")
 	}
 
 	// it is possible to require MFA for federated/guest users
-	return c.checkMfa(ctx, authRes)
+	return c.checkMfa(ctx, res, authRes)
 }
 
 func (c *aadClient) doFederatedAuth(ctx context.Context, fedUrl string) (res *http.Response, err error) {
@@ -361,7 +445,11 @@ func (c *aadClient) doFederatedAuth(ctx context.Context, fedUrl string) (res *ht
 	}
 
 	// federation url must be one of the aws-runas supported external clients
-	sc := MustGetSamlClient("", fedUrl, cfg)
+	sc, err := GetSamlClient("", fedUrl, cfg)
+	if err != nil {
+		return nil, err
+	}
+
 	if err = sc.AuthenticateWithContext(ctx); err != nil {
 		return nil, err
 	}
@@ -376,29 +464,39 @@ func (c *aadClient) doFederatedAuth(ctx context.Context, fedUrl string) (res *ht
 }
 
 //nolint:bodyclose // response bodies closed in parseResponse
-func (c *aadClient) checkMfa(ctx context.Context, authRes *aadAuthResponse) error {
-	var res *http.Response
+func (c *aadClient) checkMfa(ctx context.Context, res *http.Response, authRes *aadAuthResponse) (*http.Response, error) {
 	var err error
 
-	if len(authRes.UrlSkipMfaRegistration) > 0 {
+	switch {
+	case len(authRes.UrlSkipMfaRegistration) > 0:
 		// We can't register an MFA device here, so skip past it
+		c.Logger.Debugf("aad: skipping mfa registration")
 		req, _ := newHttpRequest(ctx, http.MethodGet, authRes.UrlSkipMfaRegistration)
 		res, err = checkResponseError(c.httpClient.Do(req.Request))
 		if err != nil {
-			return err
+			return nil, err
 		}
+	case len(authRes.UserProofs) > 0:
+		methods := make([]string, 0, len(authRes.UserProofs))
+		for _, p := range authRes.UserProofs {
+			methods = append(methods, p.AuthMethodID)
+		}
+		c.Logger.Debugf("aad: mfa required, available methods: %s", strings.Join(methods, ","))
 
-		return parseResponse(res.Body, authRes)
-	} else if len(authRes.UserProofs) > 0 {
 		res, err = c.handleMfa(ctx, authRes)
 		if err != nil {
-			return err
+			return nil, err
 		}
-
-		return parseResponse(res.Body, authRes)
+	default:
+		c.Logger.Debugf("aad: mfa not required")
+		return res, nil
 	}
 
-	return nil
+	// once MFA completes the response may be the SAML form post, rather than another sign-in page
+	if err = parseResponseRewind(res, authRes); err != nil {
+		c.Logger.Debugf("aad: response after mfa is not a sign-in page: %v", err)
+	}
+	return res, nil
 }
 
 func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*http.Response, error) {
@@ -435,6 +533,9 @@ func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*h
 
 	switch c.MfaType {
 	case MfaTypePush:
+		if mfaRes.Entropy != 0 {
+			fmt.Printf("Enter %d in the Microsoft Authenticator app\n", mfaRes.Entropy)
+		}
 		fmt.Println("Waiting for Push MFA confirmation...")
 		mfaRes, err = c.handlePushMfa(ctx, authRes.UrlEndAuth, mfaReq, wait)
 	case MfaTypeCode:
@@ -602,7 +703,35 @@ func (c *aadClient) submitJson(ctx context.Context, submitUrl string, inData any
 	}
 	defer res.Body.Close()
 
-	return json.NewDecoder(res.Body).Decode(outData)
+	data, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+
+	var fields map[string]json.RawMessage
+	if json.Unmarshal(data, &fields) == nil {
+		keys := make([]string, 0, len(fields))
+		for k := range fields {
+			keys = append(keys, k)
+		}
+		sort.Strings(keys)
+		u, _ := url.Parse(submitUrl)
+		c.Logger.Debugf("aad: response from %s%s contains fields: %s", u.Host, u.Path, strings.Join(keys, ","))
+	}
+
+	return json.Unmarshal(data, outData)
+}
+
+// parseResponseRewind parses the response body like parseResponse, but leaves res.Body readable for the next step.
+func parseResponseRewind(res *http.Response, out any) error {
+	data, err := io.ReadAll(res.Body)
+	_ = res.Body.Close()
+	if err != nil {
+		return err
+	}
+	res.Body = io.NopCloser(bytes.NewReader(data))
+
+	return parseResponseNoClose(bytes.NewReader(data), out)
 }
 
 func parseResponse(body io.ReadCloser, out any) error {
@@ -683,6 +812,7 @@ type aadMfaResponse struct {
 	ResultValue   string
 	Message       any
 	AuthMethodId  string
+	Entropy       int
 	ErrCode       int
 	Retry         bool
 	FlowToken     string
