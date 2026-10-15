@@ -42,9 +42,22 @@ The aws-runas SAML client auto-discovery logic looks for `.microsoft.com` in the
 
 Example Azure AD info in the .aws/config file:
 ```text
-saml_auth_url = https://myapps.microsoft.com/signin/__app-name__/__app-id__?tenantId=__tenant-id__
+saml_auth_url = https://launcher.myapps.microsoft.com/api/signin/__app-id__?tenantId=__tenant-id__
 saml_provider = azuread
 ```
+
+The older `https://myapps.microsoft.com/signin/__app-name__/__app-id__?tenantId=__tenant-id__` form of the URL is also
+accepted.  The `saml_username` attribute is optional, aws-runas prompts for the username (and password) when it's not set.
+
+For MFA, the `azuread` provider supports Microsoft Authenticator push notifications and verification codes (TOTP or SMS).
+When the tenant requires number matching for push notifications, aws-runas displays the number to enter in the
+Authenticator app.  Use `-t push` or `-t code` (or `mfa_type` in the profile) to select a specific method instead of
+using the default method configured for the account.
+
+**Known fragility:** Microsoft does not provide an API for this kind of authentication, so the `azuread` provider works
+by scraping the sign-in pages.  A change to Microsoft's sign-in flow, or a Conditional Access policy which requires a
+managed device, can break it.  Use `-v` to see the steps aws-runas is taking (no credentials, tokens or query strings are
+logged), and switch to `saml_provider = browser` (see below) if the `azuread` provider stops working.
 
 The Azure AD client is also configured to allow "guest" account access (which federates the authentication of an Azure
 AD principal with an external identity provider).  The big caveat being that the external identity provider must be
