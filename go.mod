@@ -1,6 +1,6 @@
 module github.com/mmmorris1975/aws-runas
 
-go 1.26.1
+go 1.27
 
 require (
 	github.com/PuerkitoBio/goquery v1.13.0
@@ -12,8 +12,8 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.79.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.4
 	github.com/aws/smithy-go v1.28.5
-	github.com/chromedp/cdproto v0.158.0
-	github.com/chromedp/chromedp v0.21.0
+	github.com/chromedp/cdproto v0.0.0-20260922220944-a19bff23514f
+	github.com/chromedp/chromedp v0.16.0
 	github.com/crewjam/saml v0.5.1
 	github.com/dustin/go-humanize v1.1.0
 	github.com/kevinburke/ssh_config v1.6.0
@@ -45,9 +45,13 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.4 // indirect
 	github.com/aws/session-manager-plugin v0.0.0-20260615221425-930a08e65d3a // indirect
 	github.com/beevik/etree v1.6.0 // indirect
+	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
 	github.com/fsnotify/fsnotify v1.9.0 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260820222146-c27c302e5fc3 // indirect
+	github.com/gobwas/httphead v0.1.0 // indirect
+	github.com/gobwas/pool v0.2.1 // indirect
+	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/websocket v1.4.2 // indirect
