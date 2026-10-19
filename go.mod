@@ -7,7 +7,7 @@ require (
 	github.com/aws/aws-sdk-go-v2 v1.47.3
 	github.com/aws/aws-sdk-go-v2/config v1.33.9
 	github.com/aws/aws-sdk-go-v2/service/ec2instanceconnect v1.44.1
-	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.4
+	github.com/aws/aws-sdk-go-v2/service/ecr v1.66.5
 	github.com/aws/aws-sdk-go-v2/service/iam v1.64.4
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.79.3
 	github.com/aws/aws-sdk-go-v2/service/sts v1.51.4
@@ -19,7 +19,7 @@ require (
 	github.com/kevinburke/ssh_config v1.6.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/mmmorris1975/simple-logger v0.5.1
-	github.com/mmmorris1975/ssm-session-client v0.500.2
+	github.com/mmmorris1975/ssm-session-client v1.0.0
 	github.com/syndtr/gocapability v0.0.0-20200815063812-42c35b437635
 	github.com/urfave/cli/v3 v3.14.0
 	golang.org/x/crypto v0.58.0
@@ -39,7 +39,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/ec2 v1.339.0 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/accept-encoding v1.13.21 // indirect
 	github.com/aws/aws-sdk-go-v2/service/internal/presigned-url v1.14.6 // indirect
-	github.com/aws/aws-sdk-go-v2/service/kms v1.61.4 // indirect
+	github.com/aws/aws-sdk-go-v2/service/kms v1.61.5 // indirect
 	github.com/aws/aws-sdk-go-v2/service/signin v1.10.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sso v1.38.4 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.43.4 // indirect
@@ -47,21 +47,21 @@ require (
 	github.com/beevik/etree v1.6.0 // indirect
 	github.com/chromedp/sysutil v1.1.0 // indirect
 	github.com/cihub/seelog v0.0.0-20170130134532-f561c5e57575 // indirect
-	github.com/fsnotify/fsnotify v1.9.0 // indirect
+	github.com/fsnotify/fsnotify v1.10.1 // indirect
 	github.com/go-json-experiment/json v0.0.0-20260820222146-c27c302e5fc3 // indirect
 	github.com/gobwas/httphead v0.1.0 // indirect
 	github.com/gobwas/pool v0.2.1 // indirect
 	github.com/gobwas/ws v1.4.0 // indirect
 	github.com/golang-jwt/jwt/v4 v4.5.2 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/jonboulle/clockwork v0.5.0 // indirect
 	github.com/mattermost/xml-roundtrip-validator v0.1.0 // indirect
 	github.com/russellhaering/goxmldsig v1.6.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/twinj/uuid v0.0.0-20151029044442-89173bcdda19 // indirect
-	github.com/xtaci/smux v1.5.35 // indirect
+	github.com/xtaci/smux v1.5.57 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/sync v0.24.0 // indirect
 )
