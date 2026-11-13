@@ -44,7 +44,7 @@ var ssmShellCmd = &cli.Command{
 			return err
 		}
 
-		ec2Id, err := ssmclient.ResolveTarget(target, c.ConfigProvider())
+		ec2Id, err := ssmclient.ResolveTarget(ctx, target, c.ConfigProvider())
 		if err != nil {
 			return err
 		}
@@ -61,6 +61,6 @@ var ssmShellCmd = &cli.Command{
 			return execSsmPlugin(c.ConfigProvider(), in)
 		}
 
-		return ssmclient.ShellPluginSession(c.ConfigProvider(), ec2Id)
+		return ssmclient.ShellPluginSession(ctx, c.ConfigProvider(), ec2Id)
 	},
 }

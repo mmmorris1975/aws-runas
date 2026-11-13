@@ -69,7 +69,7 @@ var ssmSshCmd = &cli.Command{
 
 		user, host, port := parseTargetSpec(target)
 
-		ec2Id, err := ssmclient.ResolveTarget(host, c.ConfigProvider())
+		ec2Id, err := ssmclient.ResolveTarget(ctx, host, c.ConfigProvider())
 		if err != nil {
 			return err
 		}
@@ -110,7 +110,7 @@ var ssmSshCmd = &cli.Command{
 			Target:     ec2Id,
 			RemotePort: rpi,
 		}
-		return ssmclient.SSHPluginSession(c.ConfigProvider(), in)
+		return ssmclient.SSHPluginSession(ctx, c.ConfigProvider(), in)
 	},
 }
 

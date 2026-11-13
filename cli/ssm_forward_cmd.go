@@ -56,7 +56,7 @@ var ssmForwardCmd = &cli.Command{
 		rp := parts[len(parts)-1]
 		lp := strconv.Itoa(int(cmd.Uint(ssmFwdPortFlag.Name)))
 
-		ec2Id, err := ssmclient.ResolveTarget(target, c.ConfigProvider())
+		ec2Id, err := ssmclient.ResolveTarget(ctx, target, c.ConfigProvider())
 		if err != nil {
 			return err
 		}
@@ -81,7 +81,7 @@ var ssmForwardCmd = &cli.Command{
 			RemotePort: rpi,
 			LocalPort:  int(cmd.Uint(ssmFwdPortFlag.Name)),
 		}
-		return ssmclient.PortPluginSession(c.ConfigProvider(), in)
+		return ssmclient.PortPluginSession(ctx, c.ConfigProvider(), in)
 	},
 }
 
