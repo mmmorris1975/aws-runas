@@ -241,6 +241,129 @@ func TestAadClient_Authenticate_Member(t *testing.T) {
 	})
 }
 
+func TestAadClient_Authenticate_GetCredentialType(t *testing.T) {
+	const apiCanary, formCanary, gctFlowToken = "api-canary", "form-canary", "gct-flow-token"
+
+	var gctCalls atomic.Int32
+	var kmsiCanary atomic.Value
+
+	mux := http.NewServeMux()
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	mux.HandleFunc("/myapp", func(w http.ResponseWriter, _ *http.Request) {
+		body, _ := genAuthResponse(aadAuthResponse{
+			Ctx:                  "myctx",
+			FT:                   "myftoken",
+			FTName:               "flowToken",
+			UrlPost:              "/login",
+			UrlGetCredentialType: srv.URL + "/gct",
+			Canary:               formCanary,
+			CanaryTokenName:      "canary",
+			ApiCanary:            apiCanary,
+			CorrelationId:        "corr-id",
+			SessionId:            "session-id",
+			HpgId:                1104,
+			HpgAct:               "1800",
+		})
+		_, _ = w.Write(body)
+	})
+
+	mux.HandleFunc("/gct", func(w http.ResponseWriter, r *http.Request) {
+		gctCalls.Add(1)
+		if r.Header.Get("canary") != apiCanary || r.Header.Get("hpgid") != "1104" || r.Header.Get("client-request-id") != "corr-id" {
+			http.Error(w, "missing api headers", http.StatusBadRequest)
+			return
+		}
+
+		in := new(aadGetCredTypeRequest)
+		if err := json.NewDecoder(r.Body).Decode(in); err != nil || in.OriginalRequest != "myctx" || in.FlowToken != "myftoken" {
+			http.Error(w, "bad request", http.StatusBadRequest)
+			return
+		}
+
+		res := map[string]any{"IfExistsResult": 0, "FlowToken": gctFlowToken, "apiCanary": "api-canary-2",
+			"Credentials": map[string]any{"HasPassword": true, "PrefCredential": 1}}
+		switch in.Username {
+		case "nobody":
+			res["IfExistsResult"] = 1
+		case "fed":
+			res["Credentials"] = map[string]any{"HasPassword": true, "FederationRedirectUrl": srv.URL + "/fedidp"}
+		}
+		_ = json.NewEncoder(w).Encode(res)
+	})
+
+	mux.HandleFunc("/login", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		if r.PostFormValue("passwd") == "" {
+			_, _ = w.Write([]byte(`<html><head><title>Working...</title></head><body>AADSTS50000</body></html>`))
+			return
+		}
+		if r.PostFormValue("canary") != formCanary || r.PostFormValue("flowToken") != gctFlowToken ||
+			r.PostFormValue("type") != "11" || r.PostFormValue("hpgrequestid") != "session-id" {
+			http.Error(w, "invalid login form", http.StatusBadRequest)
+			return
+		}
+
+		ar := aadAuthResponse{Ctx: "myctx", FT: "myftoken", FTName: "flowToken", UrlPost: "/kmsi", ErrCode: "0", Canary: formCanary + "-kmsi"}
+		if r.PostFormValue("passwd") != "good" {
+			ar.ErrCode = strconv.Itoa(aadBadUserPassErrCode)
+		}
+		body, _ := genAuthResponse(ar)
+		_, _ = w.Write(body)
+	})
+
+	mux.HandleFunc("/kmsi", func(w http.ResponseWriter, r *http.Request) {
+		_ = r.ParseForm()
+		kmsiCanary.Store(r.PostFormValue("canary"))
+		body, _ := genFormResponse("/authend", map[string]string{"a": "1"})
+		_, _ = w.Write(body)
+	})
+	mux.HandleFunc("/authend", aadAuthEndHandler)
+
+	newClient := func(user, pass string) *aadClient {
+		c := newMockAadClient()
+		c.authUrl, _ = url.Parse(srv.URL + "/myapp")
+		c.httpClient = srv.Client()
+		c.Username = user
+		c.Password = pass
+		return c
+	}
+
+	t.Run("managed user", func(t *testing.T) {
+		gctCalls.Store(0)
+		if err := newClient("good", "good").Authenticate(); err != nil {
+			t.Fatal(err)
+		}
+		if gctCalls.Load() != 1 {
+			t.Errorf("expected 1 GetCredentialType call, got %d", gctCalls.Load())
+		}
+		if v, _ := kmsiCanary.Load().(string); v != formCanary+"-kmsi" {
+			t.Errorf("kmsi form missing canary, got %q", v)
+		}
+	})
+
+	t.Run("bad password", func(t *testing.T) {
+		if err := newClient("good", "bad").Authenticate(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("unknown user", func(t *testing.T) {
+		if err := newClient("nobody", "whatever").Authenticate(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+
+	t.Run("federated unsupported", func(t *testing.T) {
+		c := newClient("fed", "whatever")
+		mux.HandleFunc("/fedidp", func(http.ResponseWriter, *http.Request) {})
+		if err := c.Authenticate(); err == nil {
+			t.Error("did not receive expected error")
+		}
+	})
+}
+
 func TestAadClient_Authenticate_FederatedUnsupported(t *testing.T) {
 	c := newMockAadClient()
 	c.Username = "badfed"

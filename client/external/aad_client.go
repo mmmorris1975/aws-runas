@@ -36,6 +36,7 @@ const (
 	aadIdentityProvider   = "AzureADIdentityProvider"
 	aadBadUserPassErrCode = 50126
 	aadInvalidMfaErrCode  = 500121
+	aadUserNotFoundResult = "1"
 
 	aadMfaMethodNotify = "PhoneAppNotification"
 	aadMfaMethodOTP    = "PhoneAppOTP"
@@ -49,8 +50,9 @@ var (
 
 type aadClient struct {
 	*baseClient
-	tenantId string
-	appId    string
+	tenantId   string
+	appId      string
+	apiHeaders http.Header
 }
 
 // NewAadClient creates a new AzureAD client. The url parameter is the 'User Access URL' found in the Properties
@@ -132,6 +134,7 @@ func (c *aadClient) AuthenticateWithContext(ctx context.Context) error {
 		kmsiForm.Set(authRes.FTName, authRes.FT)
 		kmsiForm.Set("ctx", authRes.Ctx)
 		kmsiForm.Set("LoginOptions", "1")
+		authRes.setCanary(kmsiForm)
 
 		req, _ = newHttpRequest(ctx, http.MethodPost, kmsiUrl.String())
 		res, err = checkResponseError(c.httpClient.Do(req.withValues(kmsiForm).Request))
@@ -385,14 +388,28 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 	authForm.Set("ctx", authRes.Ctx)
 	authForm.Set("login", c.Username)
 
-	req, _ := newHttpRequest(ctx, http.MethodPost, authUrl.String())
-	res, err := checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
-	if err != nil {
-		return nil, err
-	}
+	var res *http.Response
+	var err error
 
-	if err = parseResponse(res.Body, authRes); err != nil {
-		return nil, err
+	// Entra no longer accepts a username-only post to the login url (it answers AADSTS50000). The sign-in page
+	// advertises a GetCredentialType api for the username step instead, and the login form is only accepted
+	// when it carries the password along with the page's canary token.
+	canaryFlow := len(authRes.UrlGetCredentialType) > 0
+	if canaryFlow {
+		if err = c.getCredentialType(ctx, authRes); err != nil {
+			return nil, err
+		}
+		authForm.Set(authRes.FTName, authRes.FT)
+	} else {
+		req, _ := newHttpRequest(ctx, http.MethodPost, authUrl.String())
+		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
+		if err != nil {
+			return nil, err
+		}
+
+		if err = parseResponse(res.Body, authRes); err != nil {
+			return nil, err
+		}
 	}
 
 	// a bold assumption that everything down this path is not nil
@@ -408,8 +425,15 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 		c.Logger.Debugf("aad: managed user, submitting password")
 		authRes.ErrCode = ""
 		authForm.Set("passwd", c.Password)
+		if canaryFlow {
+			authForm.Set("loginfmt", c.Username)
+			authForm.Set("type", "11")
+			authForm.Set("LoginOptions", "3")
+			authForm.Set("hpgrequestid", authRes.SessionId)
+			authRes.setCanary(authForm)
+		}
 
-		// update existing req with new form values (password)
+		req, _ := newHttpRequest(ctx, http.MethodPost, authUrl.String())
 		res, err = checkResponseError(c.httpClient.Do(req.withValues(authForm).Request))
 		if err != nil {
 			return nil, err
@@ -427,6 +451,42 @@ func (c *aadClient) auth(ctx context.Context, authUrl *url.URL, authRes *aadAuth
 
 	// it is possible to require MFA for federated/guest users
 	return c.checkMfa(ctx, res, authRes)
+}
+
+func (c *aadClient) getCredentialType(ctx context.Context, authRes *aadAuthResponse) error {
+	c.apiHeaders = authRes.apiHeaders()
+
+	gctReq := aadGetCredTypeRequest{
+		Username:              c.Username,
+		IsOtherIdpSupported:   true,
+		IsRemoteNGCSupported:  true,
+		IsFidoSupported:       true,
+		OriginalRequest:       authRes.Ctx,
+		Country:               authRes.Country,
+		FlowToken:             authRes.FT,
+		IsAccessPassSupported: true,
+		IsQrCodePinSupported:  true,
+	}
+
+	gctRes := new(aadGetCredTypeResponse)
+	if err := c.submitJson(ctx, authRes.UrlGetCredentialType, gctReq, gctRes); err != nil {
+		return err
+	}
+
+	if fmt.Sprint(gctRes.IfExistsResult) == aadUserNotFoundResult {
+		return errors.New("authentication failed")
+	}
+
+	authRes.CredentialTypeResult = aadGetCredTypeResults{Credentials: gctRes.Credentials}
+	if len(gctRes.FlowToken) > 0 {
+		authRes.FT = gctRes.FlowToken
+	}
+	if len(gctRes.ApiCanary) > 0 {
+		authRes.ApiCanary = gctRes.ApiCanary
+		c.apiHeaders = authRes.apiHeaders()
+	}
+
+	return nil
 }
 
 func (c *aadClient) doFederatedAuth(ctx context.Context, fedUrl string) (res *http.Response, err error) {
@@ -505,6 +565,10 @@ func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*h
 		return nil, err
 	}
 
+	if len(authRes.ApiCanary) > 0 {
+		c.apiHeaders = authRes.apiHeaders()
+	}
+
 	mfaReq := aadMfaRequest{
 		AuthMethodId: factor.AuthMethodID,
 		Method:       "BeginAuth",
@@ -554,6 +618,7 @@ func (c *aadClient) handleMfa(ctx context.Context, authRes *aadAuthResponse) (*h
 	vals.Set(authRes.FTName, mfaRes.FlowToken)
 	vals.Set("request", mfaRes.Ctx)
 	vals.Set("login", c.Username)
+	authRes.setCanary(vals)
 
 	req, _ := newHttpRequest(ctx, http.MethodPost, authRes.LoginUrl(nil).String())
 	return checkResponseError(c.httpClient.Do(req.withValues(vals).Request))
@@ -695,6 +760,10 @@ func (c *aadClient) submitJson(ctx context.Context, submitUrl string, inData any
 
 	req, _ := newHttpRequest(ctx, http.MethodPost, submitUrl)
 	req.withContentType(contentTypeJson).withBody(bytes.NewReader(mfaJson))
+	req.Header.Set("Accept", contentTypeJson)
+	for k, v := range c.apiHeaders {
+		req.Header[k] = v
+	}
 
 	var res *http.Response
 	res, err = checkResponseError(c.httpClient.Do(req.Request)) //nolint:bodyclose
@@ -767,6 +836,16 @@ type aadAuthResponse struct {
 	CredentialTypeResult   aadGetCredTypeResults `json:"oGetCredTypeResult"`
 	PerAuthPollingInterval map[string]float64    `json:"oPerAuthPollingInterval"`
 	UrlSkipMfaRegistration string                `json:"urlSkipMfaRegistration"`
+
+	UrlGetCredentialType string `json:"urlGetCredentialType"`
+	Canary               string `json:"canary"`
+	CanaryTokenName      string `json:"sCanaryTokenName"`
+	ApiCanary            string `json:"apiCanary"`
+	CorrelationId        string `json:"correlationId"`
+	SessionId            string `json:"sessionId"`
+	Country              string `json:"country"`
+	HpgId                any    `json:"hpgid"`
+	HpgAct               any    `json:"hpgact"`
 }
 
 func (r aadAuthResponse) LoginUrl(base *url.URL) *url.URL {
@@ -779,6 +858,60 @@ func (r aadAuthResponse) LoginUrl(base *url.URL) *url.URL {
 		return base.ResolveReference(r.urlPost)
 	}
 	return r.urlPost
+}
+
+func (r aadAuthResponse) apiHeaders() http.Header {
+	h := http.Header{}
+	set := func(k string, v any) {
+		if s := fmt.Sprint(v); v != nil && len(s) > 0 {
+			h.Set(k, s)
+		}
+	}
+
+	set("canary", r.ApiCanary)
+	set("client-request-id", r.CorrelationId)
+	set("hpgid", r.HpgId)
+	set("hpgact", r.HpgAct)
+	set("hpgrequestid", r.SessionId)
+	return h
+}
+
+func (r aadAuthResponse) setCanary(form url.Values) {
+	if len(r.Canary) < 1 {
+		return
+	}
+
+	name := r.CanaryTokenName
+	if len(name) < 1 {
+		name = "canary"
+	}
+	form.Set(name, r.Canary)
+}
+
+type aadGetCredTypeRequest struct {
+	Username                       string `json:"username"`
+	IsOtherIdpSupported            bool   `json:"isOtherIdpSupported"`
+	CheckPhones                    bool   `json:"checkPhones"`
+	IsRemoteNGCSupported           bool   `json:"isRemoteNGCSupported"`
+	IsCookieBannerShown            bool   `json:"isCookieBannerShown"`
+	IsFidoSupported                bool   `json:"isFidoSupported"`
+	OriginalRequest                string `json:"originalRequest"`
+	Country                        string `json:"country,omitempty"`
+	ForceOtcLogin                  bool   `json:"forceotclogin"`
+	IsExternalFederationDisallowed bool   `json:"isExternalFederationDisallowed"`
+	IsRemoteConnectSupported       bool   `json:"isRemoteConnectSupported"`
+	FederationFlags                int    `json:"federationFlags"`
+	IsSignup                       bool   `json:"isSignup"`
+	FlowToken                      string `json:"flowToken"`
+	IsAccessPassSupported          bool   `json:"isAccessPassSupported"`
+	IsQrCodePinSupported           bool   `json:"isQrCodePinSupported"`
+}
+
+type aadGetCredTypeResponse struct {
+	Credentials    aadCredDetails
+	FlowToken      string
+	ApiCanary      string `json:"apiCanary"`
+	IfExistsResult any
 }
 
 type aadUserProof struct {
